@@ -24,19 +24,7 @@ export const createBot = () => {
     return bot;
 }
 
-export const setWebhook = async () => {
-    if (!BOT_TOKEN) {
-        throw new Error('Missing BOT_TOKEN');
-    }
-
-    if (!WEBHOOK_URL) {
-        throw new Error('Missing WEBHOOK_URL');
-    }
-
-    const bot = new Bot(BOT_TOKEN);
-
-    await bot.api.setWebhook(WEBHOOK_URL);
-}
+export const setWebhook = (bot: Bot, url = WEBHOOK_URL ?? '') => bot.api.setWebhook(url)
 
 export const onStart = async (info: UserFromGetMe, bot: Bot) => {
     await bot.api.setMyCommands([
