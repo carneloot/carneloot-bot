@@ -2,11 +2,11 @@
     "name": "horarios-bot",
     "version": "1.0.0",
     "description": "A telegram bot to add work time to spreadsheet",
-    "main": "src/index.ts",
+    "main": "index.ts",
     "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
     "license": "MIT",
     "scripts": {
-        "dev": "DEBUG='grammy*' ts-node src/index.ts"
+        "dev": "DEBUG='grammy*' ts-node index.ts"
     },
     "devDependencies": {
         "@types/node": "^16.11.10",

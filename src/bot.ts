@@ -2,7 +2,6 @@ import { Bot } from 'grammy';
 
 import { AddTimeCommand } from './commands/add-time.command';
 import { PingCommand } from './commands/ping.command';
-import { UserFromGetMe } from 'grammy/out/platform.node';
 
 const { BOT_TOKEN, WEBHOOK_URL } = process.env;
 
@@ -26,7 +25,7 @@ export const createBot = () => {
 
 export const setWebhook = (bot: Bot, url = WEBHOOK_URL ?? '') => bot.api.setWebhook(url)
 
-export const onStart = async (info: UserFromGetMe, bot: Bot) => {
+export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
         { command: 'ping', description: 'Pongs you!' },
         { command: 'hello', description: 'Hi 😊' },

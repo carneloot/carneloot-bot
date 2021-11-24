@@ -10,9 +10,11 @@ const { BOT_TOKEN } = process.env;
 export default (req: VercelRequest, res: VercelResponse) => {
     const reqSecret = req.query.secret;
     if (reqSecret !== BOT_TOKEN) {
-        res.status(401).send({
-            message: 'You do not have access.'
-        });
+        res
+            .status(401)
+            .send({
+                message: 'You do not have access.'
+            });
         return;
     }
 
