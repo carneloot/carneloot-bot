@@ -4,6 +4,7 @@ import { AddTimeCommand } from './commands/add-time.command';
 import { PingCommand } from './commands/ping.command';
 
 import { AuthMiddleware } from './middlewares/auth.middleware';
+import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 const { BOT_TOKEN, WEBHOOK_URL } = process.env;
 
@@ -13,6 +14,8 @@ export const createBot = () => {
     }
 
     const bot = new Bot(BOT_TOKEN);
+
+    bot.use(GenericErrorMiddleware);
 
     bot.use(AuthMiddleware);
 

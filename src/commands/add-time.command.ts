@@ -13,7 +13,7 @@ const successResponse: AnimationResponse = {
 
 export const AddTimeCommand: MiddlewareFn = async ctx => {
     if (!GOOGLE_SPREADSHEET_URL) {
-        return await ctx.reply('An error occurred trying to add time.');
+        throw new Error('Missing spreadsheet url')
     }
 
     const statusMessage = await ctx.reply('Processando...');
