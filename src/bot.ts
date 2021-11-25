@@ -3,6 +3,8 @@ import { Bot } from 'grammy';
 import { AddTimeCommand } from './commands/add-time.command';
 import { PingCommand } from './commands/ping.command';
 
+import { AuthMiddleware } from './middlewares/auth.middleware';
+
 const { BOT_TOKEN, WEBHOOK_URL } = process.env;
 
 export const createBot = () => {
@@ -12,7 +14,7 @@ export const createBot = () => {
 
     const bot = new Bot(BOT_TOKEN);
 
-    bot.command('start', ctx => ctx.reply('I hale started!'));
+    bot.use(AuthMiddleware);
 
     bot.command('hello', ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
 
