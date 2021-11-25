@@ -6,7 +6,7 @@ import { PingCommand } from './commands/ping.command';
 import { AuthMiddleware } from './middlewares/auth.middleware';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
-const { BOT_TOKEN, WEBHOOK_URL } = process.env;
+const { BOT_TOKEN } = process.env;
 
 export const createBot = () => {
     if (!BOT_TOKEN) {
@@ -19,21 +19,23 @@ export const createBot = () => {
 
     bot.use(AuthMiddleware);
 
-    bot.command('hello', ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
+    bot.command('start', ctx => ctx.reply('É nóis'));
 
-    bot.command('ping', PingCommand);
+    bot.hears(new RegExp('hello', 'i'), ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
 
-    bot.command('add', AddTimeCommand);
+    bot.command(PingCommand.command!, PingCommand);
+
+    bot.command(AddTimeCommand.command!, AddTimeCommand);
 
     return bot;
 }
 
-export const setWebhook = (bot: Bot, url = WEBHOOK_URL ?? '') => bot.api.setWebhook(url)
+export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url)
 
 export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
-        { command: 'ping', description: 'Pongs you!' },
-        { command: 'hello', description: 'Hi 😊' },
-        { command: 'add', description: 'Adds timesheet entry' },
+        { command: PingCommand.command!, description: PingCommand.description ?? '' },
+        { command: AddTimeCommand.command!, description: AddTimeCommand.description ?? '' },
+        { command: 'hello', description: 'Olar' },
     ]);
 }

@@ -3,6 +3,8 @@ import axios from 'axios';
 
 import { AnimationResponse, sendResponse } from '../utils/send-response';
 
+import type { Command } from '../types/command';
+
 const { GOOGLE_SPREADSHEET_URL } = process.env
 
 const successResponse: AnimationResponse = {
@@ -11,7 +13,7 @@ const successResponse: AnimationResponse = {
     caption: 'Naisu!',
 }
 
-export const AddTimeCommand: MiddlewareFn = async ctx => {
+export const AddTimeCommand: MiddlewareFn & Partial<Command<'add'>> = async ctx => {
     if (!GOOGLE_SPREADSHEET_URL) {
         throw new Error('Missing spreadsheet url')
     }
@@ -30,3 +32,6 @@ export const AddTimeCommand: MiddlewareFn = async ctx => {
 
     await sendResponse(ctx, successResponse);
 };
+
+AddTimeCommand.command = 'add';
+AddTimeCommand.description = 'Adicionar horario na planilha';
