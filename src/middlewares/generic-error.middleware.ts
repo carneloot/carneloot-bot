@@ -13,6 +13,7 @@ export const GenericErrorMiddleware = async (ctx: Context, next: NextFunction) =
     try {
         await next();
     } catch (err) {
+        process.env.DEBUG && console.error(err);
         await sendResponse(ctx, errorResponse);
     }
 }
