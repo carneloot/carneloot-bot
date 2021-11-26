@@ -1,5 +1,7 @@
-import { Context, NextFunction } from 'grammy';
-import { AnimationResponse, sendResponse } from '../utils/send-response';
+import { Composer, Context } from 'grammy';
+
+import { sendResponse } from '../common/response/send-response';
+import type { AnimationResponse } from '../common/response/response';
 
 const AUTH_COMMANDS = ['/add'];
 const AUTHORIZED_USERS = process.env.AUTHORIZED_USERS?.split(',') ?? [];
@@ -10,18 +12,12 @@ const unauthorizedResponse: AnimationResponse = {
     caption: 'Calma lá parcero (a)!\nVocê não pode fazer isso.',
 }
 
-export const AuthMiddleware = async (ctx: Context, next: NextFunction) => {
-    const isAuthCommand = AUTH_COMMANDS.some(command => ctx.message?.text?.startsWith(command));
+export const AuthMiddleware = new Composer();
 
-    if (!isAuthCommand) {
-        return await next();
-    }
+const isAuthCommand = (ctx: Context) => AUTH_COMMANDS.some(command => ctx.message?.text?.startsWith(command));
+const isUserNotAuthorized = (ctx: Context) => !AUTHORIZED_USERS.some(user => ctx.message?.from?.username === user);
 
-    const isAuthorizedUser = AUTHORIZED_USERS.some(user => ctx.message?.from?.username === user);
-
-    if (isAuthorizedUser) {
-        return await next();
-    }
-
-    await sendResponse(ctx, unauthorizedResponse);
-}
+AuthMiddleware
+    .filter(isAuthCommand)
+    .filter(isUserNotAuthorized)
+    .use(ctx => sendResponse(ctx, unauthorizedResponse));

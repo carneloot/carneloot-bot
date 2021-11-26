@@ -21,7 +21,9 @@ export const createBot = () => {
 
     bot.command('start', ctx => ctx.reply('É nóis'));
 
-    bot.hears(new RegExp('hello', 'i'), ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
+    bot
+        .on(':text')
+        .hears(/hello/i, ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
 
     bot.command(PingCommand.command!, PingCommand);
 
@@ -36,6 +38,5 @@ export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
         { command: PingCommand.command!, description: PingCommand.description ?? '' },
         { command: AddTimeCommand.command!, description: AddTimeCommand.description ?? '' },
-        { command: 'hello', description: 'Olar' },
     ]);
 }

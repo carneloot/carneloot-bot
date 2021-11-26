@@ -1,6 +1,6 @@
 import { MiddlewareFn } from 'grammy';
 
-import type { Command } from '../types/command';
+import type { Command } from '../common/types/command';
 
 export const PingCommand: MiddlewareFn & Partial<Command<'ping'>> = async ctx => {
     await ctx.reply('pong', {

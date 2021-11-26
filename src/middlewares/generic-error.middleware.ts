@@ -1,5 +1,7 @@
-import { AnimationResponse, sendResponse } from '../utils/send-response';
 import { Context, NextFunction } from 'grammy';
+
+import { sendResponse } from '../common/response/send-response';
+import type { AnimationResponse } from '../common/response/response';
 
 const errorResponse: AnimationResponse = {
     type: 'animation',
