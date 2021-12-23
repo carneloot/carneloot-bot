@@ -1,9 +1,12 @@
-import { Context, MiddlewareFn } from 'grammy';
+import { MiddlewareFn } from 'grammy';
 
 import type { UserResponse } from '../common/response/response';
-import type { Username } from '../common/types/username';
 import { sendRandomResponse } from '../common/response/send-random-response';
+
+import type { Username } from '../common/types/username';
+
 import { publicAsset } from '../common/utils/public-asset';
+import { isUsernameOnList } from '../common/utils/is-username-on-list';
 
 const unauthorizedResponses: UserResponse[] = [
     {
@@ -30,10 +33,8 @@ const unauthorizedResponses: UserResponse[] = [
     },
 ];
 
-const isUserAuthorized = (ctx: Context, authorizedUsers: Username[]) => authorizedUsers.some(user => ctx.message?.from?.username === user);
-
 export const AuthMiddleware = (authorizedUsers: Username[]): MiddlewareFn => async (ctx, next) => {
-    if (isUserAuthorized(ctx, authorizedUsers)) {
+    if (isUsernameOnList(ctx, authorizedUsers)) {
         await next();
         return;
     }
