@@ -1,11 +1,9 @@
-import { Composer, Context } from 'grammy';
+import { Context, MiddlewareFn } from 'grammy';
 
 import type { UserResponse } from '../common/response/response';
+import type { Username } from '../common/types/username';
 import { sendRandomResponse } from '../common/response/send-random-response';
 import { publicAsset } from '../common/utils/public-asset';
-
-const AUTH_COMMANDS = ['/add'];
-const AUTHORIZED_USERS = process.env.AUTHORIZED_USERS?.split(',') ?? [];
 
 const unauthorizedResponses: UserResponse[] = [
     {
@@ -32,12 +30,13 @@ const unauthorizedResponses: UserResponse[] = [
     },
 ];
 
-export const AuthMiddleware = new Composer();
+const isUserAuthorized = (ctx: Context, authorizedUsers: Username[]) => authorizedUsers.some(user => ctx.message?.from?.username === user);
 
-const isAuthCommand = (ctx: Context) => AUTH_COMMANDS.some(command => ctx.message?.text?.startsWith(command));
-const isUserNotAuthorized = (ctx: Context) => !AUTHORIZED_USERS.some(user => ctx.message?.from?.username === user);
+export const AuthMiddleware = (authorizedUsers: Username[]): MiddlewareFn => async (ctx, next) => {
+    if (isUserAuthorized(ctx, authorizedUsers)) {
+        await next();
+        return;
+    }
 
-AuthMiddleware
-    .filter(isAuthCommand)
-    .filter(isUserNotAuthorized)
-    .use(ctx => sendRandomResponse(ctx, unauthorizedResponses));
+    await sendRandomResponse(ctx, unauthorizedResponses)
+}

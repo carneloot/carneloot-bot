@@ -1,11 +1,10 @@
 import { MiddlewareFn } from 'grammy';
 import axios from 'axios';
 
-import type { AnimationResponse } from '../common/response/response';
-import type { Command } from '../common/types/command';
-import { mockResponse } from '../common/utils/mock-response';
-import { sendRandomResponse } from '../common/response/send-random-response';
-import { random } from '../common/utils/random';
+import type { AnimationResponse } from '../../common/response/response';
+import { mockResponse } from '../../common/utils/mock-response';
+import { sendRandomResponse } from '../../common/response/send-random-response';
+import { random } from '../../common/utils/random';
 
 const { GOOGLE_SPREADSHEET_URL, DEBUG } = process.env
 
@@ -17,10 +16,10 @@ const responses: AnimationResponse[] = [
 ].map(input => ({ type: 'animation', input }));
 
 const getResponse = () => !!DEBUG
-    ? mockResponse('Preenchido!', random(500, 1500))
+    ? mockResponse('Preenchido debug!', random(500, 1500))
     : axios.post<string>(GOOGLE_SPREADSHEET_URL!, {});
 
-export const AddTimeCommand: MiddlewareFn & Partial<Command<'add'>> = async ctx => {
+export const AddTimeCommand: MiddlewareFn = async ctx => {
     if (!GOOGLE_SPREADSHEET_URL) {
         throw new Error('Missing spreadsheet url')
     }
@@ -39,6 +38,3 @@ export const AddTimeCommand: MiddlewareFn & Partial<Command<'add'>> = async ctx 
 
     await sendRandomResponse(ctx, responses);
 };
-
-AddTimeCommand.command = 'add';
-AddTimeCommand.description = 'Adicionar horario na planilha';

@@ -1,10 +1,8 @@
 import { Bot } from 'grammy';
-
-import { AddTimeCommand } from './commands/add-time.command';
 import { PingCommand } from './commands/ping.command';
-
-import { AuthMiddleware } from './middlewares/auth.middleware';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
+import { TimesheetModule } from './modules/timesheet';
+import { Module } from './common/module/module';
 
 const { BOT_TOKEN } = process.env;
 
@@ -17,8 +15,6 @@ export const createBot = () => {
 
     bot.use(GenericErrorMiddleware);
 
-    bot.use(AuthMiddleware);
-
     bot.command('start', ctx => ctx.reply('É nóis'));
 
     bot
@@ -27,7 +23,7 @@ export const createBot = () => {
 
     bot.command(PingCommand.command!, PingCommand);
 
-    bot.command(AddTimeCommand.command!, AddTimeCommand);
+    bot.use(TimesheetModule);
 
     return bot;
 }
@@ -37,6 +33,6 @@ export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url)
 export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
         { command: PingCommand.command!, description: PingCommand.description ?? '' },
-        { command: AddTimeCommand.command!, description: AddTimeCommand.description ?? '' },
+        ...Module.getCommandList(),
     ]);
 }
