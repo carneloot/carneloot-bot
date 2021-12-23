@@ -23,6 +23,7 @@ export const StopServerCommand: MiddlewareFn = async ctx => {
 
         if (!instance || instance.State?.Name === 'stopped') {
             await updateMessage('O servidor não está rodando 😅');
+            return;
         }
 
         await client.send(new StopInstancesCommand(params))
