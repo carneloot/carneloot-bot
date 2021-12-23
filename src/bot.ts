@@ -1,8 +1,13 @@
 import { Bot } from 'grammy';
-import { PingCommand } from './commands/ping.command';
-import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
-import { TimesheetModule } from './modules/timesheet';
+
 import { Module } from './common/module/module';
+
+import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
+
+import { PingCommand } from './commands/ping.command';
+
+import { TimesheetModule } from './modules/timesheet';
+import { MinecraftModule } from './modules/minecraft';
 
 const { BOT_TOKEN } = process.env;
 
@@ -24,6 +29,7 @@ export const createBot = () => {
     bot.command(PingCommand.command!, PingCommand);
 
     bot.use(TimesheetModule);
+    bot.use(MinecraftModule);
 
     return bot;
 }

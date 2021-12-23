@@ -1,6 +1,7 @@
 import { Module } from '../../common/module/module';
-import { AddTimeCommand } from './add-time.command';
 import { AuthMiddleware } from '../../middlewares/auth.middleware';
+
+import { AddTimeCommand } from './add-time.command';
 
 const { TIMESHEET_AUTHORIZED_USERS } = process.env;
 

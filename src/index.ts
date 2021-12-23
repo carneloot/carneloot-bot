@@ -1,8 +1,9 @@
 import 'dotenv/config';
 
 import { createBot, onStart } from './bot';
+import { isDebug } from './common/utils/is-debug';
 
-if (process.env.DEBUG) {
+if (isDebug()) {
     const bot = createBot();
 
     bot.catch(console.error);
