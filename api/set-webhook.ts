@@ -10,8 +10,10 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     const bot = createBot();
 
-    const { VERCEL_URL, BOT_TOKEN } = process.env;
-    const url = `https://${VERCEL_URL}/api/${BOT_TOKEN}`;
+    const { VERCEL_URL, BOT_TOKEN, WEBHOOK_URL } = process.env;
+    const server = WEBHOOK_URL ?? VERCEL_URL;
+
+    const url = `https://${server}/api/${BOT_TOKEN}`;
     await setWebhook(bot, url);
     await onStart(bot);
 
