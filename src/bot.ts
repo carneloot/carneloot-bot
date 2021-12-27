@@ -29,7 +29,7 @@ export const createBot = () => {
     bot.command(PingCommand.command!, PingCommand);
 
     bot.use(TimesheetModule);
-    bot.use(MinecraftModule);
+    // bot.use(MinecraftModule);
 
     return bot;
 }
