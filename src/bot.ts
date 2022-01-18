@@ -5,9 +5,9 @@ import { Module } from './common/module/module';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { PingCommand } from './commands/ping.command';
+import { WhatsCommand } from './commands/whatsCommand';
 
 import { TimesheetModule } from './modules/timesheet';
-import { MinecraftModule } from './modules/minecraft';
 
 const { BOT_TOKEN } = process.env;
 
@@ -27,9 +27,9 @@ export const createBot = () => {
         .hears(/hello/i, ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
 
     bot.command(PingCommand.command!, PingCommand);
+    bot.command(WhatsCommand.command!, WhatsCommand);
 
     bot.use(TimesheetModule);
-    // bot.use(MinecraftModule);
 
     return bot;
 }
@@ -39,6 +39,7 @@ export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url)
 export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
         { command: PingCommand.command!, description: PingCommand.description ?? '' },
+        { command: WhatsCommand.command!, description: WhatsCommand.description ?? '' },
         ...Module.getCommandList(),
     ]);
 }
