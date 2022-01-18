@@ -6,12 +6,13 @@
     "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
     "license": "MIT",
     "scripts": {
-        "dev": "DEBUG='grammy*' ts-node src/index.ts"
+        "dev": "nodemon"
     },
     "devDependencies": {
         "@types/node": "^16.11.10",
         "@vercel/node": "^1.12.1",
         "dotenv": "^10.0.0",
+        "nodemon": "^2.0.15",
         "ts-node": "^10.4.0",
         "typescript": "^4.5.2"
     },
