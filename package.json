@@ -1,7 +1,7 @@
 {
-    "name": "horarios-bot",
+    "name": "carneloot-bot",
     "version": "1.0.0",
-    "description": "A telegram bot to add work time to spreadsheet",
+    "description": "A telegram bot to do general stuff for my likings",
     "main": "src/index.ts",
     "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
     "license": "MIT",
