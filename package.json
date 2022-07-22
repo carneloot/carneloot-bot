@@ -6,6 +6,7 @@
     "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
     "license": "MIT",
     "scripts": {
+        "build": "tsc",
         "dev": "nodemon",
         "start": "DEBUG='grammy*' ts-node src/index.ts"
     },
