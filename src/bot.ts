@@ -7,8 +7,6 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whatsCommand';
 
-import { TimesheetModule } from './modules/timesheet';
-
 const { BOT_TOKEN } = process.env;
 
 export const createBot = () => {
@@ -24,8 +22,6 @@ export const createBot = () => {
 
     bot.command(PingCommand.command!, PingCommand);
     bot.command(WhatsCommand.command!, WhatsCommand);
-
-    bot.use(TimesheetModule);
 
     bot
         .on(':text')
