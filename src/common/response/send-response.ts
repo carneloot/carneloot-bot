@@ -4,7 +4,7 @@ import { UserResponse } from './response';
 import { flattenMaybeFunction } from '../types/maybe-function';
 
 export const sendResponse = async (ctx: Context, response: UserResponse) => {
-    if (response.type === 'animation') {
+    if (response.type === 'gif') {
         return await ctx.replyWithAnimation(
             flattenMaybeFunction(response.input),
             {

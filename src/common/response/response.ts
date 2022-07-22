@@ -1,7 +1,7 @@
 import { MaybeFunction } from '../types/maybe-function';
 
-export type AnimationResponse = {
-    type: 'animation',
+export type GifResponse = {
+    type: 'gif',
     input: MaybeFunction<string>,
     caption?: MaybeFunction<string | undefined>,
 };
@@ -17,6 +17,6 @@ export type TextResponse = {
     text: MaybeFunction<string>,
 };
 
-export type UserResponse = AnimationResponse
+export type UserResponse = GifResponse
     | ImageResponse
     | TextResponse;
