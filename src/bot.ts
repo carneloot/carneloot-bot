@@ -5,7 +5,7 @@ import { Module } from './common/module/module';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { PingCommand } from './commands/ping.command';
-import { WhatsCommand } from './commands/whatsCommand';
+import { WhatsCommand } from './commands/whats-command';
 
 const { BOT_TOKEN } = process.env;
 
