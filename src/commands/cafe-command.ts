@@ -34,59 +34,19 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
     const coffeeWeightInWeight = COFFEE_WATER_RATIO.mul(waterAmountInVolume);
     const waterAmountInWeight = Qty(waterAmountInVolume.scalar, 'g');
 
-    await ctx.reply(`Você vai precisar usar ${coffeeWeightInWeight.toPrec('g')} de café!`);
-    await ctx.reply(`Coloca o café no filtro e faz um buraquinho no meio hehe`);
+    await ctx.reply(`Quantidade de café: ${coffeeWeightInWeight.toPrec('g')}`);
 
     const firstWaterPourInWeight = coffeeWeightInWeight.mul(2);
+    const secondWaterPourInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourInWeight);
+    const lastWaterPourInWeight = waterAmountInWeight.sub(secondWaterPourInWeight.add(firstWaterPourInWeight));
 
-    await ctx.reply(`Na primeira vez coloque ${firstWaterPourInWeight.toPrec('g')} de água.`);
-    await ctx.reply(`Depois disso dá uma mexida no filtro com o café para misturar bem 🤤`);
-
-    await sleep(ms('7s'));
-
-    await ctx.reply(`Espera uns 45 segundos (não se preocupa, eu te aviso!)`);
-
-    await sleep(ms('45s'));
-
-    const secondWaterPourInWeight = waterAmountInWeight.mul(0.6);
-
-    await ctx.reply(`Pronto!`);
-    await ctx.reply(`Agora coloque ${secondWaterPourInWeight.toPrec('g')} de água nos próximos 30 segundos.`);
-
-    await sleep(ms('5s'));
-
-    await ctx.reply('Vai lá!');
-
-    await sleep(ms('15s'));
-
-    await ctx.reply('Já foi metade! Só mais 15 segundos 👌');
-
-    await sleep(ms('15s'));
-
-    const lastWaterPourInWeight = waterAmountInWeight.sub(firstWaterPourInWeight.add(secondWaterPourInWeight));
-
-    await ctx.reply(`Por fim coloque o restante da água (${lastWaterPourInWeight.toPrec('g')}) nos próximos 30 segundos.`);
-
-    await sleep(ms('7s'));
-
-    await ctx.reply('Vai lá!');
-
-    await sleep(ms('15s'));
-
-    await ctx.reply('15 segundos e contando...');
-
-    await sleep(ms('15s'));
-
-    await ctx.reply('Prontinho 😄');
-    await ctx.reply('Agora usando uma colher mexe para um lado e depois para o outro.\nIsso ajuda a tirar o café da parede do filtro!');
-
-    await sleep(ms('1s'));
-
-    await ctx.reply('Quando estiver mais de boas, dá uma mexida de novo no filtro com o café!');
-
-    await sleep(ms('10s'));
-
-    await ctx.reply('Depois de acabar, só aproveitar o cafézinho 🤤');
+    await ctx.reply(`<pre>
+    | Posição  |  Quantidade   | Tempo |
+    |----------|-------------|------|
+    | 1 | ${firstWaterPourInWeight.toPrec('g')}  | Espera 45 s  |
+    | 2 | ${secondWaterPourInWeight.toPrec('g')} | Durante 30 s |
+    | 3 | ${lastWaterPourInWeight.toPrec('g')}   | Durante 30 s |
+    </pre>`, { parse_mode: 'HTML' });
 }
 
 CafeCommand.command = 'cafe';
