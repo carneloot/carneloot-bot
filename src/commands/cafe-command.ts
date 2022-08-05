@@ -1,10 +1,9 @@
 import { Context, MiddlewareFn } from 'grammy';
+import { table } from 'table';
 
 import Qty from 'js-quantities';
 
 import { Command } from '../common/types/command';
-import { sleep } from '../common/utils/sleep';
-import ms from 'ms';
 
 async function sendMissingInformationMessage(ctx: Context) {
     await ctx.reply('Me envie a quantidade inicial de água em ml. 😄');
@@ -22,7 +21,7 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
 
     const waterAmountInVolume = Qty(ctx.match.toString());
 
-    if (!waterAmountInVolume.isCompatible('1L')) {
+    if (!waterAmountInVolume.isCompatible('1l')) {
         await sendMissingInformationMessage(ctx);
         return;
     }
@@ -32,7 +31,7 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
     }
 
     const coffeeWeightInWeight = COFFEE_WATER_RATIO.mul(waterAmountInVolume);
-    const waterAmountInWeight = Qty(waterAmountInVolume.scalar, 'g');
+    const waterAmountInWeight = Qty(waterAmountInVolume.to('ml').scalar, 'g');
 
     await ctx.reply(`Quantidade de café: ${coffeeWeightInWeight.toPrec('g')}`);
 
@@ -40,13 +39,23 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
     const secondWaterPourInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourInWeight);
     const lastWaterPourInWeight = waterAmountInWeight.sub(secondWaterPourInWeight.add(firstWaterPourInWeight));
 
-    await ctx.reply(`<pre>
-    | Posição  |  Quantidade   | Tempo |
-    |----------|-------------|------|
-    | 1 | ${firstWaterPourInWeight.toPrec('g')}  | Espera 45 s  |
-    | 2 | ${secondWaterPourInWeight.toPrec('g')} | Durante 30 s |
-    | 3 | ${lastWaterPourInWeight.toPrec('g')}   | Durante 30 s |
-    </pre>`, { parse_mode: 'HTML' });
+    const quantityDurationTable = [
+        [ '#', 'Qtde.', 'Tempo' ],
+        [ '1o', firstWaterPourInWeight.toPrec('g').toString(), 'Esperar 45 s' ],
+        [ '2o', secondWaterPourInWeight.toPrec('g').toString(), 'Durante 30 s' ],
+        [ '3o', lastWaterPourInWeight.toPrec('g').toString(), 'Durante 30 s' ],
+    ];
+
+    await ctx.reply(`<pre>${table(quantityDurationTable, {
+        header: {
+            content: 'Quantidade de água'
+        },
+        columns: [
+            { alignment: 'center' },
+            { alignment: 'right' },
+            { alignment: 'right' },
+        ]
+    })}</pre>`, { parse_mode: 'HTML' });
 }
 
 CafeCommand.command = 'cafe';
