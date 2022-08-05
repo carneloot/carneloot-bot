@@ -11,6 +11,8 @@
         "start": "DEBUG='grammy*' ts-node src/index.ts"
     },
     "devDependencies": {
+        "@types/js-quantities": "^1.6.3",
+        "@types/ms": "^0.7.31",
         "@types/node": "^16.11.10",
         "@vercel/node": "^1.12.1",
         "dotenv": "^10.0.0",
@@ -21,6 +23,8 @@
     "dependencies": {
         "@aws-sdk/client-ec2": "^3.44.0",
         "axios": "^0.24.0",
-        "grammy": "^1.4.2"
+        "grammy": "^1.4.2",
+        "js-quantities": "^1.7.6",
+        "ms": "^2.1.3"
     }
 }

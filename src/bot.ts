@@ -6,6 +6,7 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
+import { CafeCommand } from './commands/cafe-command';
 
 const { BOT_TOKEN } = process.env;
 
@@ -22,6 +23,7 @@ export const createBot = () => {
 
     bot.command(PingCommand.command!, PingCommand);
     bot.command(WhatsCommand.command!, WhatsCommand);
+    bot.command(CafeCommand.command!, CafeCommand);
 
     bot
         .on(':text')
@@ -36,6 +38,7 @@ export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
         { command: PingCommand.command!, description: PingCommand.description ?? '' },
         { command: WhatsCommand.command!, description: WhatsCommand.description ?? '' },
+        { command: CafeCommand.command!, description: CafeCommand.description ?? '' },
         ...Module.getCommandList(),
     ]);
 }
