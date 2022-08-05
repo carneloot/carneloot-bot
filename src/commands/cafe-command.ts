@@ -48,7 +48,7 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
 
     await ctx.reply(`<pre>${table(quantityDurationTable, {
         header: {
-            content: 'Quantidade de água'
+            content: 'Água'
         },
         columns: [
             { alignment: 'center' },
