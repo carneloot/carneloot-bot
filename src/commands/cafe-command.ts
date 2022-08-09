@@ -19,9 +19,17 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
         return;
     }
 
-    const waterAmountInVolume = Qty(ctx.match.toString());
+    const [ _, _waterAmount, _coffeeWaterRatio ] = ctx.match
+        .toString()
+        .match(/([0-9.,]+\w*)(?: +([0-9.,]+[\w\/]*))?/) ?? [];
 
-    if (!waterAmountInVolume.isCompatible('1l')) {
+    const waterAmountInVolume = _waterAmount
+        ? _waterAmount.match(/^\d+$/)
+            ? Qty(Number(_waterAmount), 'ml')
+            : Qty(_waterAmount)
+        : null
+
+    if (!waterAmountInVolume || !waterAmountInVolume.isCompatible('ml')) {
         await sendMissingInformationMessage(ctx);
         return;
     }
@@ -30,7 +38,18 @@ export const CafeCommand: MiddlewareFn & Partial<Command<'cafe'>> = async ctx =>
         await ctx.reply(`Lembre-se de molhar o filtro antes de colocar o café!`);
     }
 
-    const coffeeWeightInWeight = COFFEE_WATER_RATIO.mul(waterAmountInVolume);
+    const coffeeWaterRatio = _coffeeWaterRatio
+        ? _coffeeWaterRatio.match(/^\d+$/)
+            ? Qty(Number(_coffeeWaterRatio), 'g/L')
+            : Qty(_coffeeWaterRatio)
+        : COFFEE_WATER_RATIO
+
+    if (!coffeeWaterRatio.isCompatible('g/L')) {
+        await ctx.reply('Proporção de café para quantidade água invalida. Por favor envie um valor na unidade g/L');
+        return;
+    }
+
+    const coffeeWeightInWeight = coffeeWaterRatio.mul(waterAmountInVolume);
     const waterAmountInWeight = Qty(waterAmountInVolume.to('ml').scalar, 'g');
 
     await ctx.reply(`Quantidade de café: ${coffeeWeightInWeight.toPrec('g')}`);
