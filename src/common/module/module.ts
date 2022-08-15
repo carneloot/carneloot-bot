@@ -6,7 +6,7 @@ import { Command } from '../types/command';
 
 export class Module<C extends Context> extends Composer<C> {
     private static readonly MODULE_SEPARATOR = '_';
-    private static COMMANDS: Command<string>[] = [];
+    private static COMMANDS: Omit<Command<string>, 'middleware'>[] = [];
 
     private parent?: Module<C>;
 
@@ -17,7 +17,7 @@ export class Module<C extends Context> extends Composer<C> {
         super();
     }
 
-    static getCommandList(): Command<string>[] {
+    static getCommandList() {
         return Module.COMMANDS;
     }
 

@@ -7,6 +7,7 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
+import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
 
 const { BOT_TOKEN } = process.env;
 
@@ -36,9 +37,9 @@ export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url)
 
 export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
-        { command: PingCommand.command!, description: PingCommand.description ?? '' },
-        { command: WhatsCommand.command!, description: WhatsCommand.description ?? '' },
-        { command: CafeCommand.command!, description: CafeCommand.description ?? '' },
+        { command: getCommandForHelp(PingCommand), description: getDescriptionForHelp(PingCommand) },
+        { command: getCommandForHelp(WhatsCommand), description: getDescriptionForHelp(WhatsCommand) },
+        { command: getCommandForHelp(CafeCommand), description: getDescriptionForHelp(CafeCommand) },
         ...Module.getCommandList(),
     ]);
 }
