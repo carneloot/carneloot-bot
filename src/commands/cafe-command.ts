@@ -58,15 +58,29 @@ export const CafeCommand: Command<'cafe'> = {
 
         await ctx.reply(`Quantidade de café: ${coffeeWeightInWeight.toPrec('g')}`);
 
-        const firstWaterPourInWeight = coffeeWeightInWeight.mul(2);
-        const secondWaterPourInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourInWeight);
-        const lastWaterPourInWeight = waterAmountInWeight.sub(secondWaterPourInWeight.add(firstWaterPourInWeight));
+        const firstWaterPourMinInWeight = coffeeWeightInWeight.mul(2);
+        const firstWaterPourMaxInWeight = coffeeWeightInWeight.mul(3);
+
+        const firstPourMin = firstWaterPourMinInWeight.toPrec('g').toString();
+        const firstPourMax = firstWaterPourMaxInWeight.toPrec('g').toString();
+
+        const secondWaterPourMinInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourMinInWeight);
+        const secondWaterPourMaxInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourMaxInWeight);
+
+        const secondPourMin = secondWaterPourMinInWeight.toPrec('g').toString();
+        const secondPourMax = secondWaterPourMaxInWeight.toPrec('g').toString();
+
+        const lastWaterPourMinInWeight = waterAmountInWeight.sub(secondWaterPourMinInWeight.add(firstWaterPourMinInWeight));
+        const lastWaterPourMaxInWeight = waterAmountInWeight.sub(secondWaterPourMaxInWeight.add(firstWaterPourMaxInWeight));
+
+        const lastPourMin = lastWaterPourMinInWeight.toPrec('g').toString();
+        const lastPourMax = lastWaterPourMaxInWeight.toPrec('g').toString();
 
         const quantityDurationTable = [
             [ 'Qtde.', 'Tempo' ],
-            [ firstWaterPourInWeight.toPrec('g').toString(), 'Esperar 45 s' ],
-            [ secondWaterPourInWeight.toPrec('g').toString(), 'Durante 30 s' ],
-            [ lastWaterPourInWeight.toPrec('g').toString(), 'Durante 30 s' ],
+            [ `${firstPourMin} a ${firstPourMax}`, 'Esperar 45 s' ],
+            [ `${secondPourMin} a ${secondPourMax}`, 'Durante 30 s' ],
+            [ `${lastPourMin} a ${lastPourMax}`, 'Durante 30 s' ],
         ];
 
         await ctx.reply(`<pre>${table(quantityDurationTable, {
