@@ -64,20 +64,16 @@ export const CafeCommand: Command<'cafe'> = {
         const firstPourMin = firstWaterPourMinInWeight.toPrec('g').toString();
         const firstPourMax = firstWaterPourMaxInWeight.toPrec('g').toString();
 
-        const secondWaterPourMinInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourMinInWeight);
-        const secondWaterPourMaxInWeight = waterAmountInWeight.mul(0.6).sub(firstWaterPourMaxInWeight);
+        const secondWaterPourQuantityInWeight = waterAmountInWeight.mul(0.6);
 
-        const secondPourMin = secondWaterPourMinInWeight.toPrec('g').toString();
-        const secondPourMax = secondWaterPourMaxInWeight.toPrec('g').toString();
-
-        const lastWaterPourInWeight = waterAmountInWeight.mul(0.4);
-        const lastPour = lastWaterPourInWeight.toPrec('g').toString();
+        const secondPour = secondWaterPourQuantityInWeight.toPrec('g').toString();
+        const lastPour = waterAmountInWeight.toPrec('g').toString();
 
         const quantityDurationTable = [
             [ 'Qtde.', 'Tempo' ],
             [ `${firstPourMin} a ${firstPourMax}`, 'Esperar 45 s' ],
-            [ `${secondPourMin} a ${secondPourMax}`, 'Durante 30 s' ],
-            [ lastPour, 'Durante 30 s' ],
+            [ `Até ${secondPour}`, 'Durante 30 s' ],
+            [ `Até ${lastPour}`, 'Durante 30 s' ],
         ];
 
         await ctx.reply(`<pre>${table(quantityDurationTable, {
