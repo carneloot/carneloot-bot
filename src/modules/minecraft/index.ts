@@ -7,7 +7,6 @@ import { LoggerMiddleware } from '../../middlewares/logger.middleware';
 
 const {
     MINECRAFT_AUTHORIZED_USERS,
-    MINECRAFT_SERVER_URL,
     ADMIN_USER_ID
 } = process.env;
 
