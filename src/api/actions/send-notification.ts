@@ -2,8 +2,8 @@ import { Bot } from 'grammy';
 import { NotifyType } from '../types/notify-params';
 
 const getNotificationMessage = (type: NotifyType): string => ({
-    PhoneBattery: "O celular terminou de ser carregado!",
-    WatchBattery: "O relógio terminou de ser carregado!",
+    PhoneBattery: "📱🔋 Celular carregado!",
+    WatchBattery: "⌚🔋 Relógio carregado!",
 } as Record<NotifyType, string>)[type]
 
 export const sendNotification = async (bot: Bot, notifyType: NotifyType) => {
