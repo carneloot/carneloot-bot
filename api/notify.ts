@@ -21,7 +21,13 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     const bot = createBot();
 
-    await sendNotification(bot, body);
+    try {
+        await sendNotification(bot, body);
+    } catch (e: unknown) {
+        return res
+            .status(500)
+            .json({ error: e instanceof Error ? e.message : e });
+    }
 
     res.json({ message: 'Notification sent successfully!' });
 }
