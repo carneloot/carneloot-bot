@@ -6,13 +6,13 @@ import { getUserFromApiKey } from '../../services/api-key';
 export const sendNotification = async (bot: Bot, params: NotifyParams) => {
     const user = await getUserFromApiKey(params.apiKey);
     if (!user) {
-        throw new Error(`User not found: "${params}"`);
+        throw new Error(`User not found: "${params.apiKey}"`);
     }
 
     const notification = await getNotificationByOwnerAndKeyword(user.id, params.keyword);
 
     if (!notification) {
-        throw new Error(`Notification not found: "${params}"`);
+        throw new Error(`Notification not found: "${params.keyword}"`);
     }
 
     const results = await Promise.allSettled([
