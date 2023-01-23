@@ -19,15 +19,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
     const { data: body } = parsedBodResult;
 
-    if (body.secret !== process.env.NOTIFY_SECRET) {
-        return res
-            .status(401)
-            .json({ message: 'Invalid secret' });
-    }
-
     const bot = createBot();
 
-    await sendNotification(bot, body.notifyType);
+    await sendNotification(bot, body);
 
     res.json({ message: 'Notification sent successfully!' });
 }
