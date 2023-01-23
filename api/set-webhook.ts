@@ -2,11 +2,11 @@ import { createBot, onStart, setWebhook } from '../src/bot';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async (req: VercelRequest, res: VercelResponse) => {
-    if (process.env.VERCEL_ENV !== 'production') {
-        return res
-            .status(401)
-            .json({ message: 'Deployment must be production' });
-    }
+    // if (process.env.VERCEL_ENV !== 'production') {
+    //     return res
+    //         .status(401)
+    //         .json({ message: 'Deployment must be production' });
+    // }
 
     const bot = createBot();
 
