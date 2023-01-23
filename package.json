@@ -6,6 +6,7 @@
     "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
     "license": "MIT",
     "scripts": {
+        "vercel-build": "prisma generate && prisma migrate deploy",
         "build:dev": "tsc",
         "dev": "nodemon",
         "start": "DEBUG='grammy*' ts-node src/index.ts"
@@ -13,18 +14,23 @@
     "devDependencies": {
         "@types/js-quantities": "^1.6.3",
         "@types/node": "^18.11.18",
+        "@types/randomstring": "^1.1.8",
         "@types/table": "^6.3.2",
         "@vercel/node": "^1.12.1",
         "dotenv": "^10.0.0",
         "nodemon": "^2.0.15",
+        "prisma": "^4.9.0",
         "ts-node": "^10.4.0",
         "typescript": "^4.5.2"
     },
     "dependencies": {
         "@aws-sdk/client-ec2": "^3.44.0",
+        "@grammyjs/menu": "^1.1.2",
+        "@prisma/client": "4.9.0",
         "axios": "^0.24.0",
         "grammy": "^1.4.2",
         "js-quantities": "^1.7.6",
+        "randomstring": "^1.2.3",
         "table": "^6.8.0",
         "zod": "^3.20.2"
     }

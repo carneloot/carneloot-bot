@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id String @id @db.Uuid @default(uuid())
+
+    telegramID Float   @unique
+    username   String? @unique
+    firstName  String
+    lastName   String?
+
+    ownedNotifications        Notification[]  @relation("owner")
+    notificationsToBeNotified UsersToNotify[]
+
+    apiKey ApiKey?
+
+    @@index([telegramID, username])
+    @@map("users")
+}
+
+model Notification {
+    id String @id @db.Uuid @default(uuid())
+
+    keyword String
+    message String
+
+    owner   User   @relation("owner", fields: [ownerId], references: [id])
+    ownerId String @db.Uuid
+
+    usersToNotify UsersToNotify[]
+
+    @@index([keyword, ownerId])
+    @@unique([ownerId, keyword])
+    @@map("notifications")
+}
+
+model UsersToNotify {
+    id String @id @db.Uuid @default(uuid())
+
+    user   User   @relation(fields: [userId], references: [id])
+    userId String @db.Uuid
+
+    notification   Notification @relation(fields: [notificationId], references: [id])
+    notificationId String       @db.Uuid
+
+    @@map("users_to_notify")
+}
+
+model ApiKey {
+    id String @id @db.Uuid @default(uuid())
+
+    value String @unique
+
+    user   User   @relation(fields: [userId], references: [id])
+    userId String @db.Uuid @unique
+
+    @@map("api_keys")
+}

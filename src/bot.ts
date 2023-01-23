@@ -8,6 +8,7 @@ import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
 import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
+import { AuthModule } from './modules/auth';
 
 const { BOT_TOKEN } = process.env;
 
@@ -26,14 +27,16 @@ export const createBot = () => {
     bot.command(WhatsCommand.command!, WhatsCommand);
     bot.command(CafeCommand.command!, CafeCommand);
 
+    bot.use(AuthModule);
+
     bot
         .on(':text')
         .hears(/hello/i, ctx => ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'));
 
     return bot;
-}
+};
 
-export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url)
+export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url);
 
 export const onStart = async (bot: Bot) => {
     await bot.api.setMyCommands([
@@ -42,4 +45,4 @@ export const onStart = async (bot: Bot) => {
         { command: getCommandForHelp(CafeCommand), description: getDescriptionForHelp(CafeCommand) },
         ...Module.getCommandList(),
     ]);
-}
+};
