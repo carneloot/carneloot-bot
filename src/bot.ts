@@ -4,11 +4,12 @@ import { Module } from './common/module/module';
 
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
+import { AuthModule } from './modules/auth/auth-module';
+
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
 import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
-import { AuthModule } from './modules/auth';
 
 const { BOT_TOKEN } = process.env;
 

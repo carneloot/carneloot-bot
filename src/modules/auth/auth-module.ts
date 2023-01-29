@@ -10,4 +10,4 @@ export const AuthModule = new Module(
 AuthModule.setCommand('cadastrar', 'Cadastra a sua conta no banco de dados', SignupCommand);
 
 AuthModule.use(apiKeyConfirmationMenu);
-AuthModule.setCommand('gerar_chave', 'Generates a new ApiKey for the user', GenerateApiKeyCommand);
+AuthModule.setCommand('gerar_chave', 'Gera uma nova api-key para o usuario', GenerateApiKeyCommand);
