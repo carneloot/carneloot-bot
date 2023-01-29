@@ -4,10 +4,10 @@ import { GenerateApiKeyCommand, apiKeyConfirmationMenu } from './generate-api-ke
 
 export const AuthModule = new Module(
     '',
-    'Auth operations'
+    'Operações de autenticação'
 );
 
-AuthModule.setCommand('signup', 'Signs up a new user to the database', SignupCommand);
+AuthModule.setCommand('cadastrar', 'Cadastra a sua conta no banco de dados', SignupCommand);
 
 AuthModule.use(apiKeyConfirmationMenu);
-AuthModule.setCommand('generate_apikey', 'Generates a new ApiKey for the user', GenerateApiKeyCommand);
+AuthModule.setCommand('gerar_chave', 'Generates a new ApiKey for the user', GenerateApiKeyCommand);
