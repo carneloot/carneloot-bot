@@ -18,5 +18,5 @@ export default (req: VercelRequest, res: VercelResponse) => {
         return;
     }
 
-    webhookCallback(bot, 'http')(req, res);
+    webhookCallback(bot, 'https')(req, res);
 }
