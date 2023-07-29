@@ -2,10 +2,7 @@ import { Module } from '../../common/module/module';
 import { SignupCommand } from './signup.command';
 import { GenerateApiKeyCommand, apiKeyConfirmationMenu } from './generate-api-key.command';
 
-export const AuthModule = new Module(
-    '',
-    'Operações de autenticação'
-);
+export const AuthModule = new Module('', 'Operações de autenticação');
 
 AuthModule.setCommand('cadastrar', 'Cadastra a sua conta no banco de dados', SignupCommand);
 
