@@ -16,13 +16,12 @@ export const sendNotification = async (bot: Bot, params: NotifyParams) => {
 	}
 
 	const owner = await getUserById(notification.ownerId);
-	const usersToNotify = await Promise.all(
-		notification.usersToNotify.split(',').map((userId) => getUserById(parseInt(userId, 10)))
-	);
+	const usersToNotifyIds = notification.usersToNotify?.split(',').map(parseInt) ?? [];
+	const usersToNotify = await Promise.all(usersToNotifyIds.map(getUserById));
 
 	const results = await Promise.allSettled([
-		bot.api.sendMessage(owner.telegramID, notification.message),
-		...usersToNotify.map((user) => bot.api.sendMessage(user.telegramID, notification.message))
+		bot.api.sendMessage(owner.telegramID!, notification.message),
+		...usersToNotify.map((user) => bot.api.sendMessage(user.telegramID!, notification.message))
 	]);
 
 	const errors = results.filter(
