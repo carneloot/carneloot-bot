@@ -1,13 +1,19 @@
 import 'dotenv/config';
 
-import { createBot, onStart } from './bot';
+import { createBot } from './bot';
 import { isDebug } from './common/utils/is-debug';
 
-if (isDebug()) {
-	const bot = createBot();
+async function main() {
+	if (!isDebug()) {
+		return;
+	}
+
+	const { bot, setCommands } = createBot();
 
 	bot.catch(console.error);
-	bot.start({
-		onStart: () => onStart(bot)
+	await bot.start({
+		onStart: async () => {
+			await setCommands();
+		}
 	});
 }

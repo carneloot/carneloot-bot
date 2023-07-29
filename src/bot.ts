@@ -34,25 +34,25 @@ export const createBot = () => {
 		ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg')
 	);
 
-	return bot;
-};
-
-export const setWebhook = (bot: Bot, url: string) => bot.api.setWebhook(url);
-
-export const onStart = async (bot: Bot) => {
-	await bot.api.setMyCommands([
-		{
-			command: getCommandForHelp(PingCommand),
-			description: getDescriptionForHelp(PingCommand)
-		},
-		{
-			command: getCommandForHelp(WhatsCommand),
-			description: getDescriptionForHelp(WhatsCommand)
-		},
-		{
-			command: getCommandForHelp(CafeCommand),
-			description: getDescriptionForHelp(CafeCommand)
-		},
-		...Module.getCommandList()
-	]);
+	return {
+		bot,
+		setWebhook: (url: string) => bot.api.setWebhook(url),
+		setCommands: async () => {
+			await bot.api.setMyCommands([
+				{
+					command: getCommandForHelp(PingCommand),
+					description: getDescriptionForHelp(PingCommand)
+				},
+				{
+					command: getCommandForHelp(WhatsCommand),
+					description: getDescriptionForHelp(WhatsCommand)
+				},
+				{
+					command: getCommandForHelp(CafeCommand),
+					description: getDescriptionForHelp(CafeCommand)
+				},
+				...Module.getCommandList()
+			]);
+		}
+	};
 };

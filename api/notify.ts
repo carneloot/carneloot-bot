@@ -15,7 +15,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
 	const { data: body } = parsedBodResult;
 
-	const bot = createBot();
+	const { bot } = createBot();
 
 	try {
 		await sendNotification(bot, body);

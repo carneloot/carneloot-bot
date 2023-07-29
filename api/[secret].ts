@@ -3,8 +3,6 @@ import { webhookCallback } from 'grammy';
 
 import { createBot } from '../src/bot';
 
-const bot = createBot();
-
 const { BOT_TOKEN } = process.env;
 
 export default (req: VercelRequest, res: VercelResponse) => {
@@ -15,6 +13,8 @@ export default (req: VercelRequest, res: VercelResponse) => {
 		});
 		return;
 	}
+
+	const { bot } = createBot();
 
 	webhookCallback(bot, 'https')(req, res);
 };
