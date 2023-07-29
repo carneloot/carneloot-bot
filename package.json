@@ -6,7 +6,6 @@
 	"author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
 	"license": "MIT",
 	"scripts": {
-		"vercel-build": "prisma generate && prisma migrate deploy",
 		"build:dev": "tsc",
 		"dev": "nodemon",
 		"start": "DEBUG='grammy*' ts-node src/index.ts",
@@ -26,7 +25,6 @@
 	},
 	"dependencies": {
 		"@grammyjs/menu": "^1.2.1",
-		"@prisma/client": "5.0.0",
 		"axios": "^1.4.0",
 		"google-auth-library": "^9.0.0",
 		"google-spreadsheet": "^4.0.2",
