@@ -97,9 +97,9 @@ const getUserFromApiKey = async (apiKey: string) => {
 const getUserById = async (id: number) => {
 	const sheet = await getUserSheet();
 
-	const [row] = await sheet.getRows({ limit: 1, offset: id - 1 });
+	const [row] = await sheet.getRows({ limit: 1, offset: id - 2 });
 
-	return row.toObject();
+	return row?.toObject();
 };
 
 export { createUser, getUserByTelegramID, generateApiKeyForUser, getUserFromApiKey, getUserById };

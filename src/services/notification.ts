@@ -28,13 +28,7 @@ const getNotificationRow = async (fn: GetNotificationCompareFunction) => {
 	const sheet = await getNotificationSheet();
 
 	const rows = await sheet.getRows<Notification>();
-	const row = rows.find(fn);
-
-	if (!row) {
-		throw new Error('User not found');
-	}
-
-	return row;
+	return rows.find(fn);
 };
 
 const getNotificationByOwnerAndKeyword = async (
@@ -45,7 +39,7 @@ const getNotificationByOwnerAndKeyword = async (
 		(row) => row.get('ownerId') === ownerId && row.get('keyword') === keyword
 	);
 
-	return row.toObject() as Notification;
+	return row?.toObject() as Notification;
 };
 
 export { getNotificationByOwnerAndKeyword };
