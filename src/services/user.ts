@@ -57,14 +57,8 @@ const createUser = async (user: TelegramUser) => {
 };
 
 const getUserRow = async (fn: GetUserRowCompareFn) => {
-	console.log('getting sheet');
 	const sheet = await getUserSheet();
-
-	console.log('getting rows');
 	const rows = await sheet.getRows<User>();
-
-	console.log(rows.length);
-
 	return rows.find(fn);
 };
 

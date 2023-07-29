@@ -20,10 +20,7 @@ export const apiKeyConfirmationMenu = new Menu('api-key-confirmation')
 	});
 
 export const GenerateApiKeyCommand: MiddlewareFn = async (ctx) => {
-	console.log('getting user');
 	const user = await getUserByTelegramID(ctx.from!.id);
-
-	console.log(user);
 
 	if (!user) {
 		await ctx.reply('Please sign up first using /signup');
