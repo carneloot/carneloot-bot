@@ -8,7 +8,7 @@ type Notification = {
 	message: string;
 	ownerId: number;
 	/** ID Array */
-	usersToNotify: string;
+	usersToNotify?: string;
 };
 
 type GetNotificationCompareFunction = (row: GoogleSpreadsheetRow<Notification>) => boolean;
