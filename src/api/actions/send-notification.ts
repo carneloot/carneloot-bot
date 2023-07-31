@@ -2,6 +2,7 @@ import { Bot } from 'grammy';
 import { NotifyParams } from '../types/notify-params';
 import { getUserFromApiKey } from '../../lib/user';
 import { getNotificationByOwnerAndKeyword } from '../../lib/notification';
+import { Context } from '../../common/types/context';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {
 	if (!variables) {
@@ -13,7 +14,7 @@ function parseMessage(message: string, variables: NotifyParams['variables']) {
 	}, message);
 }
 
-export const sendNotification = async (bot: Bot, params: NotifyParams) => {
+export const sendNotification = async (bot: Bot<Context>, params: NotifyParams) => {
 	const user = await getUserFromApiKey(params.apiKey);
 	if (!user) {
 		throw new Error(`User not found: "${params.apiKey}"`);
