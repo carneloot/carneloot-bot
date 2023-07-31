@@ -1,8 +1,9 @@
 import { Bot } from 'grammy';
 import { NotifyParams } from '../types/notify-params';
-import { getUserFromApiKey } from '../../lib/user';
-import { getNotificationByOwnerAndKeyword } from '../../lib/notification';
+import { getUserFromApiKey, User } from '../../lib/user';
+import { getNotificationByOwnerAndKeyword, Notification } from '../../lib/notification';
 import { Context } from '../../common/types/context';
+import { createNotificationHistory } from '../../lib/notification-history';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {
 	if (!variables) {
@@ -12,6 +13,27 @@ function parseMessage(message: string, variables: NotifyParams['variables']) {
 	return Object.entries(variables).reduce((acc, [key, value]) => {
 		return acc.replace(`{{${key}}}`, value.toString());
 	}, message);
+}
+
+interface SendNotificationAndLog {
+	bot: Bot<Context>;
+	user: User;
+	notification: Notification;
+	messageText: string;
+}
+
+async function sendNotificationAndLog({
+	bot,
+	user,
+	notification,
+	messageText
+}: SendNotificationAndLog) {
+	const message = await bot.api.sendMessage(user.telegramID, messageText);
+	await createNotificationHistory({
+		notificationID: notification.id,
+		userID: user.id,
+		messageID: message.message_id
+	});
 }
 
 export const sendNotification = async (bot: Bot<Context>, params: NotifyParams) => {
@@ -32,8 +54,20 @@ export const sendNotification = async (bot: Bot<Context>, params: NotifyParams) 
 	const message = parseMessage(notification.message, params.variables);
 
 	const results = await Promise.allSettled([
-		bot.api.sendMessage(user.telegramID!, message),
-		...usersToNotify.map((user) => bot.api.sendMessage(user.telegramID!, message))
+		sendNotificationAndLog({
+			bot: bot,
+			user: user,
+			notification: notification,
+			messageText: message
+		}),
+		...usersToNotify.map((user) =>
+			sendNotificationAndLog({
+				bot: bot,
+				user: user,
+				notification: notification,
+				messageText: message
+			})
+		)
 	]);
 
 	const errors = results.filter(

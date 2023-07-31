@@ -72,11 +72,11 @@ export const notificationHistoryTable = sqliteTable(
 		userID: text('user_id')
 			.notNull()
 			.references(() => usersTable.id),
-		sentAt: integer('sent_at', { mode: 'timestamp' }).notNull(),
-		chatId: text('chat_id').notNull()
+		messageID: integer('message_id').notNull(),
+		sentAt: integer('sent_at', { mode: 'timestamp' }).notNull()
 	},
 	(self) => ({
-		chatIdIdx: uniqueIndex('chatIdIdx').on(self.chatId),
+		messageIdIdx: uniqueIndex('messageIdIdx').on(self.messageID),
 		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.userID)
 	})
 );
