@@ -5,6 +5,7 @@ import { Module } from './common/module/module';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { AuthModule } from './modules/auth/auth-module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
@@ -30,6 +31,7 @@ export const createBot = () => {
 	bot.command(CafeCommand.command!, CafeCommand);
 
 	bot.use(AuthModule);
+	bot.use(NotificationModule);
 
 	bot.on(':text').hears(/hello/i, (ctx) =>
 		ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg')
