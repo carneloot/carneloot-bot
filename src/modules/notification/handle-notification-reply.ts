@@ -18,7 +18,7 @@ export const handleNotificationReply = (async (ctx) => {
 
 	if (!result) {
 		await ctx.reply(
-			'Não foi possível encontrar a notificação original no histórico. Por favor, resposta a notificação mais recente.'
+			'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
 		);
 		return;
 	}
