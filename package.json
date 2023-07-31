@@ -6,6 +6,7 @@
 	"author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
 	"license": "MIT",
 	"scripts": {
+		"vercel-build": "node scripts/migrate.mjs",
 		"build:dev": "tsc",
 		"dev": "nodemon",
 		"start": "DEBUG='grammy*' ts-node src/index.ts",
