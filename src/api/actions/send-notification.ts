@@ -1,7 +1,7 @@
 import { Bot } from 'grammy';
 import { NotifyParams } from '../types/notify-params';
-import { getNotificationByOwnerAndKeyword } from '../../services/notification';
-import { getUserById, getUserFromApiKey } from '../../services/user';
+import { getUserFromApiKey } from '../../lib/user';
+import { getNotificationByOwnerAndKeyword } from '../../lib/notification';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {
 	if (!variables) {
@@ -19,14 +19,14 @@ export const sendNotification = async (bot: Bot, params: NotifyParams) => {
 		throw new Error(`User not found: "${params.apiKey}"`);
 	}
 
-	const notification = await getNotificationByOwnerAndKeyword(user.id!, params.keyword);
+	const { notification, usersToNotify } = await getNotificationByOwnerAndKeyword(
+		user.id!,
+		params.keyword
+	);
 
 	if (!notification) {
 		throw new Error(`Notification not found: "${params.keyword}"`);
 	}
-
-	const usersToNotifyIds = notification.usersToNotify?.split(',').map(parseInt) ?? [];
-	const usersToNotify = await Promise.all(usersToNotifyIds.map(getUserById));
 
 	const message = parseMessage(notification.message, params.variables);
 

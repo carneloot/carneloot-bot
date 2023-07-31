@@ -2,7 +2,6 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { webhookCallback } from 'grammy';
 
 import { createBot } from '../src/bot';
-import { getSpreadsheet } from '../src/services/sheets';
 
 const { BOT_TOKEN } = process.env;
 
@@ -15,7 +14,6 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 		return;
 	}
 
-	await getSpreadsheet();
 	const { bot } = createBot();
 
 	webhookCallback(bot, 'https')(req, res);

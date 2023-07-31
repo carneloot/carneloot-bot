@@ -1,14 +1,15 @@
-import { Context, MiddlewareFn } from 'grammy';
+import { MiddlewareFn } from 'grammy';
 import { Menu } from '@grammyjs/menu';
-import { generateApiKeyForUser, getUserByTelegramID } from '../../services/user';
+import { Context } from '../../common/types/context';
+import { generateApiKeyForUser, userHasApiKey } from '../../lib/user';
 
 async function generateApiKeyAndSend(ctx: Context) {
-	const newApiKey = await generateApiKeyForUser(ctx.from!.id);
+	const newApiKey = await generateApiKeyForUser(ctx.user!.id);
 
-	await ctx.reply(`Here you go: <pre>${newApiKey}</pre>`, { parse_mode: 'HTML' });
+	await ctx.reply(`Aqui está: <pre>${newApiKey}</pre>`, { parse_mode: 'HTML' });
 }
 
-export const apiKeyConfirmationMenu = new Menu('api-key-confirmation')
+export const apiKeyConfirmationMenu = new Menu<Context>('api-key-confirmation')
 	.text('Yes', async (ctx) => {
 		await generateApiKeyAndSend(ctx);
 
@@ -19,21 +20,21 @@ export const apiKeyConfirmationMenu = new Menu('api-key-confirmation')
 		ctx.menu.close();
 	});
 
-export const GenerateApiKeyCommand: MiddlewareFn = async (ctx) => {
-	const user = await getUserByTelegramID(ctx.from!.id);
-
-	if (!user) {
-		await ctx.reply('Please sign up first using /signup');
+export const GenerateApiKeyCommand = (async (ctx) => {
+	if (!ctx.user) {
+		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 		return;
 	}
 
-	if (!user.apiKey) {
+	const hasApiKey = await userHasApiKey(ctx.user.id);
+
+	if (!hasApiKey) {
 		await generateApiKeyAndSend(ctx);
 		return;
 	}
 
 	await ctx.reply(
-		'You already have an api key. Do you want to regenerate it? The other api key will stop working.',
+		'Você já possui uma API Key. Deseja gerar uma nova? A outra chave será invalidada.',
 		{ reply_markup: apiKeyConfirmationMenu }
 	);
-};
+}) satisfies MiddlewareFn<Context>;

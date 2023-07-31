@@ -10,6 +10,7 @@ import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
 import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
+import { Context } from './common/types/context';
 
 const { BOT_TOKEN } = process.env;
 
@@ -18,7 +19,7 @@ export const createBot = () => {
 		throw new Error('Missing BOT_TOKEN');
 	}
 
-	const bot = new Bot(BOT_TOKEN);
+	const bot = new Bot<Context>(BOT_TOKEN);
 
 	bot.use(GenericErrorMiddleware);
 
