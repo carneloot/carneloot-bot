@@ -8,4 +8,4 @@ const sqlite = createClient({
 	authToken: process.env.DATABASE_AUTH_TOKEN
 });
 const db = drizzle(sqlite);
-migrate(db, { migrationsFolder: './ migrations' });
+migrate(db, { migrationsFolder: './migrations' });
