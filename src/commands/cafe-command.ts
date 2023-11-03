@@ -27,8 +27,8 @@ export const CafeCommand: Command<'cafe'> = {
 			ctx.match.toString().match(/([0-9.,]+\w*)(?: +([0-9.,]+[\w\/]*))?/) ?? [];
 
 		const waterAmountInVolume = _waterAmount
-			? _waterAmount.match(/^\d+$/)
-				? Qty(Number(_waterAmount), 'ml')
+			? _waterAmount.match(/^[0-9.,]+$/)
+				? Qty(Number(_waterAmount.replaceAll(',', '.')), 'ml')
 				: Qty(_waterAmount)
 			: null;
 
@@ -42,8 +42,8 @@ export const CafeCommand: Command<'cafe'> = {
 		}
 
 		const coffeeWaterRatio = _coffeeWaterRatio
-			? _coffeeWaterRatio.match(/^\d+$/)
-				? Qty(Number(_coffeeWaterRatio), 'g/L')
+			? _coffeeWaterRatio.match(/^[0-9.,]+$/)
+				? Qty(Number(_coffeeWaterRatio.replaceAll(',', '.')), 'g/L')
 				: Qty(_coffeeWaterRatio)
 			: COFFEE_WATER_RATIO;
 
