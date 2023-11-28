@@ -1,13 +1,13 @@
 import type { User as TelegramUser } from '@grammyjs/types';
 import { createId } from '@paralleldrive/cuid2';
 
-import { eq, InferModel } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { hashString } from '../common/utils/hash-string';
 import { apiKeysTable, usersTable } from '../lib/database/schema';
 import { db } from '../lib/database/db';
 
-type User = InferModel<typeof usersTable, 'select'>;
+type User = typeof usersTable.$inferSelect;
 
 async function createUser(user: TelegramUser) {
 	await db
@@ -74,14 +74,14 @@ async function generateApiKeyForUser(userID: User['id']) {
 
 async function getUserFromApiKey(apiKey: string) {
 	const hashedApiKey = hashString(apiKey);
-	const { user } = await db
+	const result = await db
 		.select({ user: usersTable })
 		.from(usersTable)
 		.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
 		.where(eq(apiKeysTable.key, hashedApiKey))
 		.get();
 
-	return user;
+	return result?.user ?? null;
 }
 
 export {
