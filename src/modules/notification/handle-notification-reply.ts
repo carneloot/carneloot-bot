@@ -27,15 +27,15 @@ export const handleNotificationReply = (async (ctx) => {
 		return;
 	}
 
-	const { messageToReply, ownerTelegramId } = notification;
+	const { messageToReply, ownerTelegramId, keyword } = notification;
+
+	if (keyword === 'BartoFood') {
+		return await handleBartoFoodReply(notification)(ctx);
+	}
 
 	if (ctx.user.telegramID === ownerTelegramId) {
 		await ctx.reply('Você não pode responder a sua própria notificação.');
 		return;
-	}
-
-	if (notification.keyword === 'BartoFood') {
-		return await handleBartoFoodReply(notification)(ctx);
 	}
 
 	const userDisplayInformation = ctx.message.from.username
