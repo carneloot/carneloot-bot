@@ -2,6 +2,7 @@ import { MiddlewareFn } from 'grammy';
 
 import { Context } from '../../common/types/context';
 import { getNotificationFromHistory } from '../../lib/notification';
+import { handleBartoFoodReply } from './handle-barto-food-reply';
 
 export const handleNotificationReply = (async (ctx) => {
 	if (!ctx.message?.reply_to_message) {
@@ -14,20 +15,27 @@ export const handleNotificationReply = (async (ctx) => {
 
 	const { reply_to_message: notificationMessage } = ctx.message;
 
-	const result = await getNotificationFromHistory(notificationMessage.message_id, ctx.user.id);
+	const notification = await getNotificationFromHistory(
+		notificationMessage.message_id,
+		ctx.user.id
+	);
 
-	if (!result) {
+	if (!notification) {
 		await ctx.reply(
 			'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
 		);
 		return;
 	}
 
-	const { messageToReply, ownerTelegramId } = result;
+	const { messageToReply, ownerTelegramId } = notification;
 
 	if (ctx.user.telegramID === ownerTelegramId) {
 		await ctx.reply('Você não pode responder a sua própria notificação.');
 		return;
+	}
+
+	if (notification.keyword === 'BartoFood') {
+		return await handleBartoFoodReply(notification)(ctx);
 	}
 
 	const userDisplayInformation = ctx.message.from.username

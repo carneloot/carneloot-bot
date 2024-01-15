@@ -72,7 +72,8 @@ async function getNotificationFromHistory(messageID: number, userID: string) {
 	const result = await db
 		.select({
 			messageToReply: ownerHistory.messageID,
-			ownerTelegramId: usersTable.telegramID
+			ownerTelegramId: usersTable.telegramID,
+			keyword: notificationsTable.keyword
 		})
 		.from(notificationHistoryTable)
 		.innerJoin(
