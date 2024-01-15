@@ -19,7 +19,7 @@ export const WhatsCommand: Command<'whats'> = {
 			return;
 		}
 
-		const [_, rawNumber, message] = ctx.match.toString().match(phoneRegex) ?? [];
+		const [, rawNumber, message] = ctx.match.toString().match(phoneRegex) ?? [];
 
 		if (!rawNumber) {
 			await sendMissingNumberMessage(ctx);
