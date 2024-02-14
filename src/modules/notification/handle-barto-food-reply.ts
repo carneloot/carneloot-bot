@@ -1,11 +1,11 @@
-import { MiddlewareFn } from 'grammy';
+import { Reactions } from '@grammyjs/emoji';
 
 import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
 import { getNotificationFromHistory } from '../../lib/notification';
 
-type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & {};
+type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & object;
 
 const WEIGHT_REGEX = /(\d+(\.\d+)?)(\s?)(mg|g|kg)\b/i;
 
@@ -32,4 +32,6 @@ export const handleBartoFoodReply = async (ctx: Context, notification: Notificat
 	await ctx.api.sendMessage(notification.ownerTelegramId, message, {
 		reply_to_message_id: notification.messageToReply
 	});
+
+	await ctx.react(Reactions.thumbs_up);
 };

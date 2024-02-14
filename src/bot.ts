@@ -12,6 +12,7 @@ import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
 import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
 import { Context } from './common/types/context';
+import { emojiParser } from '@grammyjs/emoji';
 
 const { BOT_TOKEN } = process.env;
 
@@ -21,6 +22,8 @@ export const createBot = () => {
 	}
 
 	const bot = new Bot<Context>(BOT_TOKEN);
+
+	bot.use(emojiParser());
 
 	bot.use(GenericErrorMiddleware);
 
