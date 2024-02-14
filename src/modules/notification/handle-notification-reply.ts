@@ -30,7 +30,7 @@ export const handleNotificationReply = (async (ctx) => {
 	const { messageToReply, ownerTelegramId, keyword } = notification;
 
 	if (keyword === 'BartoFood') {
-		return await handleBartoFoodReply(notification)(ctx);
+		return await handleBartoFoodReply(ctx, notification);
 	}
 
 	if (ctx.user.telegramID === ownerTelegramId) {
