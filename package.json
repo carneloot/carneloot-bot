@@ -10,7 +10,8 @@
     "build:dev": "tsc",
     "dev": "nodemon",
     "start": "cross-env DEBUG='grammy*' ts-node src/index.ts",
-    "format": "prettier --plugin-search-dir . --write ."
+    "format": "prettier --plugin-search-dir . --write .",
+    "set-webhook": "curl $BOT_URL/api/set-webhook"
   },
   "devDependencies": {
     "@total-typescript/ts-reset": "^0.5.1",
