@@ -9,3 +9,5 @@ const sqlite = createClient({
 });
 const db = drizzle(sqlite);
 migrate(db, { migrationsFolder: './migrations' });
+
+console.log('Ran successfully');

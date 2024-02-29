@@ -6,7 +6,7 @@
   "author": "Matheus Carnelutt (matheuschafrao@gmail.com)",
   "license": "MIT",
   "scripts": {
-    "vercel-build": "bun run scripts/migrate.mjs",
+    "vercel-build": "bun run ./scripts/migrate.mjs",
     "build:dev": "tsc",
     "dev": "nodemon",
     "start": "cross-env DEBUG='grammy*' ts-node src/index.ts",
