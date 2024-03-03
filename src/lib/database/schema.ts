@@ -1,4 +1,4 @@
-import { blob, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
 type UserID = string & { __userID: true };
@@ -30,7 +30,8 @@ export const petsTable = sqliteTable(
 			.$type<UserID>()
 	},
 	(self) => ({
-		petNameIdx: uniqueIndex('petNameIdx').on(self.name, self.ownerID)
+		petNameIdx: uniqueIndex('petNameIdx').on(self.name, self.ownerID),
+		petOwnerIdx: index('petOwnerIdx').on(self.ownerID)
 	})
 );
 
@@ -54,7 +55,9 @@ export const petCarersTable = sqliteTable(
 		status: text('status').$type<PetCarerStatus>().notNull().default('pending')
 	},
 	(self) => ({
-		petCarerIdx: uniqueIndex('petCarerIdx').on(self.petID, self.carerID)
+		petCarerIdx: uniqueIndex('petCarerIdx').on(self.petID, self.carerID),
+		petIdIdx: index('petIdIdx').on(self.petID),
+		carerIdIdx: index('carerIdIdx').on(self.carerID)
 	})
 );
 
