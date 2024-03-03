@@ -1,16 +1,18 @@
-import { and, eq, InferModel } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
+
+import { and, eq } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/sqlite-core';
 
 import {
 	notificationHistoryTable,
 	notificationsTable,
 	usersTable,
 	usersToNotifyTable
-} from '../lib/database/schema';
-import { db } from '../lib/database/db';
-import { createId } from '@paralleldrive/cuid2';
-import { alias } from 'drizzle-orm/sqlite-core';
+} from './database/schema';
+import { db } from './database/db';
 
-type Notification = InferModel<typeof notificationsTable, 'select'>;
+type Notification = typeof notificationsTable.$inferSelect;
+type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
 async function getNotificationByOwnerAndKeyword(
 	ownerId: Notification['ownerID'],
@@ -37,9 +39,9 @@ async function getNotificationByOwnerAndKeyword(
 }
 
 type CreateNotificationHistory = {
-	messageID: number;
-	notificationID: string;
-	userID: string;
+	messageID: NotificationHistory['messageID'];
+	notificationID: NotificationHistory['notificationID'];
+	userID: NotificationHistory['userID'];
 };
 
 async function createNotificationHistory({
@@ -50,7 +52,7 @@ async function createNotificationHistory({
 	await db
 		.insert(notificationHistoryTable)
 		.values({
-			id: createId(),
+			id: createId() as NotificationHistory['id'],
 			messageID,
 			notificationID,
 			userID,
@@ -66,7 +68,10 @@ async function createNotificationHistory({
 		.run();
 }
 
-async function getNotificationFromHistory(messageID: number, userID: string) {
+async function getNotificationFromHistory(
+	messageID: NotificationHistory['messageID'],
+	userID: NotificationHistory['userID']
+) {
 	const ownerHistory = alias(notificationHistoryTable, 'ownerHistory');
 
 	const result = await db

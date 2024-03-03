@@ -4,16 +4,17 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 
 import { hashString } from '../common/utils/hash-string';
-import { apiKeysTable, usersTable } from '../lib/database/schema';
-import { db } from '../lib/database/db';
+import { apiKeysTable, usersTable } from './database/schema';
+import { db } from './database/db';
 
 type User = typeof usersTable.$inferSelect;
+type ApiKey = typeof apiKeysTable.$inferSelect;
 
 async function createUser(user: TelegramUser) {
 	await db
 		.insert(usersTable)
 		.values({
-			id: createId(),
+			id: createId() as User['id'],
 			telegramID: user.id.toString(),
 			firstName: user.first_name,
 			lastName: user.last_name,
@@ -38,7 +39,7 @@ async function getUserByTelegramID(telegramID: TelegramUser['id']) {
 		.get();
 }
 
-async function userHasApiKey(userID: string) {
+async function userHasApiKey(userID: ApiKey['userID']) {
 	const apiKey = await db
 		.select({ id: apiKeysTable.id })
 		.from(apiKeysTable)
@@ -55,7 +56,7 @@ async function generateApiKeyForUser(userID: User['id']) {
 	await db
 		.insert(apiKeysTable)
 		.values({
-			id: createId(),
+			id: createId() as ApiKey['id'],
 			userID,
 			key: hashedApiKey,
 			createdAt: new Date()
