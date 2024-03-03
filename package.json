@@ -9,7 +9,7 @@
     "db:migrate": "bun run scripts/migrate.mjs",
     "build:dev": "tsc",
     "dev": "nodemon",
-    "start": "cross-env DEBUG='grammy*' ts-node src/index.ts",
+    "start": "bunx ts-node src/index.ts",
     "format": "prettier --plugin-search-dir . --write .",
     "set-webhook": "curl $BOT_URL/api/set-webhook"
   },
