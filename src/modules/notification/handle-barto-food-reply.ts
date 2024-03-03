@@ -3,11 +3,10 @@ import { Reactions } from '@grammyjs/emoji';
 import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
+import { WEIGHT_REGEX } from '../../common/constants';
 import { getNotificationFromHistory } from '../../lib/notification';
 
 type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & object;
-
-const WEIGHT_REGEX = /(\d+(\.\d+)?)(\s?)(mg|g|kg)\b/i;
 
 export const handleBartoFoodReply = async (ctx: Context, notification: Notification) => {
 	if (!ctx.message) {

@@ -14,7 +14,7 @@ import { RemoveCarerCommand, removeCarerConversation } from './remove-carer.comm
 import { ListCarersCommand, listCarersConversation } from './list-carers.command';
 import { StopCaringCommand, stopCaringConversation } from './stop-caring.command';
 
-export const PetModule = new Module<Context>('', 'Operações de rastreamento de ração');
+export const PetModule = new Module<Context>('', 'Opções de gerenciamento de pet');
 
 // Add pet
 PetModule.use(createConversation(addPetConversation, 'addPet'));

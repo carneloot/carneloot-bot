@@ -11,6 +11,7 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { AuthModule } from './modules/auth/auth-module';
 import { PetModule } from './modules/pet/pet.module';
+import { PetFoodModule } from './modules/pet-food/pet-food.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
 import { createSessionStorage } from './lib/session';
@@ -18,7 +19,6 @@ import { createSessionStorage } from './lib/session';
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
-import { SessionData } from './common/types/session';
 
 const { BOT_TOKEN } = process.env;
 
@@ -33,12 +33,6 @@ export const createBot = () => {
 	bot.use(
 		session({
 			type: 'multi',
-			pets: {
-				initial: () => ({
-					current: undefined
-				}),
-				storage: createSessionStorage<SessionData['pets']>('pets')
-			},
 			conversation: {
 				storage: createSessionStorage<ConversationSessionData>('conversation')
 			}
@@ -50,7 +44,7 @@ export const createBot = () => {
 	bot.command('cancelar', async (ctx) => {
 		await ctx.conversation.exit();
 
-		await ctx.reply('Operação cancelada');
+		await ctx.reply('Operação cancelada', { reply_markup: { remove_keyboard: true } });
 	});
 
 	bot.use(emojiParser());
@@ -65,6 +59,7 @@ export const createBot = () => {
 
 	bot.use(AuthModule);
 	bot.use(PetModule);
+	bot.use(PetFoodModule);
 	bot.use(NotificationModule);
 
 	bot.on(':text').hears(/hello/i, (ctx) =>

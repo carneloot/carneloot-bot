@@ -1,4 +1,12 @@
-import { blob, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+	blob,
+	index,
+	integer,
+	real,
+	sqliteTable,
+	text,
+	uniqueIndex
+} from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
 type UserID = string & { __userID: true };
@@ -18,7 +26,7 @@ export const usersTable = sqliteTable(
 	})
 );
 
-type PetID = string & { __petID: true };
+export type PetID = string & { __petID: true };
 export const petsTable = sqliteTable(
 	'pets',
 	{
@@ -58,6 +66,45 @@ export const petCarersTable = sqliteTable(
 		petCarerIdx: uniqueIndex('petCarerIdx').on(self.petID, self.carerID),
 		petIdIdx: index('petIdIdx').on(self.petID),
 		carerIdIdx: index('carerIdIdx').on(self.carerID)
+	})
+);
+
+export type PetFoodID = string & { __petFoodID: true };
+
+export const petFoodTable = sqliteTable(
+	'pet_food',
+	{
+		id: text('id').primaryKey().$type<PetFoodID>(),
+		petID: text('pet_id')
+			.notNull()
+			.references(() => petsTable.id)
+			.$type<PetID>(),
+		userID: text('user_id')
+			.notNull()
+			.references(() => usersTable.id)
+			.$type<UserID>(),
+		quantity: real('quantity').notNull(),
+		time: integer('time', { mode: 'timestamp' }).notNull()
+	},
+	(self) => ({
+		petFoodPetIdIdx: index('petFoodPetIdIdx').on(self.petID),
+		petFoodUserIDIdx: index('petFoodUserIDIdx').on(self.userID),
+		petFoodCreatedAtIdx: index('petFoodCreatedAtIdx').on(self.time)
+	})
+);
+
+export type ConfigID = string & { __configID: true };
+
+export const configsTable = sqliteTable(
+	'configs',
+	{
+		id: text('id').primaryKey().$type<ConfigID>(),
+		context: text('context').notNull(),
+		key: text('key'),
+		value: blob('value', { mode: 'json' }).notNull()
+	},
+	(self) => ({
+		configUniqIdx: uniqueIndex('configUniqIdx').on(self.context, self.key)
 	})
 );
 
