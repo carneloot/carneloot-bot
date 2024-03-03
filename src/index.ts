@@ -13,7 +13,7 @@ async function main() {
 	bot.catch(console.error);
 	await bot.start({
 		onStart: setCommands,
-		drop_pending_updates: true,
+		drop_pending_updates: true
 	});
 }
 main();

@@ -42,7 +42,9 @@ export const petInvitesConversation = (async (conversation, ctx) => {
 
 		await ctx.api.sendMessage(
 			petOwner.telegramID,
-			`O cuidador ${carerDisplay} ${answer ? 'aceitou' : 'recusou'} o convite para cuidar do pet ${invite.petName}`
+			`O cuidador ${carerDisplay} ${
+				answer ? 'aceitou' : 'recusou'
+			} o convite para cuidar do pet ${invite.petName}`
 		);
 	}
 }) satisfies ConversationFn<Context>;

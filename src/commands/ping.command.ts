@@ -9,7 +9,7 @@ export const PingCommand: Command<'ping'> = {
 	command: 'ping',
 	description: 'Ponga de volta',
 	middleware: () => async (ctx) => {
-		const duration = ctx.match ? ms(ctx.match?.toString()) : null
+		const duration = ctx.match ? ms(ctx.match?.toString()) : null;
 
 		if (duration && duration <= MAX_DURATION) {
 			await sleep(duration);
