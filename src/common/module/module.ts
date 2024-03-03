@@ -1,7 +1,8 @@
 import { Composer } from 'grammy';
 import { Context } from 'grammy/out/context';
-import { MaybeArray } from '../types/maybe-array';
 import { Middleware } from 'grammy/out/composer';
+
+import { MaybeArray } from '../types/maybe-array';
 import { Command } from '../types/command';
 
 export class Module<C extends Context> extends Composer<C> {
@@ -18,6 +19,7 @@ export class Module<C extends Context> extends Composer<C> {
 	static getCommandList() {
 		return Module.COMMANDS;
 	}
+
 	setCommand<S extends string>(
 		command: MaybeArray<S>,
 		description: string,

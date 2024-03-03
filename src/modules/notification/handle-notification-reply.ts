@@ -3,10 +3,11 @@ import { MiddlewareFn } from 'grammy';
 import { Context } from '../../common/types/context';
 import { getNotificationFromHistory } from '../../lib/notification';
 import { handleBartoFoodReply } from './handle-barto-food-reply';
+import { getUserDisplay } from '../../common/utils/get-user-display';
 
-export const handleNotificationReply = (async (ctx) => {
+export const handleNotificationReply = (async (ctx, next) => {
 	if (!ctx.message?.reply_to_message) {
-		return;
+		return next();
 	}
 
 	if (!ctx.user) {
@@ -38,9 +39,7 @@ export const handleNotificationReply = (async (ctx) => {
 		return;
 	}
 
-	const userDisplayInformation = ctx.message.from.username
-		? `@${ctx.message.from.username}`
-		: `${ctx.message.from.first_name} ${ctx.message.from.last_name}`;
+	const userDisplayInformation = getUserDisplay(ctx.message.from);
 
 	const message = `${userDisplayInformation}: ${ctx.message.text}`;
 	await ctx.api.sendMessage(ownerTelegramId, message, { reply_to_message_id: messageToReply });
