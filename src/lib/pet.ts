@@ -57,6 +57,14 @@ export const getPetCarers = (petID: PetCarer['petID']) => {
 		.all();
 };
 
+export const getPetFromNameAndOwner = (petName: Pet['name'], ownerID: Pet['ownerID']) => {
+	return db
+		.select()
+		.from(petsTable)
+		.where(and(eq(petsTable.name, petName), eq(petsTable.ownerID, ownerID)))
+		.get();
+};
+
 export const isUserCarer = (petID: PetCarer['petID'], carerID: PetCarer['carerID']) => {
 	return db
 		.select()

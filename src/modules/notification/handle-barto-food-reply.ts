@@ -1,10 +1,13 @@
 import { Reactions } from '@grammyjs/emoji';
 
+import { DateTime } from 'luxon';
 import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
 import { WEIGHT_REGEX } from '../../common/constants';
 import { getNotificationFromHistory } from '../../lib/notification';
+import { getPetFromNameAndOwner } from '../../lib/pet';
+import { addPetFood } from '../../lib/pet-food';
 
 type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & object;
 
@@ -27,6 +30,16 @@ export const handleBartoFoodReply = async (ctx: Context, notification: Notificat
 	const weight = Math.floor(weightQty.to('g').scalar);
 
 	const message = `BARTO_FOOD:${weight}`;
+
+	const pet = await getPetFromNameAndOwner('Bartô', notification.ownerID);
+	if (pet) {
+		await addPetFood({
+			userID: ctx.user!.id,
+			petID: pet.id,
+			quantity: weight,
+			time: DateTime.fromSeconds(ctx.message.date).toJSDate()
+		});
+	}
 
 	await ctx.api.sendMessage(notification.ownerTelegramId, message, {
 		reply_to_message_id: notification.messageToReply

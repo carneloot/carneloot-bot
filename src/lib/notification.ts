@@ -78,6 +78,7 @@ async function getNotificationFromHistory(
 		.select({
 			messageToReply: ownerHistory.messageID,
 			ownerTelegramId: usersTable.telegramID,
+			ownerID: usersTable.id,
 			keyword: notificationsTable.keyword
 		})
 		.from(notificationHistoryTable)
