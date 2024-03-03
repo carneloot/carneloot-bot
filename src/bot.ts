@@ -1,27 +1,57 @@
-import { Bot } from 'grammy';
+import { conversations } from '@grammyjs/conversations';
+import { emojiParser } from '@grammyjs/emoji';
+
+import { Bot, session } from 'grammy';
 
 import { Module } from './common/module/module';
+import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
+import { Context } from './common/types/context';
 
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
 
 import { AuthModule } from './modules/auth/auth-module';
+import { PetModule } from './modules/pet/pet.module';
 import { NotificationModule } from './modules/notification/notification.module';
+
+import { createSessionStorage } from './lib/session';
 
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';
 import { CafeCommand } from './commands/cafe-command';
-import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
-import { Context } from './common/types/context';
-import { emojiParser } from '@grammyjs/emoji';
+import { SessionData } from './common/types/session';
 
 const { BOT_TOKEN } = process.env;
 
+type ConversationSessionData = Context['session']['conversation'];
 export const createBot = () => {
 	if (!BOT_TOKEN) {
 		throw new Error('Missing BOT_TOKEN');
 	}
 
 	const bot = new Bot<Context>(BOT_TOKEN);
+
+	bot.use(
+		session({
+			type: 'multi',
+			pets: {
+				initial: () => ({
+					current: undefined
+				}),
+				storage: createSessionStorage<SessionData['pets']>('pets')
+			},
+			conversation: {
+				storage: createSessionStorage<ConversationSessionData>('conversation')
+			}
+		})
+	);
+
+	bot.use(conversations());
+
+	bot.command('cancelar', async (ctx) => {
+		await ctx.conversation.exit();
+
+		await ctx.reply('Operação cancelada');
+	});
 
 	bot.use(emojiParser());
 
@@ -34,6 +64,7 @@ export const createBot = () => {
 	bot.command(CafeCommand.command!, CafeCommand);
 
 	bot.use(AuthModule);
+	bot.use(PetModule);
 	bot.use(NotificationModule);
 
 	bot.on(':text').hears(/hello/i, (ctx) =>
@@ -56,6 +87,10 @@ export const createBot = () => {
 				{
 					command: getCommandForHelp(CafeCommand),
 					description: getDescriptionForHelp(CafeCommand)
+				},
+				{
+					command: 'cancelar',
+					description: 'Cancela a operação atual'
 				},
 				...Module.getCommandList()
 			]);

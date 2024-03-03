@@ -7,10 +7,10 @@ import { hashString } from '../common/utils/hash-string';
 import { apiKeysTable, usersTable } from './database/schema';
 import { db } from './database/db';
 
-type User = typeof usersTable.$inferSelect;
+export type User = typeof usersTable.$inferSelect;
 type ApiKey = typeof apiKeysTable.$inferSelect;
 
-async function createUser(user: TelegramUser) {
+export async function createUser(user: TelegramUser) {
 	await db
 		.insert(usersTable)
 		.values({
@@ -31,7 +31,7 @@ async function createUser(user: TelegramUser) {
 		.run();
 }
 
-async function getUserByTelegramID(telegramID: TelegramUser['id']) {
+export async function getUserByTelegramID(telegramID: TelegramUser['id']) {
 	return db
 		.select()
 		.from(usersTable)
@@ -39,7 +39,15 @@ async function getUserByTelegramID(telegramID: TelegramUser['id']) {
 		.get();
 }
 
-async function userHasApiKey(userID: ApiKey['userID']) {
+export async function getUserByID(id: User['id']) {
+	return db.select().from(usersTable).where(eq(usersTable.id, id)).get();
+}
+
+export async function getUserByUsername(username: NonNullable<User['username']>) {
+	return db.select().from(usersTable).where(eq(usersTable.username, username)).get();
+}
+
+export async function userHasApiKey(userID: ApiKey['userID']) {
 	const apiKey = await db
 		.select({ id: apiKeysTable.id })
 		.from(apiKeysTable)
@@ -49,7 +57,7 @@ async function userHasApiKey(userID: ApiKey['userID']) {
 	return apiKey.rows.length > 0;
 }
 
-async function generateApiKeyForUser(userID: User['id']) {
+export async function generateApiKeyForUser(userID: User['id']) {
 	const apiKey = createId();
 	const hashedApiKey = hashString(apiKey);
 
@@ -73,7 +81,7 @@ async function generateApiKeyForUser(userID: User['id']) {
 	return apiKey;
 }
 
-async function getUserFromApiKey(apiKey: string) {
+export async function getUserFromApiKey(apiKey: string) {
 	const hashedApiKey = hashString(apiKey);
 	const result = await db
 		.select({ user: usersTable })
@@ -84,12 +92,3 @@ async function getUserFromApiKey(apiKey: string) {
 
 	return result?.user ?? null;
 }
-
-export {
-	createUser,
-	getUserByTelegramID,
-	generateApiKeyForUser,
-	getUserFromApiKey,
-	userHasApiKey,
-	User
-};
