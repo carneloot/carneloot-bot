@@ -54,7 +54,7 @@ export const FoodStatusCommand = (async (ctx) => {
 		return;
 	}
 
-	const qtd = Qty(dailyFoodConsumption.total, 'g').toBase();
+	const qtd = Qty(dailyFoodConsumption.total, 'g');
 
 	await ctx.reply(
 		`Hoje já foram colocados ${qtd} de ração para o pet ${dailyFoodConsumption.name}.`
