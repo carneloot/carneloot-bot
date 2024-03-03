@@ -11,7 +11,8 @@ export const getDailyFoodConsumption = async (petID: PetFood['petID'], from: Dat
 		.select({
 			id: petsTable.id,
 			name: petsTable.name,
-			total: sql<number>`sum(${petFoodTable.quantity})`
+			total: sql<number>`sum(${petFoodTable.quantity})`,
+			lastTime: sql<number>`max(${petFoodTable.time})`
 		})
 		.from(petFoodTable)
 		.innerJoin(petsTable, eq(petFoodTable.petID, petsTable.id))

@@ -42,6 +42,7 @@
     "@paralleldrive/cuid2": "^2.2.2",
     "@vvo/tzdb": "^6.125.0",
     "axios": "^1.6.7",
+    "date-fns": "^3.3.1",
     "drizzle-orm": "^0.29.4",
     "grammy": "^1.21.1",
     "js-quantities": "^1.8.0",

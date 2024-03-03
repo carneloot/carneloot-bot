@@ -1,11 +1,14 @@
+import { formatDistanceStrict } from 'date-fns/formatDistanceStrict';
 import { MiddlewareFn } from 'grammy';
 import { DateTime } from 'luxon';
+import { ptBR } from 'date-fns/locale';
+
+import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
 
 import { getDailyFoodConsumption } from '../../lib/pet-food';
 import { getConfig } from '../../lib/config';
-import Qty from 'js-quantities';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -55,8 +58,13 @@ export const FoodStatusCommand = (async (ctx) => {
 	}
 
 	const qtd = Qty(dailyFoodConsumption.total, 'g');
+	const lastTime = DateTime.fromSeconds(dailyFoodConsumption.lastTime);
+	const timeSinceLast = formatDistanceStrict(lastTime.toJSDate(), now.toJSDate(), {
+		addSuffix: true,
+		locale: ptBR
+	});
 
 	await ctx.reply(
-		`Hoje já foram colocados ${qtd} de ração para o pet ${dailyFoodConsumption.name}.`
+		`Hoje já foram colocados ${qtd} de ração para o pet ${dailyFoodConsumption.name}.\nFoi colocado pela última vez ${timeSinceLast}.`
 	);
 }) satisfies MiddlewareFn<Context>;
