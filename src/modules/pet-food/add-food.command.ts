@@ -1,12 +1,14 @@
+import { Reactions } from '@grammyjs/emoji';
+
+import { addMilliseconds, fromUnixTime, subMilliseconds } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
+
+import Qty from 'js-quantities';
+import ms from 'ms';
 
 import { Context } from '../../common/types/context';
 import { getConfig } from '../../lib/config';
-import Qty from 'js-quantities';
-import { DateTime, Duration } from 'luxon';
-import ms from 'ms';
 import { addPetFood } from '../../lib/pet-food';
-import { Reactions } from '@grammyjs/emoji';
 import { WEIGHT_REGEX } from '../../common/constants';
 
 export const AddFoodCommand = (async (ctx) => {
@@ -42,21 +44,20 @@ export const AddFoodCommand = (async (ctx) => {
 	const quantityQty = Qty(Number(quantityMatch[1]), quantityMatch[2] ?? 'g');
 	const quantity = quantityQty.to('g').scalar;
 
-	let time = DateTime.fromSeconds(ctx.message!.date);
+	let time = fromUnixTime(ctx.message!.date);
 	if (deltaTimeRaw) {
 		const isNegative = deltaTimeRaw.startsWith('-');
 		const deltaTime = ms(deltaTimeRaw.replace(/^-/, ''));
-		const duration = Duration.fromMillis(deltaTime);
 		if (isNegative) {
-			time = time.minus(duration);
+			time = subMilliseconds(time, deltaTime);
 		} else {
-			time = time.plus(duration);
+			time = addMilliseconds(time, deltaTime);
 		}
 	}
 
 	await addPetFood({
 		userID: ctx.user.id,
-		time: time.toJSDate(),
+		time: time,
 		petID: currentPet.id,
 		quantity
 	});

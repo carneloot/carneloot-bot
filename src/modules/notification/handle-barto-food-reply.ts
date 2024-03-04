@@ -1,6 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { DateTime } from 'luxon';
+import { fromUnixTime } from 'date-fns';
 import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
@@ -37,7 +37,7 @@ export const handleBartoFoodReply = async (ctx: Context, notification: Notificat
 			userID: ctx.user!.id,
 			petID: pet.id,
 			quantity: weight,
-			time: DateTime.fromSeconds(ctx.message.date).toJSDate()
+			time: fromUnixTime(ctx.message.date)
 		});
 	}
 

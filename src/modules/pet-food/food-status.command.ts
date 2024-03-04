@@ -1,6 +1,6 @@
-import { formatDistanceStrict } from 'date-fns/formatDistanceStrict';
+import { addDays, formatDistanceStrict, fromUnixTime, isAfter, set, subDays } from 'date-fns';
+import { zonedTimeToUtc } from 'date-fns-tz';
 import { MiddlewareFn } from 'grammy';
-import { DateTime } from 'luxon';
 import { ptBR } from 'date-fns/locale';
 
 import Qty from 'js-quantities';
@@ -34,23 +34,23 @@ export const FoodStatusCommand = (async (ctx) => {
 		return;
 	}
 
-	const now = DateTime.fromSeconds(ctx.message!.date);
+	const now = fromUnixTime(ctx.message!.date);
 
-	let from = now
-		.set({ hour: dayStart.hour, minute: 0, second: 0, millisecond: 0 })
-		.setZone(dayStart.timezone);
+	let from = set(now, {
+		hours: dayStart.hour,
+		minutes: 0,
+		seconds: 0,
+		milliseconds: 0
+	});
 
-	if (from > now) {
-		from = from.minus({ days: 1 });
+	if (isAfter(from, now)) {
+		from = subDays(from, 1);
 	}
 
-	const to = from.plus({ days: 1 });
+	from = zonedTimeToUtc(from, dayStart.timezone);
+	const to = zonedTimeToUtc(addDays(from, 1), dayStart.timezone);
 
-	const dailyFoodConsumption = await getDailyFoodConsumption(
-		currentPet.id,
-		from.toJSDate(),
-		to.toJSDate()
-	);
+	const dailyFoodConsumption = await getDailyFoodConsumption(currentPet.id, from, to);
 
 	if (!dailyFoodConsumption || dailyFoodConsumption.total === 0) {
 		await ctx.reply('Ainda não foi colocado ração hoje. Utilize o comando /colocar_racao');
@@ -58,8 +58,8 @@ export const FoodStatusCommand = (async (ctx) => {
 	}
 
 	const qtd = Qty(dailyFoodConsumption.total, 'g');
-	const lastTime = DateTime.fromSeconds(dailyFoodConsumption.lastTime);
-	const timeSinceLast = formatDistanceStrict(lastTime.toJSDate(), now.toJSDate(), {
+	const lastTime = fromUnixTime(dailyFoodConsumption.lastTime);
+	const timeSinceLast = formatDistanceStrict(lastTime, now, {
 		addSuffix: true,
 		locale: ptBR
 	});
