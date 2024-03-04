@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { webhookCallback } from 'grammy';
 
-import { createBot } from '../src/bot';
+import { createBot } from '../src/bot.js';
 
 const { BOT_TOKEN } = process.env;
 

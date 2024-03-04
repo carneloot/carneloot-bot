@@ -1,9 +1,7 @@
-import { Composer } from 'grammy';
-import { Context } from 'grammy/out/context';
-import { Middleware } from 'grammy/out/composer';
+import { Composer, Context, Middleware } from 'grammy';
 
-import { MaybeArray } from '../types/maybe-array';
-import { Command } from '../types/command';
+import { MaybeArray } from '../types/maybe-array.js';
+import { Command } from '../types/command.js';
 
 export class Module<C extends Context> extends Composer<C> {
 	private static readonly MODULE_SEPARATOR = '_';

@@ -1,12 +1,12 @@
 import { MiddlewareFn } from 'grammy';
 
-import type { UserResponse } from '../common/response/response';
-import { sendRandomResponse } from '../common/response/send-random-response';
+import type { UserResponse } from '../common/response/response.js';
+import { sendRandomResponse } from '../common/response/send-random-response.js';
 
-import type { Username } from '../common/types/username';
+import type { Username } from '../common/types/username.js';
 
-import { publicAsset } from '../common/utils/public-asset';
-import { isUsernameOnList } from '../common/utils/is-username-on-list';
+import { publicAsset } from '../common/utils/public-asset.js';
+import { isUsernameOnList } from '../common/utils/is-username-on-list.js';
 
 const unauthorizedResponses: UserResponse[] = [
 	{

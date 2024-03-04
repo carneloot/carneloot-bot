@@ -1,4 +1,4 @@
-import { MaybeArray } from './maybe-array';
+import { MaybeArray } from './maybe-array.js';
 import { MiddlewareObj } from 'grammy';
 
 export type Command<S extends MaybeArray<string>> = MiddlewareObj & {

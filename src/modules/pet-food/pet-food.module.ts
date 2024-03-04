@@ -1,14 +1,14 @@
-import { Module } from '../../common/module/module';
-import { Context } from '../../common/types/context';
+import { Module } from '../../common/module/module.js';
+import { Context } from '../../common/types/context.js';
 import { createConversation } from '@grammyjs/conversations';
-import { SetDayStartCommand, setDayStartConversation } from './set-day-start.command';
-import { UserMiddleware } from '../../middlewares/user.middleware';
-import { FoodStatusCommand } from './food-status.command';
+import { SetDayStartCommand, setDayStartConversation } from './set-day-start.command.js';
+import { UserMiddleware } from '../../middlewares/user.middleware.js';
+import { FoodStatusCommand } from './food-status.command.js';
 import {
 	ChooseCurrentPetCommand,
 	chooseCurrentPetConversation
-} from './choose-current-pet.command';
-import { AddFoodCommand } from './add-food.command';
+} from './choose-current-pet.command.js';
+import { AddFoodCommand } from './add-food.command.js';
 
 export const PetFoodModule = new Module<Context>('', 'Operações de rastreamento de ração');
 

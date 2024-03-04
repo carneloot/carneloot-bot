@@ -3,22 +3,22 @@ import { emojiParser } from '@grammyjs/emoji';
 
 import { Bot, session } from 'grammy';
 
-import { Module } from './common/module/module';
-import { getCommandForHelp, getDescriptionForHelp } from './common/types/command';
-import { Context } from './common/types/context';
+import { Module } from './common/module/module.js';
+import { getCommandForHelp, getDescriptionForHelp } from './common/types/command.js';
+import { Context } from './common/types/context.js';
 
-import { GenericErrorMiddleware } from './middlewares/generic-error.middleware';
+import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
 
-import { AuthModule } from './modules/auth/auth-module';
-import { PetModule } from './modules/pet/pet.module';
-import { PetFoodModule } from './modules/pet-food/pet-food.module';
-import { NotificationModule } from './modules/notification/notification.module';
+import { AuthModule } from './modules/auth/auth-module.js';
+import { PetModule } from './modules/pet/pet.module.js';
+import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
+import { NotificationModule } from './modules/notification/notification.module.js';
 
-import { createSessionStorage } from './lib/entities/session';
+import { createSessionStorage } from './lib/entities/session.js';
 
-import { PingCommand } from './commands/ping.command';
-import { WhatsCommand } from './commands/whats-command';
-import { CafeCommand } from './commands/cafe-command';
+import { PingCommand } from './commands/ping.command.js';
+import { WhatsCommand } from './commands/whats-command.js';
+import { CafeCommand } from './commands/cafe-command.js';
 
 const { BOT_TOKEN } = process.env;
 

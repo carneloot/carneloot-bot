@@ -1,7 +1,7 @@
 import { ConversationFn } from '@grammyjs/conversations';
 import { InlineKeyboard } from 'grammy';
 
-import { Context } from '../types/context';
+import { Context } from '../types/context.js';
 
 export const showYesOrNoQuestion = (message: string) =>
 	(async (conversation, ctx) => {

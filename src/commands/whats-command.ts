@@ -1,5 +1,5 @@
 import { Context } from 'grammy';
-import { Command } from '../common/types/command';
+import { Command } from '../common/types/command.js';
 
 const formatMessage = (message: string) => encodeURIComponent(message).replace(/!/g, '%21');
 

@@ -3,8 +3,8 @@ import { createId } from '@paralleldrive/cuid2';
 import { StorageAdapter } from 'grammy';
 import { and, eq } from 'drizzle-orm';
 
-import { db } from '../database/db';
-import { sessionsTable } from '../database/schema';
+import { db } from '../database/db.js';
+import { sessionsTable } from '../database/schema.js';
 
 export const createSessionStorage = <T>(context: string) => {
 	return {

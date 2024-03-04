@@ -1,7 +1,7 @@
 import { Context, NextFunction } from 'grammy';
 
-import { sendResponse } from '../common/response/send-response';
-import type { GifResponse } from '../common/response/response';
+import { sendResponse } from '../common/response/send-response.js';
+import type { GifResponse } from '../common/response/response.js';
 
 const errorResponse: GifResponse = {
 	type: 'gif',

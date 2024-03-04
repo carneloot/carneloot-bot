@@ -5,10 +5,10 @@ import { ptBR } from 'date-fns/locale';
 
 import Qty from 'js-quantities';
 
-import { Context } from '../../common/types/context';
+import { Context } from '../../common/types/context.js';
 
-import { getDailyFoodConsumption } from '../../lib/entities/pet-food';
-import { getConfig } from '../../lib/entities/config';
+import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
+import { getConfig } from '../../lib/entities/config.js';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {

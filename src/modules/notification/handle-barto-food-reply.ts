@@ -3,11 +3,11 @@ import { Reactions } from '@grammyjs/emoji';
 import { fromUnixTime } from 'date-fns';
 import Qty from 'js-quantities';
 
-import { Context } from '../../common/types/context';
-import { WEIGHT_REGEX } from '../../common/constants';
-import { getNotificationFromHistory } from '../../lib/entities/notification';
-import { getPetFromNameAndOwner } from '../../lib/entities/pet';
-import { addPetFood } from '../../lib/entities/pet-food';
+import { Context } from '../../common/types/context.js';
+import { WEIGHT_REGEX } from '../../common/constants.js';
+import { getNotificationFromHistory } from '../../lib/entities/notification.js';
+import { getPetFromNameAndOwner } from '../../lib/entities/pet.js';
+import { addPetFood } from '../../lib/entities/pet-food.js';
 
 type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & object;
 

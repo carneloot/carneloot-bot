@@ -2,11 +2,11 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet';
+import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
-import { getUserDisplay } from '../../common/utils/get-user-display';
+import { Context } from '../../common/types/context.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const listCarersConversation = (async (conversation, ctx) => {
 	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));

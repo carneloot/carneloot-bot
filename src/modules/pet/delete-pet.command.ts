@@ -1,11 +1,11 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 import { MiddlewareFn } from 'grammy';
 
-import { deletePet, getUserOwnedPets } from '../../lib/entities/pet';
+import { deletePet, getUserOwnedPets } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context';
-import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
+import { Context } from '../../common/types/context.js';
+import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const deletePetConversation = (async (conversation, ctx) => {
 	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));

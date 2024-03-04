@@ -2,14 +2,14 @@ import { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { answerPendingPetInvite, getPendingPetInvites } from '../../lib/entities/pet';
-import { getUserByID } from '../../lib/entities/user';
-import { copyConfig } from '../../lib/entities/config';
+import { answerPendingPetInvite, getPendingPetInvites } from '../../lib/entities/pet.js';
+import { getUserByID } from '../../lib/entities/user.js';
+import { copyConfig } from '../../lib/entities/config.js';
 
-import { Context } from '../../common/types/context';
-import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
-import { getUserDisplay } from '../../common/utils/get-user-display';
+import { Context } from '../../common/types/context.js';
+import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const petInvitesConversation = (async (conversation, ctx) => {
 	const pendingInvites = await conversation.external(() => getPendingPetInvites(ctx.user!.id));

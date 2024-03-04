@@ -3,11 +3,11 @@ import { getTimeZones } from '@vvo/tzdb';
 
 import { MiddlewareFn } from 'grammy';
 
-import { getConfig, setConfig } from '../../lib/entities/config';
+import { getConfig, setConfig } from '../../lib/entities/config.js';
 
-import { Context } from '../../common/types/context';
-import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
+import { Context } from '../../common/types/context.js';
+import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
 	value: i,

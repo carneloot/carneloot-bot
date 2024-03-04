@@ -1,8 +1,8 @@
-import { Module } from '../../common/module/module';
-import { SignupCommand } from './signup.command';
-import { GenerateApiKeyCommand, apiKeyConfirmationMenu } from './generate-api-key.command';
-import { UserMiddleware } from '../../middlewares/user.middleware';
-import { Context } from '../../common/types/context';
+import { Module } from '../../common/module/module.js';
+import { SignupCommand } from './signup.command.js';
+import { GenerateApiKeyCommand, apiKeyConfirmationMenu } from './generate-api-key.command.js';
+import { UserMiddleware } from '../../middlewares/user.middleware.js';
+import { Context } from '../../common/types/context.js';
 
 export const AuthModule = new Module<Context>('', 'Operações de autenticação');
 

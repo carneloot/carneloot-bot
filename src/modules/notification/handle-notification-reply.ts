@@ -1,9 +1,9 @@
 import { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context';
-import { getNotificationFromHistory } from '../../lib/entities/notification';
-import { handleBartoFoodReply } from './handle-barto-food-reply';
-import { getUserDisplay } from '../../common/utils/get-user-display';
+import { Context } from '../../common/types/context.js';
+import { getNotificationFromHistory } from '../../lib/entities/notification.js';
+import { handleBartoFoodReply } from './handle-barto-food-reply.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const handleNotificationReply = (async (ctx, next) => {
 	if (!ctx.message?.reply_to_message) {

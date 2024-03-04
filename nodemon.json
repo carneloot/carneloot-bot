@@ -1,5 +1,7 @@
 {
-	"ext": "ts",
-	"watch": ["src/*"],
-	"exec": "bun run start"
+  "ext": "ts",
+  "watch": [
+    "src/*"
+  ],
+  "exec": "bun run start"
 }

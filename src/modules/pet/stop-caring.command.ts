@@ -2,13 +2,13 @@ import { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { getUserByID } from '../../lib/entities/user';
-import { getUserCaredPets, removeCarer } from '../../lib/entities/pet';
+import { getUserByID } from '../../lib/entities/user.js';
+import { getUserCaredPets, removeCarer } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
-import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';
-import { getUserDisplay } from '../../common/utils/get-user-display';
+import { Context } from '../../common/types/context.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const stopCaringConversation = (async (conversation, ctx) => {
 	const caringPets = await conversation.external(() => getUserCaredPets(ctx.user!.id));

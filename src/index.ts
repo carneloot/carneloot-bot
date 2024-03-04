@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
-import { createBot } from './bot';
-import { isDebug } from './common/utils/is-debug';
+import { createBot } from './bot.js';
+import { isDebug } from './common/utils/is-debug.js';
 
 async function main() {
 	if (!isDebug()) {
@@ -16,4 +16,5 @@ async function main() {
 		drop_pending_updates: true
 	});
 }
+
 main();

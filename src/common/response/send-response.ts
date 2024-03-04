@@ -1,7 +1,7 @@
 import { Context } from 'grammy';
 
-import { UserResponse } from './response';
-import { flattenMaybeFunction } from '../types/maybe-function';
+import { UserResponse } from './response.js';
+import { flattenMaybeFunction } from '../types/maybe-function.js';
 
 export const sendResponse = async (ctx: Context, response: UserResponse) => {
 	if (response.type === 'gif') {
