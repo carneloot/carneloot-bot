@@ -1,7 +1,7 @@
 import { MiddlewareFn } from 'grammy';
 
 import { Context } from '../../common/types/context';
-import { getNotificationFromHistory } from '../../lib/notification';
+import { getNotificationFromHistory } from '../../lib/entities/notification';
 import { handleBartoFoodReply } from './handle-barto-food-reply';
 import { getUserDisplay } from '../../common/utils/get-user-display';
 

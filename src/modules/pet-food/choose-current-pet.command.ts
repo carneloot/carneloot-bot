@@ -2,9 +2,9 @@ import { ConversationFn } from '@grammyjs/conversations';
 import { MiddlewareFn } from 'grammy';
 
 import { Context } from '../../common/types/context';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/pet';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
-import { setConfig } from '../../lib/config';
+import { setConfig } from '../../lib/entities/config';
 
 export const chooseCurrentPetConversation = (async (cvs, ctx) => {
 	const ownedPets = await cvs.external(() => getUserOwnedPets(ctx.user!.id));

@@ -7,8 +7,8 @@ import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
 
-import { getDailyFoodConsumption } from '../../lib/pet-food';
-import { getConfig } from '../../lib/config';
+import { getDailyFoodConsumption } from '../../lib/entities/pet-food';
+import { getConfig } from '../../lib/entities/config';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {

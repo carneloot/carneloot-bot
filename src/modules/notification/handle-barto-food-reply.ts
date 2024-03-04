@@ -5,9 +5,9 @@ import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context';
 import { WEIGHT_REGEX } from '../../common/constants';
-import { getNotificationFromHistory } from '../../lib/notification';
-import { getPetFromNameAndOwner } from '../../lib/pet';
-import { addPetFood } from '../../lib/pet-food';
+import { getNotificationFromHistory } from '../../lib/entities/notification';
+import { getPetFromNameAndOwner } from '../../lib/entities/pet';
+import { addPetFood } from '../../lib/entities/pet-food';
 
 type Notification = Awaited<ReturnType<typeof getNotificationFromHistory>> & object;
 

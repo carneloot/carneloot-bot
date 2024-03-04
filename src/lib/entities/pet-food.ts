@@ -1,8 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, gte, lt, sql } from 'drizzle-orm';
 
-import { petFoodTable, petsTable } from './database/schema';
-import { db } from './database/db';
+import { petFoodTable, petsTable } from '../database/schema';
+import { db } from '../database/db';
 
 type PetFood = typeof petFoodTable.$inferSelect;
 

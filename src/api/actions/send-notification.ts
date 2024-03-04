@@ -1,11 +1,11 @@
 import { Bot } from 'grammy';
 import { NotifyParams } from '../types/notify-params';
-import { getUserFromApiKey, User } from '../../lib/user';
+import { getUserFromApiKey, User } from '../../lib/entities/user';
 import {
 	createNotificationHistory,
 	getNotificationByOwnerAndKeyword,
 	Notification
-} from '../../lib/notification';
+} from '../../lib/entities/notification';
 import { Context } from '../../common/types/context';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {

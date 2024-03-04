@@ -7,8 +7,8 @@ import Qty from 'js-quantities';
 import ms from 'ms';
 
 import { Context } from '../../common/types/context';
-import { getConfig } from '../../lib/config';
-import { addPetFood } from '../../lib/pet-food';
+import { getConfig } from '../../lib/entities/config';
+import { addPetFood } from '../../lib/entities/pet-food';
 import { WEIGHT_REGEX } from '../../common/constants';
 
 export const AddFoodCommand = (async (ctx) => {

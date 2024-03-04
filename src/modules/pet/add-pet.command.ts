@@ -1,7 +1,7 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 import { MiddlewareFn } from 'grammy';
 
-import { createPet } from '../../lib/pet';
+import { createPet } from '../../lib/entities/pet';
 
 import { Context } from '../../common/types/context';
 

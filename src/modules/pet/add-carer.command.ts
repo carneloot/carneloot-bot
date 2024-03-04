@@ -2,8 +2,8 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { addCarer, getUserOwnedPets, isUserCarer } from '../../lib/pet';
-import { getUserByUsername } from '../../lib/user';
+import { addCarer, getUserOwnedPets, isUserCarer } from '../../lib/entities/pet';
+import { getUserByUsername } from '../../lib/entities/user';
 
 import { Context } from '../../common/types/context';
 import { getUserDisplay } from '../../common/utils/get-user-display';

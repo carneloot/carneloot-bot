@@ -1,5 +1,5 @@
 import { MiddlewareFn } from 'grammy';
-import { createUser } from '../../lib/user';
+import { createUser } from '../../lib/entities/user';
 
 export const SignupCommand: MiddlewareFn = async (ctx) => {
 	const user = ctx.from;

@@ -1,6 +1,6 @@
 import { MiddlewareFn } from 'grammy';
 
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/pet';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet';
 
 import { Context } from '../../common/types/context';
 

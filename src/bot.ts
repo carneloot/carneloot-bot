@@ -14,7 +14,7 @@ import { PetModule } from './modules/pet/pet.module';
 import { PetFoodModule } from './modules/pet-food/pet-food.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
-import { createSessionStorage } from './lib/session';
+import { createSessionStorage } from './lib/entities/session';
 
 import { PingCommand } from './commands/ping.command';
 import { WhatsCommand } from './commands/whats-command';

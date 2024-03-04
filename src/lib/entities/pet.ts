@@ -2,8 +2,8 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
 
-import { db } from './database/db';
-import { petCarersTable, PetCarerStatus, petsTable, usersTable } from './database/schema';
+import { db } from '../database/db';
+import { petCarersTable, PetCarerStatus, petsTable, usersTable } from '../database/schema';
 
 export type Pet = typeof petsTable.$inferSelect;
 export type PetCarer = typeof petCarersTable.$inferSelect;

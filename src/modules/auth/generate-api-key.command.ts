@@ -1,7 +1,7 @@
 import { MiddlewareFn } from 'grammy';
 import { Menu } from '@grammyjs/menu';
 import { Context } from '../../common/types/context';
-import { generateApiKeyForUser, userHasApiKey } from '../../lib/user';
+import { generateApiKeyForUser, userHasApiKey } from '../../lib/entities/user';
 
 async function generateApiKeyAndSend(ctx: Context) {
 	const newApiKey = await generateApiKeyForUser(ctx.user!.id);

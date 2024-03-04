@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { User } from './user';
-import { db } from './database/db';
-import { ConfigID, configsTable, PetID } from './database/schema';
+import { db } from '../database/db';
+import { ConfigID, configsTable, PetID } from '../database/schema';
 import { and, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 

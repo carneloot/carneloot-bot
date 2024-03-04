@@ -8,8 +8,8 @@ import {
 	notificationsTable,
 	usersTable,
 	usersToNotifyTable
-} from './database/schema';
-import { db } from './database/db';
+} from '../database/schema';
+import { db } from '../database/db';
 
 type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;

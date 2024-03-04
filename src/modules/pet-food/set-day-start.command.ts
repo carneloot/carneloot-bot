@@ -3,7 +3,7 @@ import { getTimeZones } from '@vvo/tzdb';
 
 import { MiddlewareFn } from 'grammy';
 
-import { getConfig, setConfig } from '../../lib/config';
+import { getConfig, setConfig } from '../../lib/entities/config';
 
 import { Context } from '../../common/types/context';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';

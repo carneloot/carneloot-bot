@@ -3,7 +3,7 @@ import { EmojiFlavor } from '@grammyjs/emoji';
 
 import { Context as GrammyContext, SessionFlavor } from 'grammy';
 
-import { User } from '../../lib/user';
+import { User } from '../../lib/entities/user';
 
 import { SessionData } from './session';
 

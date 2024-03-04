@@ -2,7 +2,7 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { getPetCarers, getUserOwnedPets } from '../../lib/pet';
+import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet';
 
 import { Context } from '../../common/types/context';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';

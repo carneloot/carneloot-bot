@@ -2,9 +2,9 @@ import { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { answerPendingPetInvite, getPendingPetInvites } from '../../lib/pet';
-import { getUserByID } from '../../lib/user';
-import { copyConfig } from '../../lib/config';
+import { answerPendingPetInvite, getPendingPetInvites } from '../../lib/entities/pet';
+import { getUserByID } from '../../lib/entities/user';
+import { copyConfig } from '../../lib/entities/config';
 
 import { Context } from '../../common/types/context';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';

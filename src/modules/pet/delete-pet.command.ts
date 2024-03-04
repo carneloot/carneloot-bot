@@ -1,7 +1,7 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 import { MiddlewareFn } from 'grammy';
 
-import { deletePet, getUserOwnedPets } from '../../lib/pet';
+import { deletePet, getUserOwnedPets } from '../../lib/entities/pet';
 
 import { Context } from '../../common/types/context';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question';
