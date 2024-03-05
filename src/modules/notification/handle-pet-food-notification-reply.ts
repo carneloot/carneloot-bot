@@ -43,6 +43,8 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			messageID: ctx.message.message_id
 		});
 
+		await ctx.reply(`Foram adicionados ${quantityQty} de ração.`);
+
 		if (lastPetFood) {
 			await cancelPetFoodNotification(lastPetFood.id);
 		}

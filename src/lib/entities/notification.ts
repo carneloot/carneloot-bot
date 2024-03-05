@@ -90,12 +90,12 @@ async function getNotificationFromHistory(
 			petID: notificationHistoryTable.petID
 		})
 		.from(notificationHistoryTable)
-		.innerJoin(
+		.leftJoin(
 			notificationsTable,
 			eq(notificationHistoryTable.notificationID, notificationsTable.id)
 		)
-		.innerJoin(ownerHistory, eq(notificationsTable.ownerID, ownerHistory.userID))
-		.innerJoin(usersTable, eq(notificationsTable.ownerID, usersTable.id))
+		.leftJoin(ownerHistory, eq(notificationsTable.ownerID, ownerHistory.userID))
+		.leftJoin(usersTable, eq(notificationsTable.ownerID, usersTable.id))
 		.where(
 			and(
 				eq(notificationHistoryTable.messageID, messageID),

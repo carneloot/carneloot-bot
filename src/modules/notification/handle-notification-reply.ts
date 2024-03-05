@@ -34,6 +34,10 @@ export const handleNotificationReply = (async (ctx, next) => {
 
 	const { messageToReply, ownerTelegramId } = notification;
 
+	if (!messageToReply || !ownerTelegramId) {
+		return;
+	}
+
 	if (ctx.user.telegramID === ownerTelegramId) {
 		await ctx.reply('Você não pode responder a sua própria notificação.');
 		return;
