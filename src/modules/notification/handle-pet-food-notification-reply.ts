@@ -19,7 +19,7 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			throw new Error('Message object not found.');
 		}
 
-		const result = parsePetFoodWeightAndTime(ctx.match, ctx.message!.date);
+		const result = parsePetFoodWeightAndTime(ctx.message.text, ctx.message.date);
 
 		if (result.isErr()) {
 			await ctx.reply(result.error);
