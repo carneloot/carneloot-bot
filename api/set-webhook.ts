@@ -1,4 +1,4 @@
-import { createBot } from '../src/bot';
+import { createBot } from '../src/bot.js';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async (req: VercelRequest, res: VercelResponse) => {

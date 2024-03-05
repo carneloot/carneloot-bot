@@ -4,12 +4,12 @@ module.exports = {
 
 	parserOptions: {
 		ecmaVersion: 'latest',
-		sourceType: 'module',
+		sourceType: 'module'
 	},
 
 	env: {
 		commonjs: true,
-		es6: true,
+		es6: true
 	},
 
 	// Base config
@@ -18,23 +18,10 @@ module.exports = {
 		// Typescript
 		{
 			files: ['**/*.ts'],
-			plugins: ['@typescript-eslint', 'import'],
+			plugins: ['@typescript-eslint'],
 			parser: '@typescript-eslint/parser',
-			settings: {
-				'import/internal-regex': '^~/',
-				'import/resolver': {
-					node: {
-						extensions: ['.ts', '.tsx']
-					},
-					typescript: {
-						alwaysTryTypes: true
-					}
-				}
-			},
 			extends: [
-				'plugin:@typescript-eslint/recommended',
-				'plugin:import/recommended',
-				'plugin:import/typescript'
+				'plugin:@typescript-eslint/recommended'
 			]
 		},
 
@@ -47,4 +34,4 @@ module.exports = {
 		}
 	]
 
-}
+};

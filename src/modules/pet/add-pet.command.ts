@@ -1,9 +1,9 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 import { MiddlewareFn } from 'grammy';
 
-import { createPet } from '../../lib/entities/pet';
+import { createPet } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context';
+import { Context } from '../../common/types/context.js';
 
 export const addPetConversation = (async (conversation, ctx) => {
 	await ctx.reply('Qual o nome do seu pet?');

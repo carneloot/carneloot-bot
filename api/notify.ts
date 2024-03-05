@@ -1,7 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { NotifyParams } from '../src/api/types/notify-params';
-import { createBot } from '../src/bot';
-import { sendNotification } from '../src/api/actions/send-notification';
+
+import { NotifyParams } from '../src/api/types/notify-params.js';
+import { createBot } from '../src/bot.js';
+import { sendNotification } from '../src/api/actions/send-notification.js';
 
 export default async (req: VercelRequest, res: VercelResponse) => {
 	if (req.method !== 'POST') {

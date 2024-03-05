@@ -1,8 +1,8 @@
 import { MiddlewareFn } from 'grammy';
 
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context';
+import { Context } from '../../common/types/context.js';
 
 export const ListPetsCommand = (async (ctx) => {
 	if (!ctx.user) {

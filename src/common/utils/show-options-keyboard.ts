@@ -3,7 +3,7 @@ import { InlineKeyboard, Keyboard } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
-import { Context } from '../types/context';
+import { Context } from '../types/context.js';
 
 type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 	values: T[];

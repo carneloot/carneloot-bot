@@ -9,7 +9,8 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { z } from 'zod';
 
-type UserID = string & { __userID: true };
+export const UserID = z.string().cuid2().brand('UserID');
+export type UserID = z.infer<typeof UserID>;
 
 export const usersTable = sqliteTable(
 	'users',
@@ -26,7 +27,9 @@ export const usersTable = sqliteTable(
 	})
 );
 
-export type PetID = string & { __petID: true };
+export const PetID = z.string().cuid2().brand('PetID');
+export type PetID = z.infer<typeof PetID>;
+
 export const petsTable = sqliteTable(
 	'pets',
 	{
@@ -46,7 +49,8 @@ export const petsTable = sqliteTable(
 export const PetCarerStatus = z.enum(['pending', 'accepted', 'rejected']);
 export type PetCarerStatus = z.infer<typeof PetCarerStatus>;
 
-type PetCarerID = string & { __petCarerID: true };
+export const PetCarerID = z.string().cuid2().brand('PetCarerID');
+export type PetCarerID = z.infer<typeof PetCarerID>;
 
 export const petCarersTable = sqliteTable(
 	'pet_carers',
@@ -69,7 +73,8 @@ export const petCarersTable = sqliteTable(
 	})
 );
 
-export type PetFoodID = string & { __petFoodID: true };
+export const PetFoodID = z.string().cuid2().brand('PetFoodID');
+export type PetFoodID = z.infer<typeof PetFoodID>;
 
 export const petFoodTable = sqliteTable(
 	'pet_food',
@@ -93,7 +98,8 @@ export const petFoodTable = sqliteTable(
 	})
 );
 
-export type ConfigID = string & { __configID: true };
+export const ConfigID = z.string().cuid2().brand('ConfigID');
+export type ConfigID = z.infer<typeof ConfigID>;
 
 export const configsTable = sqliteTable(
 	'configs',
@@ -108,7 +114,8 @@ export const configsTable = sqliteTable(
 	})
 );
 
-type ApiKeyID = string & { __apiKeyID: true };
+export const ApiKeyID = z.string().cuid2().brand('ApiKeyID');
+export type ApiKeyID = z.infer<typeof ApiKeyID>;
 
 export const apiKeysTable = sqliteTable(
 	'api_keys',
@@ -127,7 +134,8 @@ export const apiKeysTable = sqliteTable(
 	})
 );
 
-type NotificationID = string & { __notificationID: true };
+export const NotificationID = z.string().cuid2().brand('NotificationID');
+export type NotificationID = z.infer<typeof NotificationID>;
 
 export const notificationsTable = sqliteTable(
 	'notifications',
@@ -145,7 +153,8 @@ export const notificationsTable = sqliteTable(
 	})
 );
 
-type UsersToNotifyID = string & { __usersToNotifyID: true };
+export const UsersToNotifyID = z.string().cuid2().brand('UsersToNotifyID');
+export type UsersToNotifyID = z.infer<typeof UsersToNotifyID>;
 
 export const usersToNotifyTable = sqliteTable(
 	'users_to_notify',
@@ -165,16 +174,19 @@ export const usersToNotifyTable = sqliteTable(
 	})
 );
 
-type NotificationHistoryID = string & { __notificationHistoryID: true };
+export const NotificationHistoryID = z.string().cuid2().brand('NotificationHistoryID');
+export type NotificationHistoryID = z.infer<typeof NotificationHistoryID>;
 
 export const notificationHistoryTable = sqliteTable(
 	'notification_history',
 	{
 		id: text('id').primaryKey().$type<NotificationHistoryID>(),
 		notificationID: text('notification_id')
-			.notNull()
 			.references(() => notificationsTable.id)
 			.$type<NotificationID>(),
+		petID: text('pet_id')
+			.references(() => petsTable.id)
+			.$type<PetID>(),
 		userID: text('user_id')
 			.notNull()
 			.references(() => usersTable.id)
@@ -184,7 +196,7 @@ export const notificationHistoryTable = sqliteTable(
 	},
 	(self) => ({
 		messageIdIdx: uniqueIndex('messageIdIdx').on(self.messageID),
-		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.userID)
+		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.petID, self.userID)
 	})
 );
 

@@ -1,12 +1,12 @@
 import { Bot } from 'grammy';
-import { NotifyParams } from '../types/notify-params';
-import { getUserFromApiKey, User } from '../../lib/entities/user';
+import { NotifyParams } from '../types/notify-params.js';
+import { getUserFromApiKey, User } from '../../lib/entities/user.js';
 import {
 	createNotificationHistory,
 	getNotificationByOwnerAndKeyword,
 	Notification
-} from '../../lib/entities/notification';
-import { Context } from '../../common/types/context';
+} from '../../lib/entities/notification.js';
+import { Context } from '../../common/types/context.js';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {
 	if (!variables) {
@@ -35,7 +35,8 @@ async function sendNotificationAndLog({
 	await createNotificationHistory({
 		notificationID: notification.id,
 		userID: user.id,
-		messageID: message.message_id
+		messageID: message.message_id,
+		petID: null
 	});
 }
 

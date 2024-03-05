@@ -1,27 +1,18 @@
-import { addDays, formatDistanceStrict, fromUnixTime, isAfter, set, subDays } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { formatDistanceStrict, fromUnixTime } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
 import { ptBR } from 'date-fns/locale';
 
 import Qty from 'js-quantities';
 
-import { Context } from '../../common/types/context';
+import { Context } from '../../common/types/context.js';
 
-import { getDailyFoodConsumption } from '../../lib/entities/pet-food';
-import { getConfig } from '../../lib/entities/config';
+import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
+import { getConfig } from '../../lib/entities/config.js';
+import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {
 		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
-		return;
-	}
-
-	const dayStart = await getConfig('user', 'dayStart', ctx.user.id);
-
-	if (!dayStart) {
-		await ctx.reply(
-			'Você ainda não configurou o horário de início do dia.\nUtilize o comando /configurar_inicio_dia para configurar'
-		);
 		return;
 	}
 
@@ -34,21 +25,18 @@ export const FoodStatusCommand = (async (ctx) => {
 		return;
 	}
 
-	const now = fromUnixTime(ctx.message!.date);
+	const dayStart = await getConfig('pet', 'dayStart', currentPet.id);
 
-	let from = set(now, {
-		hours: dayStart.hour,
-		minutes: 0,
-		seconds: 0,
-		milliseconds: 0
-	});
-
-	if (isAfter(from, now)) {
-		from = subDays(from, 1);
+	if (!dayStart) {
+		await ctx.reply(
+			'Você ainda não configurou o horário de início do dia.\nUtilize o comando /configurar_inicio_dia para configurar'
+		);
+		return;
 	}
 
-	from = zonedTimeToUtc(from, dayStart.timezone);
-	const to = zonedTimeToUtc(addDays(from, 1), dayStart.timezone);
+	const now = fromUnixTime(ctx.message!.date);
+
+	const { from, to } = getDailyFromTo(now, dayStart);
 
 	const dailyFoodConsumption = await getDailyFoodConsumption(currentPet.id, from, to);
 

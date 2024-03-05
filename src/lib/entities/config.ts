@@ -1,23 +1,28 @@
+import { createId } from '@paralleldrive/cuid2';
+
+import { Duration } from 'tinyduration';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { User } from './user';
-import { db } from '../database/db';
-import { ConfigID, configsTable, PetID } from '../database/schema';
-import { and, eq } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
+import { db } from '../database/db.js';
+import { ConfigID, configsTable, PetID, UserID } from '../database/schema.js';
 
 const Configs = {
 	user: {
-		identifier: '' as User['id'],
-		dayStart: z.object({
-			hour: z.number().min(0).max(14),
-			timezone: z.string()
-		}),
+		identifier: UserID,
 		currentPet: z.object({
 			id: z.string().transform((v) => v as PetID),
 			name: z.string()
 		}),
 		showNotifications: z.boolean()
+	},
+	pet: {
+		identifier: PetID,
+		notificationDelay: z.any({}).transform((v) => v as Duration),
+		dayStart: z.object({
+			hour: z.number().min(0).max(14),
+			timezone: z.string()
+		})
 	}
 };
 type Configs = typeof Configs;
@@ -26,14 +31,14 @@ type ConfigContext = keyof Configs;
 
 type ConfigKey<Context extends ConfigContext> = Exclude<keyof Configs[Context], 'identifier'>;
 
-type ContextIdentifier<Context extends ConfigContext> = Configs[Context]['identifier'];
+type ContextIdentifier<Context extends ConfigContext> = z.infer<Configs[Context]['identifier']>;
 
 type ConfigSchema<
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>
 > = Configs[Context][Key] extends z.ZodTypeAny ? Configs[Context][Key] : never;
 
-type ConfigValue<
+export type ConfigValue<
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>
 > = Configs[Context][Key] extends z.ZodTypeAny ? z.infer<Configs[Context][Key]> : never;
@@ -102,40 +107,18 @@ export const setConfig = async <
 		});
 };
 
-export const copyConfig = async <
+export const deleteConfig = async <
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>,
 	Identifier extends ContextIdentifier<Context>
 >(
 	context: Context,
 	key: Key,
-	from: Identifier,
-	to: Identifier
+	id: Identifier
 ) => {
-	const fromValue = await db
-		.select({ value: configsTable.value })
-		.from(configsTable)
-		.where(
-			and(eq(configsTable.context, `${context}:${from}`), eq(configsTable.key, key as string))
-		)
-		.get();
-
-	if (!fromValue) {
-		return;
-	}
-
 	await db
-		.insert(configsTable)
-		.values({
-			id: createId() as ConfigID,
-			context: `${context}:${to}`,
-			key: key as string,
-			value: fromValue.value
-		})
-		.onConflictDoUpdate({
-			target: [configsTable.context, configsTable.key],
-			set: {
-				value: fromValue.value
-			}
-		});
+		.delete(configsTable)
+		.where(
+			and(eq(configsTable.context, `${context}:${id}`), eq(configsTable.key, key as string))
+		);
 };

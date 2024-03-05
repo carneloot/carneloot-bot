@@ -6,10 +6,10 @@ import { MiddlewareFn } from 'grammy';
 import Qty from 'js-quantities';
 import ms from 'ms';
 
-import { Context } from '../../common/types/context';
-import { getConfig } from '../../lib/entities/config';
-import { addPetFood } from '../../lib/entities/pet-food';
-import { WEIGHT_REGEX } from '../../common/constants';
+import { Context } from '../../common/types/context.js';
+import { getConfig } from '../../lib/entities/config.js';
+import { addPetFood, schedulePetFoodNotification } from '../../lib/entities/pet-food.js';
+import { WEIGHT_REGEX } from '../../common/constants.js';
 
 export const AddFoodCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -61,6 +61,8 @@ export const AddFoodCommand = (async (ctx) => {
 		petID: currentPet.id,
 		quantity
 	});
+
+	await schedulePetFoodNotification(currentPet.id, time);
 
 	await ctx.reply(`Foram adicionados ${quantityQty} de ração para o pet ${currentPet.name}.`);
 	await ctx.react(Reactions.thumbs_up);

@@ -1,7 +1,7 @@
 import ms from 'ms';
 
-import type { Command } from '../common/types/command';
-import { sleep } from '../common/utils/sleep';
+import type { Command } from '../common/types/command.js';
+import { sleep } from '../common/utils/sleep.js';
 
 const MAX_DURATION = ms('10s');
 

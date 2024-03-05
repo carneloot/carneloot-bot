@@ -1,4 +1,4 @@
-import { MaybeFunction } from '../types/maybe-function';
+import { MaybeFunction } from '../types/maybe-function.js';
 
 export type GifResponse = {
 	type: 'gif';

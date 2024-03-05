@@ -1,9 +1,9 @@
 import { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context';
-import { getNotificationFromHistory } from '../../lib/entities/notification';
-import { handleBartoFoodReply } from './handle-barto-food-reply';
-import { getUserDisplay } from '../../common/utils/get-user-display';
+import { Context } from '../../common/types/context.js';
+import { getNotificationFromHistory } from '../../lib/entities/notification.js';
+import { handlePetFoodNotificationReply } from './handle-pet-food-notification-reply.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const handleNotificationReply = (async (ctx, next) => {
 	if (!ctx.message?.reply_to_message) {
@@ -28,11 +28,11 @@ export const handleNotificationReply = (async (ctx, next) => {
 		return;
 	}
 
-	const { messageToReply, ownerTelegramId, keyword } = notification;
-
-	if (keyword === 'BartoFood') {
-		return await handleBartoFoodReply(ctx, notification);
+	if (notification.petID) {
+		return await handlePetFoodNotificationReply(notification.petID)(ctx);
 	}
+
+	const { messageToReply, ownerTelegramId } = notification;
 
 	if (ctx.user.telegramID === ownerTelegramId) {
 		await ctx.reply('Você não pode responder a sua própria notificação.');

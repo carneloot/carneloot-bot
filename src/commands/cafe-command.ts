@@ -3,7 +3,7 @@ import { table } from 'table';
 
 import Qty from 'js-quantities';
 
-import { Command } from '../common/types/command';
+import { Command } from '../common/types/command.js';
 
 async function sendMissingInformationMessage(ctx: Context) {
 	await ctx.reply('Me envie a quantidade inicial de água em ml. 😄');

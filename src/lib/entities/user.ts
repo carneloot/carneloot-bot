@@ -3,9 +3,9 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { eq } from 'drizzle-orm';
 
-import { hashString } from '../../common/utils/hash-string';
-import { apiKeysTable, usersTable } from '../database/schema';
-import { db } from '../database/db';
+import { hashString } from '../../common/utils/hash-string.js';
+import { apiKeysTable, usersTable } from '../database/schema.js';
+import { db } from '../database/db.js';
 
 export type User = typeof usersTable.$inferSelect;
 type ApiKey = typeof apiKeysTable.$inferSelect;

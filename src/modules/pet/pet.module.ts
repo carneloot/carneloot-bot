@@ -1,18 +1,18 @@
 import { createConversation } from '@grammyjs/conversations';
 
-import { Module } from '../../common/module/module';
-import { Context } from '../../common/types/context';
+import { Module } from '../../common/module/module.js';
+import { Context } from '../../common/types/context.js';
 
-import { UserMiddleware } from '../../middlewares/user.middleware';
+import { UserMiddleware } from '../../middlewares/user.middleware.js';
 
-import { ListPetsCommand } from './list-pets.command';
-import { AddPetCommand, addPetConversation } from './add-pet.command';
-import { AddCarerCommand, addCarerConversation } from './add-carer.command';
-import { PetInvitesCommand, petInvitesConversation } from './pet-invites.command';
-import { DeletePetCommand, deletePetConversation } from './delete-pet.command';
-import { RemoveCarerCommand, removeCarerConversation } from './remove-carer.command';
-import { ListCarersCommand, listCarersConversation } from './list-carers.command';
-import { StopCaringCommand, stopCaringConversation } from './stop-caring.command';
+import { ListPetsCommand } from './list-pets.command.js';
+import { AddPetCommand, addPetConversation } from './add-pet.command.js';
+import { AddCarerCommand, addCarerConversation } from './add-carer.command.js';
+import { PetInvitesCommand, petInvitesConversation } from './pet-invites.command.js';
+import { DeletePetCommand, deletePetConversation } from './delete-pet.command.js';
+import { RemoveCarerCommand, removeCarerConversation } from './remove-carer.command.js';
+import { ListCarersCommand, listCarersConversation } from './list-carers.command.js';
+import { StopCaringCommand, stopCaringConversation } from './stop-caring.command.js';
 
 export const PetModule = new Module<Context>('', 'Opções de gerenciamento de pet');
 

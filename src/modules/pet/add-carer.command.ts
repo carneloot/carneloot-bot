@@ -2,12 +2,12 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
 
-import { addCarer, getUserOwnedPets, isUserCarer } from '../../lib/entities/pet';
-import { getUserByUsername } from '../../lib/entities/user';
+import { addCarer, getUserOwnedPets, isUserCarer } from '../../lib/entities/pet.js';
+import { getUserByUsername } from '../../lib/entities/user.js';
 
-import { Context } from '../../common/types/context';
-import { getUserDisplay } from '../../common/utils/get-user-display';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard';
+import { Context } from '../../common/types/context.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const addCarerConversation = (async (conversation, ctx) => {
 	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));
