@@ -1,9 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { and, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { add } from 'date-fns';
 
-import { petFoodTable, PetID, petsTable } from '../database/schema.js';
+import { PetFoodID, petFoodTable, PetID, petsTable } from '../database/schema.js';
 import { db } from '../database/db.js';
 import { getConfig } from './config.js';
 import { triggerClient } from '../trigger/trigger-client.js';
@@ -32,41 +32,61 @@ export const getDailyFoodConsumption = async (petID: PetFood['petID'], from: Dat
 		.get();
 };
 
-export const addPetFood = async (values: Omit<typeof petFoodTable.$inferInsert, 'id'>) => {
-	await db.insert(petFoodTable).values({
-		id: createId() as PetFood['id'],
-		...values
-	});
+export const addPetFood = (values: Omit<typeof petFoodTable.$inferInsert, 'id'>) => {
+	return db
+		.insert(petFoodTable)
+		.values({
+			id: createId() as PetFood['id'],
+			...values
+		})
+		.returning({
+			id: petFoodTable.id
+		})
+		.get();
 };
 
-export const cancelPetFoodNotification = async (petID: PetID) => {
+export const getLastPetFood = (petID: PetID) => {
+	return db
+		.select({ id: petFoodTable.id })
+		.from(petFoodTable)
+		.where(eq(petFoodTable.petID, petID))
+		.orderBy(desc(petFoodTable.time))
+		.limit(1)
+		.get();
+};
+
+export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
 	await wrapTry(
-		() => triggerClient.cancelEvent(`pet-food-notification:${petID}`),
+		() => triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`),
 		() => console.warn('Failed to cancel previous notification')
 	);
 };
 
-export const schedulePetFoodNotification = async (petID: PetID, time: Date) => {
+export const schedulePetFoodNotification = async (
+	petID: PetID,
+	petFoodID: PetFoodID,
+	time: Date
+) => {
 	const delay = await getConfig('pet', 'notificationDelay', petID);
 
-	if (delay) {
-		await cancelPetFoodNotification(petID);
-
-		await wrapTry(
-			() =>
-				triggerClient.sendEvent(
-					{
-						id: `pet-food-notification:${petID}`,
-						name: 'pet-food-notification',
-						payload: {
-							petID: petID
-						}
-					},
-					{
-						deliverAt: add(time, delay)
-					}
-				),
-			(err) => console.log('Failed to schedule notifications', err)
-		);
+	if (!delay) {
+		return;
 	}
+
+	await wrapTry(
+		() =>
+			triggerClient.sendEvent(
+				{
+					id: `pet-food-notification:${petFoodID}`,
+					name: 'pet-food-notification',
+					payload: {
+						petID: petID
+					}
+				},
+				{
+					deliverAt: add(time, delay)
+				}
+			),
+		(err) => console.log('Failed to schedule notifications', err)
+	);
 };

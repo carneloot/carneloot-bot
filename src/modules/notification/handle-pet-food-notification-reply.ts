@@ -4,7 +4,7 @@ import { fromUnixTime } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
 import Qty from 'js-quantities';
 
-import { addPetFood, schedulePetFoodNotification } from '../../lib/entities/pet-food.js';
+import { addPetFood, cancelPetFoodNotification, getLastPetFood, schedulePetFoodNotification } from '../../lib/entities/pet-food.js';
 import { PetID } from '../../lib/database/schema.js';
 
 import { Context } from '../../common/types/context.js';
@@ -26,12 +26,16 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 		}
 
 		const quantityStr = quantityMatch.at(0)!.trim();
-		const quantityQty = quantityStr.match(/(mg|g|kg)$/) ? Qty(quantityStr) : Qty(`${quantityStr}g`);
+		const quantityQty = quantityStr.match(/(mg|g|kg)$/)
+			? Qty(quantityStr)
+			: Qty(`${quantityStr}g`);
 		const quantity = Math.floor(quantityQty.to('g').scalar);
 
 		const time = fromUnixTime(ctx.message.date);
 
-		await addPetFood({
+		const lastPetFood = await getLastPetFood(petID);
+
+		const petFood = await addPetFood({
 			userID: ctx.user!.id,
 			petID,
 			quantity,
@@ -39,7 +43,11 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			messageID: ctx.message.message_id
 		});
 
-		await schedulePetFoodNotification(petID, time);
+		if (lastPetFood) {
+			await cancelPetFoodNotification(lastPetFood.id);
+		}
+
+		await schedulePetFoodNotification(petID, petFood.id, time);
 
 		await ctx.react(Reactions.thumbs_up);
 	}) satisfies MiddlewareFn<Context>;

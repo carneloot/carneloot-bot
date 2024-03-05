@@ -8,7 +8,12 @@ import ms from 'ms';
 
 import { Context } from '../../common/types/context.js';
 import { getConfig } from '../../lib/entities/config.js';
-import { addPetFood, schedulePetFoodNotification } from '../../lib/entities/pet-food.js';
+import {
+	addPetFood,
+	cancelPetFoodNotification,
+	getLastPetFood,
+	schedulePetFoodNotification
+} from '../../lib/entities/pet-food.js';
 import { WEIGHT_REGEX } from '../../common/constants.js';
 
 export const AddFoodCommand = (async (ctx) => {
@@ -55,7 +60,9 @@ export const AddFoodCommand = (async (ctx) => {
 		}
 	}
 
-	await addPetFood({
+	const lastPetFood = await getLastPetFood(currentPet.id);
+
+	const petFood = await addPetFood({
 		userID: ctx.user.id,
 		time: time,
 		petID: currentPet.id,
@@ -63,7 +70,11 @@ export const AddFoodCommand = (async (ctx) => {
 		messageID: ctx.message?.message_id
 	});
 
-	await schedulePetFoodNotification(currentPet.id, time);
+	if (lastPetFood) {
+		await cancelPetFoodNotification(lastPetFood.id);
+	}
+
+	await schedulePetFoodNotification(currentPet.id, petFood.id, time);
 
 	await ctx.reply(`Foram adicionados ${quantityQty} de ração para o pet ${currentPet.name}.`);
 	await ctx.react(Reactions.thumbs_up);
