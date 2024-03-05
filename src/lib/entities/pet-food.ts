@@ -1,13 +1,13 @@
 import { createId } from '@paralleldrive/cuid2';
 
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { fromPromise } from 'neverthrow';
 import { add } from 'date-fns';
 
 import { PetFoodID, petFoodTable, PetID, petsTable } from '../database/schema.js';
 import { db } from '../database/db.js';
 import { getConfig } from './config.js';
 import { triggerClient } from '../trigger/trigger-client.js';
-import { wrapTry } from '../../common/utils/wrap-try.js';
 
 type PetFood = typeof petFoodTable.$inferSelect;
 
@@ -56,9 +56,8 @@ export const getLastPetFood = (petID: PetID) => {
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
-	await wrapTry(
-		() => triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`),
-		() => console.warn('Failed to cancel previous notification')
+	await fromPromise(triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`), () =>
+		console.warn('Failed to cancel previous notification')
 	);
 };
 
@@ -73,20 +72,19 @@ export const schedulePetFoodNotification = async (
 		return;
 	}
 
-	await wrapTry(
-		() =>
-			triggerClient.sendEvent(
-				{
-					id: `pet-food-notification:${petFoodID}`,
-					name: 'pet-food-notification',
-					payload: {
-						petID: petID
-					}
-				},
-				{
-					deliverAt: add(time, delay)
+	await fromPromise(
+		triggerClient.sendEvent(
+			{
+				id: `pet-food-notification:${petFoodID}`,
+				name: 'pet-food-notification',
+				payload: {
+					petID: petID
 				}
-			),
+			},
+			{
+				deliverAt: add(time, delay)
+			}
+		),
 		(err) => console.log('Failed to schedule notifications', err)
 	);
 };
