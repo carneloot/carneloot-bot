@@ -1,5 +1,4 @@
-import { addDays, formatDistanceStrict, fromUnixTime, isAfter, set, subDays } from 'date-fns';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { formatDistanceStrict, fromUnixTime } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
 import { ptBR } from 'date-fns/locale';
 
@@ -9,6 +8,7 @@ import { Context } from '../../common/types/context.js';
 
 import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
 import { getConfig } from '../../lib/entities/config.js';
+import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -36,19 +36,7 @@ export const FoodStatusCommand = (async (ctx) => {
 
 	const now = fromUnixTime(ctx.message!.date);
 
-	let from = set(now, {
-		hours: dayStart.hour,
-		minutes: 0,
-		seconds: 0,
-		milliseconds: 0
-	});
-
-	if (isAfter(from, now)) {
-		from = subDays(from, 1);
-	}
-
-	from = zonedTimeToUtc(from, dayStart.timezone);
-	const to = zonedTimeToUtc(addDays(from, 1), dayStart.timezone);
+	const { from, to } = getDailyFromTo(now, dayStart);
 
 	const dailyFoodConsumption = await getDailyFoodConsumption(currentPet.id, from, to);
 

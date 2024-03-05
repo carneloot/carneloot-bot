@@ -38,7 +38,7 @@ type ConfigSchema<
 	Key extends ConfigKey<Context>
 > = Configs[Context][Key] extends z.ZodTypeAny ? Configs[Context][Key] : never;
 
-type ConfigValue<
+export type ConfigValue<
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>
 > = Configs[Context][Key] extends z.ZodTypeAny ? z.infer<Configs[Context][Key]> : never;
