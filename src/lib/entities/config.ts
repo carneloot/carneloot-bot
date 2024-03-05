@@ -1,14 +1,14 @@
+import { createId } from '@paralleldrive/cuid2';
+
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { User } from './user.js';
 import { db } from '../database/db.js';
-import { ConfigID, configsTable, PetID } from '../database/schema.js';
-import { and, eq } from 'drizzle-orm';
-import { createId } from '@paralleldrive/cuid2';
+import { ConfigID, configsTable, PetID, UserID } from '../database/schema.js';
 
 const Configs = {
 	user: {
-		identifier: '' as User['id'],
+		identifier: UserID,
 		dayStart: z.object({
 			hour: z.number().min(0).max(14),
 			timezone: z.string()
@@ -26,7 +26,7 @@ type ConfigContext = keyof Configs;
 
 type ConfigKey<Context extends ConfigContext> = Exclude<keyof Configs[Context], 'identifier'>;
 
-type ContextIdentifier<Context extends ConfigContext> = Configs[Context]['identifier'];
+type ContextIdentifier<Context extends ConfigContext> = z.infer<Configs[Context]['identifier']>;
 
 type ConfigSchema<
 	Context extends ConfigContext,
