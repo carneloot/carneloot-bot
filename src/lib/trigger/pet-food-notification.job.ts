@@ -52,7 +52,9 @@ triggerClient.defineJob({
 			return;
 		}
 
-		const carers = await getPetCarers(payload.petID);
+		const carers = await getPetCarers(payload.petID).then((carers) =>
+			carers.filter((carer) => carer.status === 'accepted')
+		);
 
 		const bot = new Bot<Context>(process.env.BOT_TOKEN!);
 
