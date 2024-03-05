@@ -4,7 +4,6 @@ import { MiddlewareFn } from 'grammy';
 
 import { answerPendingPetInvite, getPendingPetInvites } from '../../lib/entities/pet.js';
 import { getUserByID } from '../../lib/entities/user.js';
-import { copyConfig } from '../../lib/entities/config.js';
 
 import { Context } from '../../common/types/context.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
@@ -39,11 +38,6 @@ export const petInvitesConversation = (async (conversation, ctx) => {
 
 	const petOwner = await conversation.external(() => getUserByID(invite.petOwner));
 	if (petOwner) {
-		// Copy config from owner to new carer
-		await conversation.external(() =>
-			copyConfig('user', 'dayStart', petOwner.id, ctx.user!.id)
-		);
-
 		const carerDisplay = getUserDisplay(ctx.user!);
 
 		await ctx.api.sendMessage(

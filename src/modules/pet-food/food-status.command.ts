@@ -16,20 +16,20 @@ export const FoodStatusCommand = (async (ctx) => {
 		return;
 	}
 
-	const dayStart = await getConfig('user', 'dayStart', ctx.user.id);
-
-	if (!dayStart) {
-		await ctx.reply(
-			'Você ainda não configurou o horário de início do dia.\nUtilize o comando /configurar_inicio_dia para configurar'
-		);
-		return;
-	}
-
 	const currentPet = await getConfig('user', 'currentPet', ctx.user.id);
 
 	if (!currentPet) {
 		await ctx.reply(
 			'Você ainda não configurou o pet atual.\nUtilize o comando /escolher_pet para configurar'
+		);
+		return;
+	}
+
+	const dayStart = await getConfig('pet', 'dayStart', currentPet.id);
+
+	if (!dayStart) {
+		await ctx.reply(
+			'Você ainda não configurou o horário de início do dia.\nUtilize o comando /configurar_inicio_dia para configurar'
 		);
 		return;
 	}

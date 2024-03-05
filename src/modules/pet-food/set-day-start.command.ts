@@ -8,6 +8,7 @@ import { getConfig, setConfig } from '../../lib/entities/config.js';
 import { Context } from '../../common/types/context.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { getUserOwnedPets } from '../../lib/entities/pet.js';
 
 const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
 	value: i,
@@ -15,13 +16,28 @@ const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export const setDayStartConversation = (async (cvs, ctx) => {
-	const dayStart = await cvs.external(() => getConfig('user', 'dayStart', ctx.user!.id));
+	const pets = await cvs.external(() => getUserOwnedPets(ctx.user!.id));
+
+	if (pets.length === 0) {
+		await ctx.reply('Você ainda não cadastrou nenhum pet.');
+		return;
+	}
+
+	const pet = await showOptionsKeyboard({
+		values: pets,
+		labelFn: (pet) => pet.name,
+		message: 'Escolha o pet para configurar:'
+	})(cvs, ctx);
+
+	const dayStart = await cvs.external(() => getConfig('pet', 'dayStart', pet.id));
 
 	const message = dayStart
-		? `Seu horário de início do dia atual é ${dayStart.hour}h no fuso horário ${dayStart.timezone}.`
-		: 'Você ainda não definiu um horário de início do dia.';
+		? `O horário de início atual do pet ${pet.name} é ${dayStart.hour}h no fuso horário "${dayStart.timezone}".`
+		: `Você ainda não definiu um horário de início do dia para ${pet.name}.`;
 
-	const answer = await showYesOrNoQuestion(`${message} Deseja alterar?`)(cvs, ctx);
+	const answer = await showYesOrNoQuestion(
+		`${message} Deseja ${dayStart ? 'alterar' : 'adicionar'}?`
+	)(cvs, ctx);
 
 	if (!answer) {
 		await ctx.replyWithEmoji`Ok ${'smiling_face_with_smiling_eyes'}`;
@@ -45,11 +61,11 @@ export const setDayStartConversation = (async (cvs, ctx) => {
 	})(cvs, ctx);
 
 	await cvs.external(() =>
-		setConfig('user', 'dayStart', ctx.user!.id, { hour: hour.value, timezone: timezone.name })
+		setConfig('pet', 'dayStart', pet.id, { hour: hour.value, timezone: timezone.name })
 	);
 
 	await ctx.reply(
-		`Seu horário de início do dia foi definido para ${hour.value}h no fuso horário ${timezone.name}.`
+		`O horário de início do dia do pet ${pet.name} foi definido para ${hour.value}h no fuso horário "${timezone.name}".`
 	);
 }) satisfies ConversationFn<Context>;
 

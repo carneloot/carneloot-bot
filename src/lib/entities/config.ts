@@ -9,15 +9,18 @@ import { ConfigID, configsTable, PetID, UserID } from '../database/schema.js';
 const Configs = {
 	user: {
 		identifier: UserID,
-		dayStart: z.object({
-			hour: z.number().min(0).max(14),
-			timezone: z.string()
-		}),
 		currentPet: z.object({
 			id: z.string().transform((v) => v as PetID),
 			name: z.string()
 		}),
 		showNotifications: z.boolean()
+	},
+	pet: {
+		identifier: PetID,
+		dayStart: z.object({
+			hour: z.number().min(0).max(14),
+			timezone: z.string()
+		})
 	}
 };
 type Configs = typeof Configs;
@@ -98,44 +101,6 @@ export const setConfig = async <
 			target: [configsTable.context, configsTable.key],
 			set: {
 				value: parsedValue
-			}
-		});
-};
-
-export const copyConfig = async <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
->(
-	context: Context,
-	key: Key,
-	from: Identifier,
-	to: Identifier
-) => {
-	const fromValue = await db
-		.select({ value: configsTable.value })
-		.from(configsTable)
-		.where(
-			and(eq(configsTable.context, `${context}:${from}`), eq(configsTable.key, key as string))
-		)
-		.get();
-
-	if (!fromValue) {
-		return;
-	}
-
-	await db
-		.insert(configsTable)
-		.values({
-			id: createId() as ConfigID,
-			context: `${context}:${to}`,
-			key: key as string,
-			value: fromValue.value
-		})
-		.onConflictDoUpdate({
-			target: [configsTable.context, configsTable.key],
-			set: {
-				value: fromValue.value
 			}
 		});
 };
