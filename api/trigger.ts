@@ -1,6 +1,6 @@
-import { triggerClient } from '../src/lib/trigger/trigger.js';
+import { triggerClient } from '../src/lib/trigger/trigger-client.js';
 
-import '../src/lib/trigger/example.job.js';
+import '../src/lib/trigger/pet-food-notification.job.js';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

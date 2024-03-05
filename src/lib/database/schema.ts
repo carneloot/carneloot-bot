@@ -182,9 +182,11 @@ export const notificationHistoryTable = sqliteTable(
 	{
 		id: text('id').primaryKey().$type<NotificationHistoryID>(),
 		notificationID: text('notification_id')
-			.notNull()
 			.references(() => notificationsTable.id)
 			.$type<NotificationID>(),
+		petID: text('pet_id')
+			.references(() => petsTable.id)
+			.$type<PetID>(),
 		userID: text('user_id')
 			.notNull()
 			.references(() => usersTable.id)
@@ -194,7 +196,7 @@ export const notificationHistoryTable = sqliteTable(
 	},
 	(self) => ({
 		messageIdIdx: uniqueIndex('messageIdIdx').on(self.messageID),
-		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.userID)
+		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.petID, self.userID)
 	})
 );
 

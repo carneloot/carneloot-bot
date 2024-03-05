@@ -35,7 +35,8 @@ async function sendNotificationAndLog({
 	await createNotificationHistory({
 		notificationID: notification.id,
 		userID: user.id,
-		messageID: message.message_id
+		messageID: message.message_id,
+		petID: null
 	});
 }
 

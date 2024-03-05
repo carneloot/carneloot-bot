@@ -4,6 +4,8 @@ import { and, eq } from 'drizzle-orm';
 
 import { db } from '../database/db.js';
 import { petCarersTable, PetCarerStatus, petsTable, usersTable } from '../database/schema.js';
+import { User } from './user.js';
+import { Prettify } from '../../common/types/prettify.js';
 
 export type Pet = typeof petsTable.$inferSelect;
 export type PetCarer = typeof petCarersTable.$inferSelect;
@@ -18,6 +20,36 @@ export const createPet = async (name: Pet['name'], ownerID: Pet['ownerID']) => {
 
 export const deletePet = async (petID: Pet['id']) => {
 	await db.delete(petsTable).where(eq(petsTable.id, petID));
+};
+
+type GetPetByIDOptions<WithOwner extends boolean> = {
+	withOwner?: WithOwner;
+};
+
+type GetPetByIDResult<WithOwner extends boolean> = WithOwner extends true
+	? Pick<Pet, 'id' | 'name'> & { owner: User }
+	: Pick<Pet, 'id' | 'name'>;
+
+export const getPetByID = <WithOwner extends boolean = false>(
+	petID: Pet['id'],
+	options?: GetPetByIDOptions<WithOwner>
+): Promise<Prettify<GetPetByIDResult<WithOwner>>> => {
+	const withOwner = options?.withOwner ?? false;
+
+	const query = db
+		.select({
+			id: petsTable.id,
+			name: petsTable.name,
+			...(withOwner ? { owner: usersTable } : {})
+		})
+		.from(petsTable)
+		.where(eq(petsTable.id, petID));
+
+	if (withOwner) {
+		query.innerJoin(usersTable, eq(petsTable.ownerID, usersTable.id));
+	}
+
+	return query.get() as Promise<GetPetByIDResult<WithOwner>>;
 };
 
 export const getUserOwnedPets = (userID: Pet['ownerID']) => {
@@ -55,14 +87,6 @@ export const getPetCarers = (petID: PetCarer['petID']) => {
 		.innerJoin(usersTable, eq(petCarersTable.carerID, usersTable.id))
 		.where(eq(petCarersTable.petID, petID))
 		.all();
-};
-
-export const getPetFromNameAndOwner = (petName: Pet['name'], ownerID: Pet['ownerID']) => {
-	return db
-		.select()
-		.from(petsTable)
-		.where(and(eq(petsTable.name, petName), eq(petsTable.ownerID, ownerID)))
-		.get();
 };
 
 export const isUserCarer = (petID: PetCarer['petID'], carerID: PetCarer['carerID']) => {

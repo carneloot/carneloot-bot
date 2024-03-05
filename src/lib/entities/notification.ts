@@ -39,14 +39,16 @@ async function getNotificationByOwnerAndKeyword(
 }
 
 type CreateNotificationHistory = {
+	userID: NotificationHistory['userID'];
 	messageID: NotificationHistory['messageID'];
 	notificationID: NotificationHistory['notificationID'];
-	userID: NotificationHistory['userID'];
+	petID: NotificationHistory['petID'];
 };
 
 async function createNotificationHistory({
 	messageID,
 	notificationID,
+	petID,
 	userID
 }: CreateNotificationHistory) {
 	await db
@@ -55,11 +57,16 @@ async function createNotificationHistory({
 			id: createId() as NotificationHistory['id'],
 			messageID,
 			notificationID,
+			petID,
 			userID,
 			sentAt: new Date()
 		})
 		.onConflictDoUpdate({
-			target: [notificationHistoryTable.notificationID, notificationHistoryTable.userID],
+			target: [
+				notificationHistoryTable.notificationID,
+				notificationHistoryTable.userID,
+				notificationHistoryTable.petID
+			],
 			set: {
 				messageID,
 				sentAt: new Date()
@@ -74,12 +81,13 @@ async function getNotificationFromHistory(
 ) {
 	const ownerHistory = alias(notificationHistoryTable, 'ownerHistory');
 
-	const result = await db
+	return db
 		.select({
 			messageToReply: ownerHistory.messageID,
 			ownerTelegramId: usersTable.telegramID,
 			ownerID: usersTable.id,
-			keyword: notificationsTable.keyword
+			keyword: notificationsTable.keyword,
+			petID: notificationHistoryTable.petID
 		})
 		.from(notificationHistoryTable)
 		.innerJoin(
@@ -95,12 +103,6 @@ async function getNotificationFromHistory(
 			)
 		)
 		.get();
-
-	if (!result) {
-		return null;
-	}
-
-	return result;
 }
 
 export {

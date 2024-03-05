@@ -8,6 +8,7 @@ import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 import { deleteConfig, getConfig, setConfig } from '../../lib/entities/config.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { cancelPetFoodNotification } from '../../lib/entities/pet-food.js';
 
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	const pets = await cvs.external(() => getUserOwnedPets(ctx.user!.id));
@@ -86,6 +87,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	}
 
 	await cvs.external(() => deleteConfig('pet', 'notificationDelay', pet.id));
+	await cvs.external(() => cancelPetFoodNotification(pet.id));
 
 	await ctx.reply('Atraso de notificação excluído e notificação desabilitada.');
 }) satisfies ConversationFn<Context>;
