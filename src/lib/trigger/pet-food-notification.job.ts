@@ -55,7 +55,7 @@ triggerClient.defineJob({
 		const quantity = dailyConsumption ? Qty(dailyConsumption.total, 'g') : null;
 
 		const message = [
-			`Hora de dar comida para o pet ${pet.name}.`,
+			`🚨 Hora de dar comida para o pet ${pet.name}.`,
 			!!quantity && `Já foram ${quantity} hoje.`,
 			!quantity && 'Ainda não foi dado comida hoje.'
 		]
