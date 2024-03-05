@@ -59,7 +59,8 @@ export const AddFoodCommand = (async (ctx) => {
 		userID: ctx.user.id,
 		time: time,
 		petID: currentPet.id,
-		quantity
+		quantity,
+		messageID: ctx.message?.message_id
 	});
 
 	await schedulePetFoodNotification(currentPet.id, time);

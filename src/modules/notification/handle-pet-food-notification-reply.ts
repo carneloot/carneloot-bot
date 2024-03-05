@@ -35,7 +35,8 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			userID: ctx.user!.id,
 			petID,
 			quantity,
-			time
+			time,
+			messageID: ctx.message.message_id
 		});
 
 		await schedulePetFoodNotification(petID, time);

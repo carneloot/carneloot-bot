@@ -88,13 +88,15 @@ export const petFoodTable = sqliteTable(
 			.notNull()
 			.references(() => usersTable.id)
 			.$type<UserID>(),
+		messageID: integer('message_id'),
 		quantity: real('quantity').notNull(),
 		time: integer('time', { mode: 'timestamp' }).notNull()
 	},
 	(self) => ({
 		petFoodPetIdIdx: index('petFoodPetIdIdx').on(self.petID),
 		petFoodUserIDIdx: index('petFoodUserIDIdx').on(self.userID),
-		petFoodCreatedAtIdx: index('petFoodCreatedAtIdx').on(self.time)
+		petFoodCreatedAtIdx: index('petFoodCreatedAtIdx').on(self.time),
+		petFoodMessageIDIdx: index('petFoodMessageIDIdx').on(self.messageID)
 	})
 );
 
