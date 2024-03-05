@@ -1,10 +1,5 @@
 import { Reactions } from '@grammyjs/emoji';
-
-import { addMilliseconds, fromUnixTime, subMilliseconds } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
-
-import Qty from 'js-quantities';
-import ms from 'ms';
 
 import { Context } from '../../common/types/context.js';
 import { getConfig } from '../../lib/entities/config.js';
@@ -14,18 +9,11 @@ import {
 	getLastPetFood,
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
-import { WEIGHT_REGEX } from '../../common/constants.js';
+import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 
 export const AddFoodCommand = (async (ctx) => {
 	if (!ctx.user) {
 		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
-		return;
-	}
-
-	if (!ctx.match || Array.isArray(ctx.match)) {
-		await ctx.reply(
-			'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
-		);
 		return;
 	}
 
@@ -38,27 +26,14 @@ export const AddFoodCommand = (async (ctx) => {
 		return;
 	}
 
-	const [quantityRaw, deltaTimeRaw] = ctx.match.split(' ');
+	const result = parsePetFoodWeightAndTime(ctx.match, ctx.message!.date);
 
-	const quantityMatch = quantityRaw.match(WEIGHT_REGEX);
-	if (!quantityMatch) {
-		await ctx.reply('A quantidade de ração informada é inválida.');
+	if (result.isErr()) {
+		await ctx.reply(result.error);
 		return;
 	}
 
-	const quantityQty = Qty(Number(quantityMatch[1]), quantityMatch[2] ?? 'g');
-	const quantity = quantityQty.to('g').scalar;
-
-	let time = fromUnixTime(ctx.message!.date);
-	if (deltaTimeRaw) {
-		const isNegative = deltaTimeRaw.startsWith('-');
-		const deltaTime = ms(deltaTimeRaw.replace(/^-/, ''));
-		if (isNegative) {
-			time = subMilliseconds(time, deltaTime);
-		} else {
-			time = addMilliseconds(time, deltaTime);
-		}
-	}
+	const { quantity, time } = result.value;
 
 	const lastPetFood = await getLastPetFood(currentPet.id);
 
@@ -66,7 +41,7 @@ export const AddFoodCommand = (async (ctx) => {
 		userID: ctx.user.id,
 		time: time,
 		petID: currentPet.id,
-		quantity,
+		quantity: quantity.scalar,
 		messageID: ctx.message?.message_id
 	});
 
@@ -76,6 +51,6 @@ export const AddFoodCommand = (async (ctx) => {
 
 	await schedulePetFoodNotification(currentPet.id, petFood.id, time);
 
-	await ctx.reply(`Foram adicionados ${quantityQty} de ração para o pet ${currentPet.name}.`);
+	await ctx.reply(`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`);
 	await ctx.react(Reactions.thumbs_up);
 }) satisfies MiddlewareFn<Context>;
