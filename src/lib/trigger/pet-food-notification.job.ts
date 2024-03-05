@@ -46,23 +46,24 @@ triggerClient.defineJob({
 
 		const dailyConsumption = await getDailyFoodConsumption(payload.petID, from, to);
 
-		if (!dailyConsumption) {
-			await io.logger.error(`Failed to get daily consumption for pet ${payload.petID}`);
-
-			return;
-		}
-
 		const carers = await getPetCarers(payload.petID).then((carers) =>
 			carers.filter((carer) => carer.status === 'accepted')
 		);
 
 		const bot = new Bot<Context>(process.env.BOT_TOKEN!);
 
-		const quantity = Qty(dailyConsumption.total, 'g');
+		const quantity = dailyConsumption ? Qty(dailyConsumption.total, 'g') : null;
+
+		const message = [
+			`Hora de dar comida para o pet ${pet.name}.`,
+			!!quantity && `Já foram ${quantity} hoje.`,
+			!quantity && 'Ainda não foi dado comida hoje.'
+		]
+			.filter(Boolean)
+			.join(' ');
 
 		for (const { carer } of [{ carer: pet.owner }, ...carers]) {
 			await io.runTask(`send-pet-notification:${carer.id}`, async () => {
-				const message = `Hora de dar comida para o pet ${pet.name}. Já foram ${quantity} hoje.`;
 				const sentMessage = await bot.api.sendMessage(carer.telegramID, message);
 
 				await createNotificationHistory({
