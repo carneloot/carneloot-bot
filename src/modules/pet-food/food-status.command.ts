@@ -1,7 +1,7 @@
 import { formatDistanceStrict, fromUnixTime } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
-import { ptBR } from 'date-fns/locale';
 
+import ptBR from 'date-fns/locale/pt-BR';
 import Qty from 'js-quantities';
 
 import { Context } from '../../common/types/context.js';
