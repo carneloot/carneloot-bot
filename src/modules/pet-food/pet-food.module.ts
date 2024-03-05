@@ -4,11 +4,15 @@ import { createConversation } from '@grammyjs/conversations';
 import { SetDayStartCommand, setDayStartConversation } from './set-day-start.command.js';
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
 import { FoodStatusCommand } from './food-status.command.js';
+import { AddFoodCommand } from './add-food.command.js';
 import {
 	ChooseCurrentPetCommand,
 	chooseCurrentPetConversation
 } from './choose-current-pet.command.js';
-import { AddFoodCommand } from './add-food.command.js';
+import {
+	SetNotificationDelayCommand,
+	setNotificationDelayConversation
+} from './set-notification-delay.command.js';
 
 export const PetFoodModule = new Module<Context>('', 'Operações de rastreamento de ração');
 
@@ -19,6 +23,15 @@ PetFoodModule.setCommand(
 	'Configura o horário de início do dia para rastreamento de ração',
 	UserMiddleware,
 	SetDayStartCommand
+);
+
+// Set notification delay
+PetFoodModule.use(createConversation(setNotificationDelayConversation, 'setNotificationDelay'));
+PetFoodModule.setCommand(
+	'configurar_atraso_notificacao',
+	'Configura o atraso de notificação para rastreamento de ração',
+	UserMiddleware,
+	SetNotificationDelayCommand
 );
 
 // Chooses current pet

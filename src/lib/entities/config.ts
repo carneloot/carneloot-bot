@@ -1,5 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 
+import { Duration } from 'tinyduration';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -17,6 +18,7 @@ const Configs = {
 	},
 	pet: {
 		identifier: PetID,
+		notificationDelay: z.any({}).transform((v) => v as Duration),
 		dayStart: z.object({
 			hour: z.number().min(0).max(14),
 			timezone: z.string()
@@ -103,4 +105,20 @@ export const setConfig = async <
 				value: parsedValue
 			}
 		});
+};
+
+export const deleteConfig = async <
+	Context extends ConfigContext,
+	Key extends ConfigKey<Context>,
+	Identifier extends ContextIdentifier<Context>
+>(
+	context: Context,
+	key: Key,
+	id: Identifier
+) => {
+	await db
+		.delete(configsTable)
+		.where(
+			and(eq(configsTable.context, `${context}:${id}`), eq(configsTable.key, key as string))
+		);
 };
