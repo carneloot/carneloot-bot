@@ -45,6 +45,13 @@ export const addPetFood = (values: Omit<typeof petFoodTable.$inferInsert, 'id'>)
 		.get();
 };
 
+export const updatePetFood = async (
+	petFoodID: PetFoodID,
+	values: Pick<typeof petFoodTable.$inferInsert, 'time' | 'messageID' | 'quantity'>
+) => {
+	await db.update(petFoodTable).set(values).where(eq(petFoodTable.id, petFoodID));
+};
+
 export const getLastPetFood = (petID: PetID) => {
 	return db
 		.select({ id: petFoodTable.id })
@@ -53,6 +60,10 @@ export const getLastPetFood = (petID: PetID) => {
 		.orderBy(desc(petFoodTable.time))
 		.limit(1)
 		.get();
+};
+
+export const getPetFoodByMessageId = (messageID: number) => {
+	return db.select().from(petFoodTable).where(eq(petFoodTable.messageID, messageID)).get();
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {

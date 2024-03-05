@@ -13,6 +13,7 @@ import {
 	SetNotificationDelayCommand,
 	setNotificationDelayConversation
 } from './set-notification-delay.command.js';
+import { CorrectFoodCommand, correctFoodConversation } from './correct-food.command.js';
 
 export const PetFoodModule = new Module<Context>('', 'Operações de rastreamento de ração');
 
@@ -57,4 +58,13 @@ PetFoodModule.setCommand(
 	'Adiciona ração ao rastreamento de ração',
 	UserMiddleware,
 	AddFoodCommand
+);
+
+// Correct food
+PetFoodModule.use(createConversation(correctFoodConversation, 'correctFood'));
+PetFoodModule.setCommand(
+	'corrigir_racao',
+	'Corrige o valor e tempo de um comando de ração mandado anteriormente',
+	UserMiddleware,
+	CorrectFoodCommand
 );
