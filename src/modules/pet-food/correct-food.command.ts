@@ -11,6 +11,7 @@ import {
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
+import { getConfig } from '../../lib/entities/config.js';
 
 export const correctFoodConversation = (async (cvs, ctx) => {
 	await ctx.reply('Responda a mensagem que quer corrigir com o valor correto.');
@@ -32,7 +33,18 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const result = parsePetFoodWeightAndTime(replyResponse.message!.text, getUnixTime(petFood.time));
+	const dayStart = await getConfig('pet', 'dayStart', petFood.petID);
+
+	if (!dayStart) {
+		await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+		return;
+	}
+
+	const result = parsePetFoodWeightAndTime({
+		messageMatch: replyResponse.message!.text,
+		messageTime: getUnixTime(petFood.time),
+		timezone: dayStart.timezone
+	});
 
 	if (result.isErr()) {
 		await ctx.reply(result.error);

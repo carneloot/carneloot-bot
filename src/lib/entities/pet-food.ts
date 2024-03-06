@@ -63,7 +63,15 @@ export const getLastPetFood = (petID: PetID) => {
 };
 
 export const getPetFoodByMessageId = (messageID: number) => {
-	return db.select().from(petFoodTable).where(eq(petFoodTable.messageID, messageID)).get();
+	return db
+		.select({
+			id: petFoodTable.id,
+			time: petFoodTable.time,
+			petID: petFoodTable.petID
+		})
+		.from(petFoodTable)
+		.where(eq(petFoodTable.messageID, messageID))
+		.get();
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {

@@ -13,6 +13,7 @@ import { PetID } from '../../lib/database/schema.js';
 
 import { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
+import { getConfig } from '../../lib/entities/config.js';
 
 export const handlePetFoodNotificationReply = (petID: PetID) =>
 	(async (ctx) => {
@@ -20,7 +21,18 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			throw new Error('Message object not found.');
 		}
 
-		const result = parsePetFoodWeightAndTime(ctx.message.text, ctx.message.date);
+		const dayStart = await getConfig('pet', 'dayStart', petID);
+
+		if (!dayStart) {
+			await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+			return;
+		}
+
+		const result = parsePetFoodWeightAndTime({
+			messageMatch: ctx.message.text,
+			messageTime: ctx.message.date,
+			timezone: dayStart.timezone
+		});
 
 		if (result.isErr()) {
 			await ctx.reply(result.error);

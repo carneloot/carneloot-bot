@@ -27,7 +27,18 @@ export const AddFoodCommand = (async (ctx) => {
 		return;
 	}
 
-	const result = parsePetFoodWeightAndTime(ctx.match, ctx.message!.date);
+	const dayStart = await getConfig('pet', 'dayStart', currentPet.id);
+
+	if (!dayStart) {
+		await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+		return;
+	}
+
+	const result = parsePetFoodWeightAndTime({
+		messageMatch: ctx.match,
+		messageTime: ctx.message!.date,
+		timezone: dayStart.timezone
+	});
 
 	if (result.isErr()) {
 		await ctx.reply(result.error);
