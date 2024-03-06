@@ -1,6 +1,7 @@
 import { Reactions } from '@grammyjs/emoji';
 
 import { MiddlewareFn } from 'grammy';
+import { isAfter } from 'date-fns';
 
 import {
 	addPetFood,
@@ -40,11 +41,13 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 
 		await ctx.reply(`Foram adicionados ${quantity} de ração.`);
 
-		if (lastPetFood) {
-			await cancelPetFoodNotification(lastPetFood.id);
-		}
+		if (!lastPetFood || isAfter(time, lastPetFood.time)) {
+			if (lastPetFood) {
+				await cancelPetFoodNotification(lastPetFood.id);
+			}
 
-		await schedulePetFoodNotification(petID, petFood.id, time);
+			await schedulePetFoodNotification(petID, petFood.id, time);
+		}
 
 		await ctx.react(Reactions.thumbs_up);
 	}) satisfies MiddlewareFn<Context>;

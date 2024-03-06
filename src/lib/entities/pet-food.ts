@@ -54,7 +54,7 @@ export const updatePetFood = async (
 
 export const getLastPetFood = (petID: PetID) => {
 	return db
-		.select({ id: petFoodTable.id })
+		.select({ id: petFoodTable.id, time: petFoodTable.time })
 		.from(petFoodTable)
 		.where(eq(petFoodTable.petID, petID))
 		.orderBy(desc(petFoodTable.time))
