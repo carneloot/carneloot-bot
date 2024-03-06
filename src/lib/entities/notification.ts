@@ -51,6 +51,12 @@ async function createNotificationHistory({
 	petID,
 	userID
 }: CreateNotificationHistory) {
+	const target = [
+		notificationHistoryTable.userID,
+		...(notificationID ? [notificationHistoryTable.notificationID] : []),
+		...(petID ? [notificationHistoryTable.petID] : [])
+	];
+
 	await db
 		.insert(notificationHistoryTable)
 		.values({
@@ -62,11 +68,7 @@ async function createNotificationHistory({
 			sentAt: new Date()
 		})
 		.onConflictDoUpdate({
-			target: [
-				notificationHistoryTable.notificationID,
-				notificationHistoryTable.userID,
-				notificationHistoryTable.petID
-			],
+			target,
 			set: {
 				messageID,
 				sentAt: new Date()
