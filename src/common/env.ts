@@ -11,7 +11,7 @@ const envSchema = z.object({
 
 	DEBUG: z.string().optional(),
 
-	VERCEL_URL: z.string().url().optional(),
+	VERCEL_URL: z.string().optional(),
 	VERCEL_ENV: z.string().optional()
 });
 
