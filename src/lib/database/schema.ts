@@ -198,7 +198,14 @@ export const notificationHistoryTable = sqliteTable(
 	},
 	(self) => ({
 		messageIdIdx: uniqueIndex('messageIdIdx').on(self.messageID),
-		uniqueIndex: uniqueIndex('uniqueIndex').on(self.notificationID, self.petID, self.userID)
+		notificationHistoryUniqNotifIdx: uniqueIndex('notificationHistoryUniqNotifIdx').on(
+			self.notificationID,
+			self.userID
+		),
+		notificationHistoryUniqPetIdx: uniqueIndex('notificationHistoryUniqPetIdx').on(
+			self.petID,
+			self.userID
+		)
 	})
 );
 
