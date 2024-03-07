@@ -2,7 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { fromPromise } from 'neverthrow';
-import { add } from 'date-fns';
+import { add, set } from 'date-fns';
 
 import { PetFoodID, petFoodTable, PetID, petsTable } from '../database/schema.js';
 import { db } from '../database/db.js';
@@ -101,7 +101,7 @@ export const schedulePetFoodNotification = async (
 				}
 			},
 			{
-				deliverAt: add(time, delay)
+				deliverAt: set(add(time, delay), { seconds: 0, milliseconds: 0 })
 			}
 		),
 		(err) => console.log('Failed to schedule notifications', err)
