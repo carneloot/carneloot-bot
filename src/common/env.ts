@@ -2,12 +2,11 @@ import { z } from 'zod';
 
 const envSchema = z.object({
 	BOT_TOKEN: z.string(),
+	WEBHOOK_URL: z.string().optional(),
 	TRIGGER_API_KEY: z.string(),
 
 	DATABASE_URL: z.string(),
 	DATABASE_AUTH_TOKEN: z.string().optional(),
-
-	WEBHOOK_URL: z.string().url().optional(),
 
 	DEBUG: z.string().optional(),
 
