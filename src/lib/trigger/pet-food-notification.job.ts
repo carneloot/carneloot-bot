@@ -12,6 +12,7 @@ import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getDailyFoodConsumption } from '../entities/pet-food.js';
 import { createNotificationHistory } from '../entities/notification.js';
 import { Context } from '../../common/types/context.js';
+import { Env } from '../../common/env.js';
 
 triggerClient.defineJob({
 	id: 'pet-food-notification',
@@ -50,7 +51,7 @@ triggerClient.defineJob({
 			carers.filter((carer) => carer.status === 'accepted')
 		);
 
-		const bot = new Bot<Context>(process.env.BOT_TOKEN!);
+		const bot = new Bot<Context>(Env.BOT_TOKEN);
 
 		const quantity = dailyConsumption ? Qty(dailyConsumption.total, 'g') : null;
 

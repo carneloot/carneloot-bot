@@ -1,8 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 
-const { VERCEL_URL, VERCEL } = process.env;
+import { Env } from '../env.js';
 
 export const publicAsset = (path: string) =>
-	VERCEL && VERCEL_URL
-		? `https://${VERCEL_URL}/${path}`
+	Env.VERCEL_URL
+		? `https://${Env.VERCEL_URL}/${path}`
 		: `https://picsum.photos/400/300?random=${createId()}`;

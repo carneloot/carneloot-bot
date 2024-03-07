@@ -2,6 +2,7 @@ import { Context, NextFunction } from 'grammy';
 
 import { sendResponse } from '../common/response/send-response.js';
 import type { GifResponse } from '../common/response/response.js';
+import { Env } from '../common/env.js';
 
 const errorResponse: GifResponse = {
 	type: 'gif',
@@ -13,7 +14,7 @@ export const GenericErrorMiddleware = async (ctx: Context, next: NextFunction) =
 	try {
 		await next();
 	} catch (err) {
-		process.env.DEBUG && console.error(err);
+		Env.DEBUG && console.error(err);
 		await sendResponse(ctx, errorResponse);
 	}
 };

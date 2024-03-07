@@ -6,6 +6,7 @@ import { Bot, session } from 'grammy';
 import { Module } from './common/module/module.js';
 import { getCommandForHelp, getDescriptionForHelp } from './common/types/command.js';
 import { Context } from './common/types/context.js';
+import { Env } from './common/env.js';
 
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
 
@@ -20,15 +21,9 @@ import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
 import { CafeCommand } from './commands/cafe-command.js';
 
-const { BOT_TOKEN } = process.env;
-
 type ConversationSessionData = Context['session']['conversation'];
 export const createBot = () => {
-	if (!BOT_TOKEN) {
-		throw new Error('Missing BOT_TOKEN');
-	}
-
-	const bot = new Bot<Context>(BOT_TOKEN);
+	const bot = new Bot<Context>(Env.BOT_TOKEN);
 
 	bot.use(
 		session({

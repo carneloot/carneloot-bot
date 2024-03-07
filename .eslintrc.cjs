@@ -12,8 +12,14 @@ module.exports = {
 		es6: true
 	},
 
+	rules: {
+		'n/no-process-env': 'error',
+		'n/no-unpublished-import': 'off',
+		'n/no-extraneous-import': 'off'
+	},
+
 	// Base config
-	extends: ['eslint:recommended', 'plugin:prettier/recommended'],
+	extends: ['eslint:recommended', 'plugin:prettier/recommended', 'plugin:n/recommended'],
 	overrides: [
 		// Typescript
 		{

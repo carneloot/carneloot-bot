@@ -7,6 +7,7 @@ import type { Username } from '../common/types/username.js';
 
 import { publicAsset } from '../common/utils/public-asset.js';
 import { isUsernameOnList } from '../common/utils/is-username-on-list.js';
+import { Env } from '../common/env.js';
 
 const unauthorizedResponses: UserResponse[] = [
 	{
@@ -29,7 +30,7 @@ const unauthorizedResponses: UserResponse[] = [
 	{
 		type: 'image',
 		input: () => publicAsset('auth-1.jpg'),
-		caption: () => (process.env.DEBUG && 'Foto aleatória porque é local') ?? undefined
+		caption: () => (Env.DEBUG && 'Foto aleatória porque é local') ?? undefined
 	}
 ];
 

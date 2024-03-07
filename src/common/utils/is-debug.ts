@@ -1,1 +1,3 @@
-export const isDebug = () => Boolean(process.env.DEBUG);
+import { Env } from '../env.js';
+
+export const isDebug = () => Boolean(Env.DEBUG);
