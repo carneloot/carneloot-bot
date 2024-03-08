@@ -1,6 +1,5 @@
-import { formatDistanceStrict, fromUnixTime } from 'date-fns';
+import { fromUnixTime } from 'date-fns';
 import { MiddlewareFn } from 'grammy';
-import ptBR from 'date-fns/locale/pt-BR/index.js';
 
 import Qty from 'js-quantities';
 
@@ -9,6 +8,7 @@ import { Context } from '../../common/types/context.js';
 import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
 import { getConfig } from '../../lib/entities/config.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { getRelativeTime } from '../../common/utils/get-relative-time.js';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -47,12 +47,15 @@ export const FoodStatusCommand = (async (ctx) => {
 
 	const qtd = Qty(dailyFoodConsumption.total, 'g');
 	const lastTime = fromUnixTime(dailyFoodConsumption.lastTime);
-	const timeSinceLast = formatDistanceStrict(lastTime, now, {
-		addSuffix: true,
-		locale: ptBR
+	let timeSinceLast = getRelativeTime(lastTime, now, {
+		units: ['years', 'months', 'weeks', 'days', 'hours', 'minutes']
 	});
 
+	if (timeSinceLast.length === 0) {
+		timeSinceLast = 'menos de um minuto';
+	}
+
 	await ctx.reply(
-		`Hoje já foram colocados ${qtd} de ração para o pet ${dailyFoodConsumption.name}.\nFoi colocado pela última vez ${timeSinceLast}.`
+		`Hoje já foram colocados ${qtd} de ração para o pet ${dailyFoodConsumption.name}.\nFoi colocado pela última vez há ${timeSinceLast}.`
 	);
 }) satisfies MiddlewareFn<Context>;
