@@ -8,6 +8,7 @@ import { PetFoodID, petFoodTable, PetID, petsTable } from '../database/schema.js
 import { db } from '../database/db.js';
 import { getConfig } from './config.js';
 import { triggerClient } from '../trigger/trigger-client.js';
+import { isDebug } from '../../common/utils/is-debug.js';
 
 type PetFood = typeof petFoodTable.$inferSelect;
 
@@ -75,6 +76,10 @@ export const getPetFoodByMessageId = (messageID: number) => {
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
+	if (isDebug()) {
+		return;
+	}
+
 	await fromPromise(triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`), () =>
 		console.warn('Failed to cancel previous notification')
 	);
@@ -85,6 +90,10 @@ export const schedulePetFoodNotification = async (
 	petFoodID: PetFoodID,
 	time: Date
 ) => {
+	if (isDebug()) {
+		return;
+	}
+
 	const delay = await getConfig('pet', 'notificationDelay', petID);
 
 	if (!delay) {
