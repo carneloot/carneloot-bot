@@ -1,58 +1,66 @@
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { fromUnixTime, set } from 'date-fns';
 import { err, ok } from 'neverthrow';
 
 import Qty from 'js-quantities';
 
-import { Context } from '../types/context.js';
+import { z } from 'zod';
 
-export const WEIGHT_REGEX = /(\d+(?:\.\d+)?)(mg|g|kg)?\b/i;
-export const DATE_TIME_REGEX =
-	/(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?<year>-\d{4})?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2})/;
+const MESSAGE_REGEX =
+	/(?<quantity>\d+(?:\.\d+)?)(?<unit>mg|g|kg)?\b\s+(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?:-(?<year>\d{4}))?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2})/i;
 
 interface PetFoodWeightAndTime {
-	messageMatch: Context['match'];
+	messageMatch?: string;
 	messageTime: number;
 	timezone: string;
 }
+
+const RegexResult = z.object({
+	quantity: z.coerce.number(),
+	unit: z.enum(['mg', 'g', 'kg']).default('g'),
+	day: z.coerce.number().optional(),
+	month: z.coerce.number().optional(),
+	year: z.coerce.number().optional(),
+	hour: z.coerce.number().optional(),
+	minute: z.coerce.number().optional()
+});
 
 export const parsePetFoodWeightAndTime = ({
 	messageMatch,
 	messageTime,
 	timezone
 }: PetFoodWeightAndTime) => {
-	if (!messageMatch || Array.isArray(messageMatch)) {
+	if (!messageMatch) {
+		return err('Por favor, envie uma mensagem');
+	}
+
+	const match = messageMatch.match(MESSAGE_REGEX);
+
+	if (!match) {
 		return err(
 			'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
 		);
 	}
 
-	const [quantityRaw, timeRaw] = messageMatch.split(' ');
+	const safeParseResult = RegexResult.safeParse(match.groups);
 
-	const quantityMatch = quantityRaw.match(WEIGHT_REGEX);
-	if (!quantityMatch) {
+	if (!safeParseResult.success) {
 		return err('A quantidade de ração informada é inválida.');
 	}
 
-	const quantity = Qty(Number(quantityMatch[1]), quantityMatch[2] ?? 'g').to('g');
+	const groups = safeParseResult.data;
 
-	let time = fromUnixTime(messageTime);
-	if (timeRaw) {
-		const timeMatch = timeRaw.match(DATE_TIME_REGEX);
+	const quantity = Qty(groups.quantity, groups.unit).to('g');
 
-		if (!timeMatch) {
-			return err(
-				'Por favor, mande o tempo da última refeição no formato "dd-mm-yyyy hh:mm" (a data é opcional).'
-			);
-		}
-
+	let time = utcToZonedTime(fromUnixTime(messageTime), timezone);
+	if (groups.hour && groups.minute) {
 		time = zonedTimeToUtc(
 			set(time, {
-				date: timeMatch.groups!.day ? parseInt(timeMatch.groups!.day, 10) : undefined,
-				month: timeMatch.groups!.month ? parseInt(timeMatch.groups!.month, 10) : undefined,
-				year: timeMatch.groups!.year ? parseInt(timeMatch.groups!.year, 10) : undefined,
-				hours: parseInt(timeMatch.groups!.hour, 10),
-				minutes: parseInt(timeMatch.groups!.minute, 10),
+				date: groups.day,
+				month: groups.month,
+				year: groups.year,
+				hours: groups.hour,
+				minutes: groups.minute,
 				seconds: 0,
 				milliseconds: 0
 			}),

@@ -1,6 +1,7 @@
 import { Reactions } from '@grammyjs/emoji';
 import { MiddlewareFn } from 'grammy';
-import { isAfter } from 'date-fns';
+import { isAfter, isEqual } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
 import { Context } from '../../common/types/context.js';
 import { getConfig } from '../../lib/entities/config.js';
@@ -31,6 +32,11 @@ export const AddFoodCommand = (async (ctx) => {
 
 	if (!dayStart) {
 		await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+		return;
+	}
+
+	if (typeof ctx.match !== 'string') {
+		await ctx.reply('Por favor, envie uma mensagem');
 		return;
 	}
 
@@ -65,6 +71,14 @@ export const AddFoodCommand = (async (ctx) => {
 		await schedulePetFoodNotification(currentPet.id, petFood.id, time);
 	}
 
-	await ctx.reply(`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`);
+	const message = [
+		`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`,
+		!isEqual(ctx.message!.date, time) &&
+			`A ração foi adicionada para ${utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR')}`
+	]
+		.filter(Boolean)
+		.join(' ');
+
+	await ctx.reply(message);
 	await ctx.react(Reactions.thumbs_up);
 }) satisfies MiddlewareFn<Context>;
