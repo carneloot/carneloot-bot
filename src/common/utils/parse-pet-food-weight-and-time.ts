@@ -7,7 +7,7 @@ import Qty from 'js-quantities';
 import { z } from 'zod';
 
 const MESSAGE_REGEX =
-	/(?<quantity>\d+(?:\.\d+)?)(?<unit>mg|g|kg)?\b\s+(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?:-(?<year>\d{4}))?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2})/i;
+	/(?<quantity>\d+(?:\.\d+)?)(?<unit>mg|g|kg)?(?:\s+(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?:-(?<year>\d{4}))?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2}))?/i;
 
 interface PetFoodWeightAndTime {
 	messageMatch?: string;
@@ -53,7 +53,7 @@ export const parsePetFoodWeightAndTime = ({
 	const quantity = Qty(groups.quantity, groups.unit).to('g');
 
 	let time = utcToZonedTime(fromUnixTime(messageTime), timezone);
-	if (groups.hour && groups.minute) {
+	if (groups.hour !== undefined && groups.minute !== undefined) {
 		time = zonedTimeToUtc(
 			set(time, {
 				date: groups.day,
