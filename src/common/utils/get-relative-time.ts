@@ -16,7 +16,7 @@ export const getRelativeTime = (date: Date, baseDate: Date, options?: Options) =
 
 	const formattedDuration = formatDuration(duration, {
 		locale: ptBR,
-		format: options?.units,
+		format: options?.units ?? [],
 		delimiter: ','
 	}).split(',');
 
