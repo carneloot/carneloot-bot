@@ -10,7 +10,7 @@ describe('parsePetFoodWeightAndTime', () => {
 	let date: Date;
 
 	beforeEach(() => {
-		date = new Date(2024, 2, 10, 17, 30, 30, 500);
+		date = zonedTimeToUtc(new Date(2024, 2, 10, 17, 30, 30, 0), timezone);
 	});
 
 	it('returns an error when messageMatch is not provided', () => {
@@ -42,9 +42,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		expect(result.isOk()).toBeTrue();
 		if (result.isOk()) {
 			expect(result.value.quantity.scalar).toEqual(10);
-			expect(result.value.time).toEqual(
-				utcToZonedTime(set(date, { milliseconds: 0 }), timezone)
-			);
+			expect(result.value.time).toEqual(date);
 		}
 	});
 

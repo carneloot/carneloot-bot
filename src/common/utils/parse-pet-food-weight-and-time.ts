@@ -52,10 +52,10 @@ export const parsePetFoodWeightAndTime = ({
 
 	const quantity = Qty(groups.quantity, groups.unit).to('g');
 
-	let time = utcToZonedTime(fromUnixTime(messageTime), timezone);
+	let time = fromUnixTime(messageTime);
 	if (groups.hour !== undefined && groups.minute !== undefined) {
 		time = zonedTimeToUtc(
-			set(time, {
+			set(utcToZonedTime(time, timezone), {
 				date: groups.day,
 				month: groups.month,
 				year: groups.year,
