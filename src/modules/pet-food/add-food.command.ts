@@ -1,6 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
 import { MiddlewareFn } from 'grammy';
-import { isAfter, isEqual } from 'date-fns';
+import { isAfter } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 
 import { Context } from '../../common/types/context.js';
@@ -51,7 +51,7 @@ export const AddFoodCommand = (async (ctx) => {
 		return;
 	}
 
-	const { quantity, time } = result.value;
+	const { quantity, time, timeChanged } = result.value;
 
 	const lastPetFood = await getLastPetFood(currentPet.id);
 
@@ -73,7 +73,7 @@ export const AddFoodCommand = (async (ctx) => {
 
 	const message = [
 		`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`,
-		!isEqual(ctx.message!.date, time) &&
+		timeChanged &&
 			`A ração foi adicionada para ${utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR')}`
 	]
 		.filter(Boolean)

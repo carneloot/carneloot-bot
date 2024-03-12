@@ -43,6 +43,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		if (result.isOk()) {
 			expect(result.value.quantity.scalar).toEqual(10);
 			expect(result.value.time).toEqual(date);
+			expect(result.value.timeChanged).toBeFalse();
 		}
 	});
 
@@ -61,11 +62,15 @@ describe('parsePetFoodWeightAndTime', () => {
 		expect(resultKilo.isOk()).toBeTrue();
 		if (resultKilo.isOk()) {
 			expect(resultKilo.value.quantity.scalar).toEqual(1000);
+			expect(resultKilo.value.time).toEqual(date);
+			expect(resultKilo.value.timeChanged).toBeFalse();
 		}
 
 		expect(resultMilli.isOk()).toBeTrue();
 		if (resultMilli.isOk()) {
 			expect(resultMilli.value.quantity.scalar).toEqual(0.1);
+			expect(resultMilli.value.time).toEqual(date);
+			expect(resultMilli.value.timeChanged).toBeFalse();
 		}
 	});
 
@@ -90,6 +95,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		if (result.isOk()) {
 			expect(result.value.quantity.scalar).toEqual(5.2);
 			expect(result.value.time).toEqual(time);
+			expect(result.value.timeChanged).toBeTrue();
 		}
 	});
 
@@ -117,6 +123,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		if (result.isOk()) {
 			expect(result.value.quantity.scalar).toEqual(32);
 			expect(result.value.time).toEqual(time);
+			expect(result.value.timeChanged).toBeTrue();
 		}
 	});
 });

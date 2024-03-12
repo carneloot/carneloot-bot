@@ -1,7 +1,7 @@
 import { ConversationFn } from '@grammyjs/conversations';
 
 import { MiddlewareFn } from 'grammy';
-import { getUnixTime, isEqual } from 'date-fns';
+import { getUnixTime } from 'date-fns';
 
 import { Context } from '../../common/types/context.js';
 import {
@@ -51,7 +51,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const { quantity, time } = result.value;
+	const { quantity, time, timeChanged } = result.value;
 
 	await cvs.external(() =>
 		updatePetFood(petFood.id, {
@@ -65,7 +65,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	const isLastFood = petFood.id === lastFood?.id;
 
 	// If last food updated its time, reschedule notification
-	if (isLastFood && !isEqual(time, petFood.time)) {
+	if (isLastFood && timeChanged) {
 		await cvs.external(() => schedulePetFoodNotification(petFood.petID, petFood.id, time));
 	}
 
