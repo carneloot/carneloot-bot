@@ -12,7 +12,7 @@ import {
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-import { sendOwnerNotification } from './utils/send-owner-notification';
+import { sendOwnerNotification } from './utils/send-owner-notification.js';
 
 export const AddFoodCommand = (async (ctx) => {
 	if (!ctx.user) {
