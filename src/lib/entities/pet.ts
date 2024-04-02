@@ -33,7 +33,7 @@ type GetPetByIDResult<WithOwner extends boolean> = WithOwner extends true
 export const getPetByID = <WithOwner extends boolean = false>(
 	petID: Pet['id'],
 	options?: GetPetByIDOptions<WithOwner>
-): Promise<Prettify<GetPetByIDResult<WithOwner>>> => {
+): Promise<Prettify<GetPetByIDResult<WithOwner>> | null> => {
 	const withOwner = options?.withOwner ?? false;
 
 	const query = db

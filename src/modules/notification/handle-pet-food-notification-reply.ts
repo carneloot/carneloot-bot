@@ -15,6 +15,7 @@ import { PetID } from '../../lib/database/schema.js';
 import { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
+import { sendOwnerNotification } from '../pet-food/utils/send-owner-notification';
 
 export const handlePetFoodNotificationReply = (petID: PetID) =>
 	(async (ctx) => {
@@ -69,6 +70,8 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 
 			await schedulePetFoodNotification(petID, petFood.id, time);
 		}
+
+		await sendOwnerNotification(ctx, petID, quantity, ctx.user!);
 
 		await ctx.react(Reactions.thumbs_up);
 	}) satisfies MiddlewareFn<Context>;
