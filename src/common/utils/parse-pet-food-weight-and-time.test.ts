@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { getUnixTime, set } from 'date-fns';
 import { err } from 'neverthrow';
 
-import { parsePetFoodWeightAndTime } from './parse-pet-food-weight-and-time';
+import { parsePetFoodWeightAndTime } from './parse-pet-food-weight-and-time.js';
 
 describe('parsePetFoodWeightAndTime', () => {
 	const timezone = 'America/Sao_Paulo';

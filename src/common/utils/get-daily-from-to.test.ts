@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { zonedTimeToUtc } from 'date-fns-tz';
 
-import { getDailyFromTo } from './get-daily-from-to';
+import { getDailyFromTo } from './get-daily-from-to.js';
 
 describe('getDailyFromTo', () => {
 	const timezone = 'America/Sao_Paulo';

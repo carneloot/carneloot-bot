@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { getRelativeTime } from './get-relative-time';
+import { getRelativeTime } from './get-relative-time.js';
 
 describe('getRelativeTime', () => {
 	it('returns relative time in hours and minutes when dates are provided', () => {
