@@ -62,7 +62,7 @@ export const showOptionsKeyboard =
 				return undefined as ShowOptionsKeyboardResponse<T, AddCancel>;
 			}
 
-			const resultValue = options.values.at(+response.match[1]);
+			const resultValue = options.values.at(+response.match[1]!);
 
 			invariant(resultValue);
 

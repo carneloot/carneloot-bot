@@ -11,10 +11,10 @@ import {
 } from '../database/schema.js';
 import { db } from '../database/db.js';
 
-type Notification = typeof notificationsTable.$inferSelect;
+export type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
-async function getNotificationByOwnerAndKeyword(
+export async function getNotificationByOwnerAndKeyword(
 	ownerId: Notification['ownerID'],
 	keyword: Notification['keyword']
 ) {
@@ -31,7 +31,7 @@ async function getNotificationByOwnerAndKeyword(
 		)
 		.all();
 
-	const [{ notification }] = result;
+	const notification = result[0]?.notification;
 
 	const usersToNotify = result.map(({ usersToNotify }) => usersToNotify).filter(Boolean);
 
@@ -45,7 +45,7 @@ type CreateNotificationHistory = {
 	petID: NotificationHistory['petID'];
 };
 
-async function createNotificationHistory({
+export async function createNotificationHistory({
 	messageID,
 	notificationID,
 	petID,
@@ -77,7 +77,7 @@ async function createNotificationHistory({
 		.run();
 }
 
-async function getNotificationFromHistory(
+export async function getNotificationFromHistory(
 	messageID: NotificationHistory['messageID'],
 	userID: NotificationHistory['userID']
 ) {
@@ -106,10 +106,3 @@ async function getNotificationFromHistory(
 		)
 		.get();
 }
-
-export {
-	getNotificationByOwnerAndKeyword,
-	createNotificationHistory,
-	getNotificationFromHistory,
-	Notification
-};
