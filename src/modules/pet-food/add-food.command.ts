@@ -12,7 +12,7 @@ import {
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-import { sendOwnerNotification } from './utils/send-owner-notification.js';
+import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
 export const AddFoodCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -72,7 +72,7 @@ export const AddFoodCommand = (async (ctx) => {
 		await schedulePetFoodNotification(currentPet.id, petFood.id, time);
 	}
 
-	await sendOwnerNotification(ctx, currentPet.id, quantity, ctx.user);
+	await sendAddedFoodNotification(ctx, currentPet.id, quantity, ctx.user);
 
 	const message = [
 		`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`,
