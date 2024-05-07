@@ -25,6 +25,7 @@
     "bun-types": "^1.1.0",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.20.14",
+    "lefthook": "^1.6.10",
     "nodemon": "^3.1.0",
     "tsx": "^4.7.1",
     "typescript": "^5.4.3"
