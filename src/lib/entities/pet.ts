@@ -2,10 +2,15 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
 
+import type { Prettify } from '../../common/types/prettify.js';
 import { db } from '../database/db.js';
-import { petCarersTable, PetCarerStatus, petsTable, usersTable } from '../database/schema.js';
-import { User } from './user.js';
-import { Prettify } from '../../common/types/prettify.js';
+import {
+	type PetCarerStatus,
+	petCarersTable,
+	petsTable,
+	usersTable
+} from '../database/schema.js';
+import type { User } from './user.js';
 
 export type Pet = typeof petsTable.$inferSelect;
 export type PetCarer = typeof petCarersTable.$inferSelect;
@@ -72,7 +77,12 @@ export const getUserCaredPets = (userID: PetCarer['carerID']) => {
 		})
 		.from(petCarersTable)
 		.innerJoin(petsTable, eq(petCarersTable.petID, petsTable.id))
-		.where(and(eq(petCarersTable.carerID, userID), eq(petCarersTable.status, 'accepted')))
+		.where(
+			and(
+				eq(petCarersTable.carerID, userID),
+				eq(petCarersTable.status, 'accepted')
+			)
+		)
 		.all();
 };
 
@@ -89,15 +99,23 @@ export const getPetCarers = (petID: PetCarer['petID']) => {
 		.all();
 };
 
-export const isUserCarer = (petID: PetCarer['petID'], carerID: PetCarer['carerID']) => {
+export const isUserCarer = (
+	petID: PetCarer['petID'],
+	carerID: PetCarer['carerID']
+) => {
 	return db
 		.select()
 		.from(petCarersTable)
-		.where(and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID)))
+		.where(
+			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID))
+		)
 		.get();
 };
 
-export const addCarer = async (petID: PetCarer['petID'], carerID: PetCarer['carerID']) => {
+export const addCarer = async (
+	petID: PetCarer['petID'],
+	carerID: PetCarer['carerID']
+) => {
 	await db.insert(petCarersTable).values({
 		id: createId() as PetCarer['id'],
 		carerID,
@@ -105,10 +123,15 @@ export const addCarer = async (petID: PetCarer['petID'], carerID: PetCarer['care
 	});
 };
 
-export const removeCarer = async (petID: PetCarer['petID'], carerID: PetCarer['carerID']) => {
+export const removeCarer = async (
+	petID: PetCarer['petID'],
+	carerID: PetCarer['carerID']
+) => {
 	await db
 		.delete(petCarersTable)
-		.where(and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID)));
+		.where(
+			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID))
+		);
 };
 
 export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
@@ -120,7 +143,12 @@ export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
 		})
 		.from(petCarersTable)
 		.innerJoin(petsTable, eq(petCarersTable.petID, petsTable.id))
-		.where(and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.status, 'pending')))
+		.where(
+			and(
+				eq(petCarersTable.carerID, carerID),
+				eq(petCarersTable.status, 'pending')
+			)
+		)
 		.all();
 };
 
@@ -128,5 +156,8 @@ export const answerPendingPetInvite = async (
 	inviteID: PetCarer['id'],
 	answer: Exclude<PetCarerStatus, 'pending'>
 ) => {
-	await db.update(petCarersTable).set({ status: answer }).where(eq(petCarersTable.id, inviteID));
+	await db
+		.update(petCarersTable)
+		.set({ status: answer })
+		.where(eq(petCarersTable.id, inviteID));
 };

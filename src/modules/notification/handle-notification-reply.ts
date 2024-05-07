@@ -1,9 +1,9 @@
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { getNotificationFromHistory } from '../../lib/entities/notification.js';
 import { handlePetFoodNotificationReply } from './handle-pet-food-notification-reply.js';
-import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const handleNotificationReply = (async (ctx, next) => {
 	if (!ctx.message?.reply_to_message) {
@@ -46,5 +46,7 @@ export const handleNotificationReply = (async (ctx, next) => {
 	const userDisplayInformation = getUserDisplay(ctx.message.from);
 
 	const message = `${userDisplayInformation}: ${ctx.message.text}`;
-	await ctx.api.sendMessage(ownerTelegramId, message, { reply_to_message_id: messageToReply });
+	await ctx.api.sendMessage(ownerTelegramId, message, {
+		reply_to_message_id: messageToReply
+	});
 }) satisfies MiddlewareFn<Context>;

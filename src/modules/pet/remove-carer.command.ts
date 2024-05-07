@@ -1,15 +1,25 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
-import { getPetCarers, getUserOwnedPets, removeCarer } from '../../lib/entities/pet.js';
+import invariant from 'tiny-invariant';
 
-import { Context } from '../../common/types/context.js';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import {
+	getPetCarers,
+	getUserOwnedPets,
+	removeCarer
+} from '../../lib/entities/pet.js';
+
+import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const removeCarerConversation = (async (conversation, ctx) => {
-	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const pets = await conversation.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,

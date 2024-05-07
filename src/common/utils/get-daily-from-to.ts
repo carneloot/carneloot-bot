@@ -1,9 +1,12 @@
 import { addDays, isAfter, set, subDays } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 
-import { ConfigValue } from '../../lib/entities/config.js';
+import type { ConfigValue } from '../../lib/entities/config.js';
 
-export function getDailyFromTo(now: Date, dayStart: ConfigValue<'pet', 'dayStart'>) {
+export function getDailyFromTo(
+	now: Date,
+	dayStart: ConfigValue<'pet', 'dayStart'>
+) {
 	const nowZoned = utcToZonedTime(now, dayStart.timezone);
 
 	let fromZoned = set(nowZoned, {

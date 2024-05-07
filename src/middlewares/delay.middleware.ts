@@ -1,4 +1,4 @@
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
 import { sleep } from '../common/utils/sleep.js';
 

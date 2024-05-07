@@ -1,6 +1,6 @@
-import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { getUnixTime, set } from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { err } from 'neverthrow';
 
 import { parsePetFoodWeightAndTime } from './parse-pet-food-weight-and-time.js';
@@ -14,7 +14,10 @@ describe('parsePetFoodWeightAndTime', () => {
 	});
 
 	it('returns an error when messageMatch is not provided', () => {
-		const result = parsePetFoodWeightAndTime({ messageTime: getUnixTime(date), timezone });
+		const result = parsePetFoodWeightAndTime({
+			messageTime: getUnixTime(date),
+			timezone
+		});
 		expect(result).toEqual(err('Por favor, envie uma mensagem'));
 	});
 

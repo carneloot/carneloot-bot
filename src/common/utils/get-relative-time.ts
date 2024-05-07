@@ -8,7 +8,11 @@ type Options = {
 	units: Unit[];
 };
 
-export const getRelativeTime = (date: Date, baseDate: Date, options?: Options) => {
+export const getRelativeTime = (
+	date: Date,
+	baseDate: Date,
+	options?: Options
+) => {
 	const duration = intervalToDuration({
 		start: baseDate,
 		end: date

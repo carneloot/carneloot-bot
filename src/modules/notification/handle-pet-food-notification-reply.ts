@@ -1,32 +1,35 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { MiddlewareFn } from 'grammy';
 import { isAfter } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
+import type { MiddlewareFn } from 'grammy';
 
+import invariant from 'tiny-invariant';
+
+import type { PetID } from '../../lib/database/schema.js';
 import {
 	addPetFood,
 	cancelPetFoodNotification,
 	getLastPetFood,
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
-import { PetID } from '../../lib/database/schema.js';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
 import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
 
 export const handlePetFoodNotificationReply = (petID: PetID) =>
 	(async (ctx) => {
-		if (!ctx.message) {
-			throw new Error('Message object not found.');
-		}
+		invariant(ctx.message, 'Message object not found.');
+		invariant(ctx.user, 'User is not defined.');
 
 		const dayStart = await getConfig('pet', 'dayStart', petID);
 
 		if (!dayStart) {
-			await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+			await ctx.reply(
+				'Por favor, configure o horário de início do dia para o pet.'
+			);
 			return;
 		}
 
@@ -46,7 +49,7 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 		const lastPetFood = await getLastPetFood(petID);
 
 		const petFood = await addPetFood({
-			userID: ctx.user!.id,
+			userID: ctx.user.id,
 			petID,
 			quantity: quantity.scalar,
 			time,
@@ -56,7 +59,10 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 		const message = [
 			`Foram adicionados ${quantity} de ração.`,
 			timeChanged &&
-				`A ração foi adicionada para ${utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR')}`
+				`A ração foi adicionada para ${utcToZonedTime(
+					time,
+					dayStart.timezone
+				).toLocaleString('pt-BR')}`
 		]
 			.filter(Boolean)
 			.join(' ');
@@ -71,7 +77,7 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			await schedulePetFoodNotification(petID, petFood.id, time);
 		}
 
-		await sendAddedFoodNotification(ctx, petID, quantity, ctx.user!);
+		await sendAddedFoodNotification(ctx, petID, quantity, ctx.user);
 
 		await ctx.react(Reactions.thumbs_up);
 	}) satisfies MiddlewareFn<Context>;

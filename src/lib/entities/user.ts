@@ -4,8 +4,8 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 
 import { hashString } from '../../common/utils/hash-string.js';
-import { apiKeysTable, usersTable } from '../database/schema.js';
 import { db } from '../database/db.js';
+import { apiKeysTable, usersTable } from '../database/schema.js';
 
 export type User = typeof usersTable.$inferSelect;
 type ApiKey = typeof apiKeysTable.$inferSelect;
@@ -43,8 +43,14 @@ export async function getUserByID(id: User['id']) {
 	return db.select().from(usersTable).where(eq(usersTable.id, id)).get();
 }
 
-export async function getUserByUsername(username: NonNullable<User['username']>) {
-	return db.select().from(usersTable).where(eq(usersTable.username, username)).get();
+export async function getUserByUsername(
+	username: NonNullable<User['username']>
+) {
+	return db
+		.select()
+		.from(usersTable)
+		.where(eq(usersTable.username, username))
+		.get();
 }
 
 export async function userHasApiKey(userID: ApiKey['userID']) {

@@ -1,17 +1,19 @@
-import { ConversationFn } from '@grammyjs/conversations';
+import type { ConversationFn } from '@grammyjs/conversations';
 
-import { MiddlewareFn } from 'grammy';
+import invariant from 'tiny-invariant';
+
 import { getUnixTime } from 'date-fns';
+import type { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
+import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
+import { getConfig } from '../../lib/entities/config.js';
 import {
 	getLastPetFood,
 	getPetFoodByMessageId,
 	schedulePetFoodNotification,
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
-import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-import { getConfig } from '../../lib/entities/config.js';
 
 export const correctFoodConversation = (async (cvs, ctx) => {
 	await ctx.reply('Responda a mensagem que quer corrigir com o valor correto.');
@@ -21,9 +23,16 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		(ctx) => ctx.reply('Por favor responda a uma mensagem.')
 	);
 
-	const petFoodMessage = replyResponse.message!.reply_to_message!;
+	invariant(
+		replyResponse.message?.reply_to_message,
+		'Message object not found.'
+	);
 
-	const petFood = await cvs.external(() => getPetFoodByMessageId(petFoodMessage.message_id));
+	const petFoodMessage = replyResponse.message.reply_to_message;
+
+	const petFood = await cvs.external(() =>
+		getPetFoodByMessageId(petFoodMessage.message_id)
+	);
 
 	if (!petFood) {
 		await ctx.reply(
@@ -36,12 +45,14 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	const dayStart = await getConfig('pet', 'dayStart', petFood.petID);
 
 	if (!dayStart) {
-		await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+		await ctx.reply(
+			'Por favor, configure o horário de início do dia para o pet.'
+		);
 		return;
 	}
 
 	const result = parsePetFoodWeightAndTime({
-		messageMatch: replyResponse.message!.text,
+		messageMatch: replyResponse.message?.text,
 		messageTime: getUnixTime(petFood.time),
 		timezone: dayStart.timezone
 	});
@@ -66,7 +77,9 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {
-		await cvs.external(() => schedulePetFoodNotification(petFood.petID, petFood.id, time));
+		await cvs.external(() =>
+			schedulePetFoodNotification(petFood.petID, petFood.id, time)
+		);
 	}
 
 	await ctx.reply('Ração alterada com sucesso!');

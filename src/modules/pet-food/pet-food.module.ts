@@ -1,21 +1,30 @@
-import { Module } from '../../common/module/module.js';
-import { Context } from '../../common/types/context.js';
 import { createConversation } from '@grammyjs/conversations';
-import { SetDayStartCommand, setDayStartConversation } from './set-day-start.command.js';
+import { Module } from '../../common/module/module.js';
+import type { Context } from '../../common/types/context.js';
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
-import { FoodStatusCommand } from './food-status.command.js';
 import { AddFoodCommand } from './add-food.command.js';
 import {
 	ChooseCurrentPetCommand,
 	chooseCurrentPetConversation
 } from './choose-current-pet.command.js';
 import {
+	CorrectFoodCommand,
+	correctFoodConversation
+} from './correct-food.command.js';
+import { FoodStatusCommand } from './food-status.command.js';
+import {
+	SetDayStartCommand,
+	setDayStartConversation
+} from './set-day-start.command.js';
+import {
 	SetNotificationDelayCommand,
 	setNotificationDelayConversation
 } from './set-notification-delay.command.js';
-import { CorrectFoodCommand, correctFoodConversation } from './correct-food.command.js';
 
-export const PetFoodModule = new Module<Context>('', 'Operações de rastreamento de ração');
+export const PetFoodModule = new Module<Context>(
+	'',
+	'Operações de rastreamento de ração'
+);
 
 // Set start of day to calculate daily food consumption
 PetFoodModule.use(createConversation(setDayStartConversation, 'setDayStart'));
@@ -27,7 +36,9 @@ PetFoodModule.setCommand(
 );
 
 // Set notification delay
-PetFoodModule.use(createConversation(setNotificationDelayConversation, 'setNotificationDelay'));
+PetFoodModule.use(
+	createConversation(setNotificationDelayConversation, 'setNotificationDelay')
+);
 PetFoodModule.setCommand(
 	'configurar_atraso_notificacao',
 	'Configura o atraso de notificação para rastreamento de ração',
@@ -36,7 +47,9 @@ PetFoodModule.setCommand(
 );
 
 // Chooses current pet
-PetFoodModule.use(createConversation(chooseCurrentPetConversation, 'chooseCurrentPet'));
+PetFoodModule.use(
+	createConversation(chooseCurrentPetConversation, 'chooseCurrentPet')
+);
 PetFoodModule.setCommand(
 	'escolher_pet',
 	'Escolhe o pet atual para rastreamento de ração',

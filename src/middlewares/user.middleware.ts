@@ -1,9 +1,11 @@
-import { MiddlewareFn } from 'grammy';
-import { Context } from '../common/types/context.js';
+import type { MiddlewareFn } from 'grammy';
+import type { Context } from '../common/types/context.js';
 import { getUserByTelegramID } from '../lib/entities/user.js';
 
 export const UserMiddleware = (async (ctx, next) => {
-	const user = await getUserByTelegramID(ctx.from!.id);
+	const user = ctx.from?.id
+		? await getUserByTelegramID(ctx.from.id)
+		: undefined;
 
 	if (user) {
 		ctx.user = user;

@@ -3,13 +3,13 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
+import { db } from '../database/db.js';
 import {
 	notificationHistoryTable,
 	notificationsTable,
 	usersTable,
 	usersToNotifyTable
 } from '../database/schema.js';
-import { db } from '../database/db.js';
 
 export type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
@@ -24,16 +24,24 @@ export async function getNotificationByOwnerAndKeyword(
 			usersToNotify: usersTable
 		})
 		.from(notificationsTable)
-		.leftJoin(usersToNotifyTable, eq(notificationsTable.id, usersToNotifyTable.notificationID))
+		.leftJoin(
+			usersToNotifyTable,
+			eq(notificationsTable.id, usersToNotifyTable.notificationID)
+		)
 		.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
 		.where(
-			and(eq(notificationsTable.ownerID, ownerId), eq(notificationsTable.keyword, keyword))
+			and(
+				eq(notificationsTable.ownerID, ownerId),
+				eq(notificationsTable.keyword, keyword)
+			)
 		)
 		.all();
 
 	const notification = result[0]?.notification;
 
-	const usersToNotify = result.map(({ usersToNotify }) => usersToNotify).filter(Boolean);
+	const usersToNotify = result
+		.map(({ usersToNotify }) => usersToNotify)
+		.filter(Boolean);
 
 	return { notification, usersToNotify };
 }

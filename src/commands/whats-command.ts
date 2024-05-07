@@ -1,7 +1,8 @@
-import { Context } from 'grammy';
-import { Command } from '../common/types/command.js';
+import type { Context } from 'grammy';
+import type { Command } from '../common/types/command.js';
 
-const formatMessage = (message: string) => encodeURIComponent(message).replace(/!/g, '%21');
+const formatMessage = (message: string) =>
+	encodeURIComponent(message).replace(/!/g, '%21');
 
 const phoneRegex =
 	/^((?:(?:\+|00)?55\s?)?\(?[1-9][0-9]\)?\s?(?:9\d|[2-9])\d{3}[-\s]?\d{4})(?:\s(.*))?/;
@@ -12,7 +13,8 @@ async function sendMissingNumberMessage(ctx: Context) {
 
 export const WhatsCommand: Command<'whats'> = {
 	command: 'whats',
-	description: 'Gera um link para mandar mensagem no WhatsApp sem precisar adicionar o contato',
+	description:
+		'Gera um link para mandar mensagem no WhatsApp sem precisar adicionar o contato',
 	middleware: () => async (ctx) => {
 		if (!ctx.match) {
 			await sendMissingNumberMessage(ctx);

@@ -1,9 +1,12 @@
 import { Reactions } from '@grammyjs/emoji';
-import { MiddlewareFn } from 'grammy';
 import { isAfter } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
+import type { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context.js';
+import invariant from 'tiny-invariant';
+
+import type { Context } from '../../common/types/context.js';
+import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
 import {
 	addPetFood,
@@ -11,7 +14,6 @@ import {
 	getLastPetFood,
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
-import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
 export const AddFoodCommand = (async (ctx) => {
@@ -32,7 +34,9 @@ export const AddFoodCommand = (async (ctx) => {
 	const dayStart = await getConfig('pet', 'dayStart', currentPet.id);
 
 	if (!dayStart) {
-		await ctx.reply('Por favor, configure o horário de início do dia para o pet.');
+		await ctx.reply(
+			'Por favor, configure o horário de início do dia para o pet.'
+		);
 		return;
 	}
 
@@ -41,9 +45,11 @@ export const AddFoodCommand = (async (ctx) => {
 		return;
 	}
 
+	invariant(ctx.message, 'Message is not defined');
+
 	const result = parsePetFoodWeightAndTime({
 		messageMatch: ctx.match,
-		messageTime: ctx.message!.date,
+		messageTime: ctx.message.date,
 		timezone: dayStart.timezone
 	});
 
@@ -77,7 +83,10 @@ export const AddFoodCommand = (async (ctx) => {
 	const message = [
 		`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`,
 		timeChanged &&
-			`A ração foi adicionada para ${utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR')}`
+			`A ração foi adicionada para ${utcToZonedTime(
+				time,
+				dayStart.timezone
+			).toLocaleString('pt-BR')}`
 	]
 		.filter(Boolean)
 		.join(' ');

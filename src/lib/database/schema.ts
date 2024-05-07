@@ -176,7 +176,10 @@ export const usersToNotifyTable = sqliteTable(
 	})
 );
 
-export const NotificationHistoryID = z.string().cuid2().brand('NotificationHistoryID');
+export const NotificationHistoryID = z
+	.string()
+	.cuid2()
+	.brand('NotificationHistoryID');
 export type NotificationHistoryID = z.infer<typeof NotificationHistoryID>;
 
 export const notificationHistoryTable = sqliteTable(
@@ -198,14 +201,12 @@ export const notificationHistoryTable = sqliteTable(
 	},
 	(self) => ({
 		messageIdIdx: uniqueIndex('messageIdIdx').on(self.messageID),
-		notificationHistoryUniqNotifIdx: uniqueIndex('notificationHistoryUniqNotifIdx').on(
-			self.notificationID,
-			self.userID
-		),
-		notificationHistoryUniqPetIdx: uniqueIndex('notificationHistoryUniqPetIdx').on(
-			self.petID,
-			self.userID
-		)
+		notificationHistoryUniqNotifIdx: uniqueIndex(
+			'notificationHistoryUniqNotifIdx'
+		).on(self.notificationID, self.userID),
+		notificationHistoryUniqPetIdx: uniqueIndex(
+			'notificationHistoryUniqPetIdx'
+		).on(self.petID, self.userID)
 	})
 );
 

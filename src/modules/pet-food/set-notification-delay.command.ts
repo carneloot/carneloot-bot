@@ -1,21 +1,31 @@
-import { ConversationFn } from '@grammyjs/conversations';
+import type { ConversationFn } from '@grammyjs/conversations';
 
+import type { MiddlewareFn } from 'grammy';
 import { parse, serialize } from 'tinyduration';
-import { MiddlewareFn } from 'grammy';
 
-import { Context } from '../../common/types/context.js';
+import invariant from 'tiny-invariant';
+
+import type { Context } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
-import { getUserOwnedPets } from '../../lib/entities/pet.js';
-import { deleteConfig, getConfig, setConfig } from '../../lib/entities/config.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import {
+	deleteConfig,
+	getConfig,
+	setConfig
+} from '../../lib/entities/config.js';
 import {
 	cancelPetFoodNotification,
 	getLastPetFood,
 	schedulePetFoodNotification
 } from '../../lib/entities/pet-food.js';
+import { getUserOwnedPets } from '../../lib/entities/pet.js';
 
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
-	const pets = await cvs.external(() => getUserOwnedPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const pets = await cvs.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
@@ -23,20 +33,25 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		message: 'Escolha o pet:'
 	})(cvs, ctx);
 
-	const duration = await cvs.external(() => getConfig('pet', 'notificationDelay', pet.id));
+	const duration = await cvs.external(() =>
+		getConfig('pet', 'notificationDelay', pet.id)
+	);
 
 	if (!duration) {
-		await ctx.reply('Você ainda não definiu um atraso de notificação para este pet.');
+		await ctx.reply(
+			'Você ainda não definiu um atraso de notificação para este pet.'
+		);
 	} else {
-		await ctx.reply(`O atraso de notificação para ${pet.name} é de ${serialize(duration)}.`);
+		await ctx.reply(
+			`O atraso de notificação para ${pet.name} é de ${serialize(duration)}.`
+		);
 	}
 
 	let answer: 'Alterar' | 'Excluir' | undefined;
 	if (!duration) {
-		const innerAnswer = await showYesOrNoQuestion('Deseja definir um atraso de notificação?')(
-			cvs,
-			ctx
-		);
+		const innerAnswer = await showYesOrNoQuestion(
+			'Deseja definir um atraso de notificação?'
+		)(cvs, ctx);
 
 		if (innerAnswer) {
 			answer = 'Alterar';
@@ -55,7 +70,9 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 	if (answer === 'Alterar') {
 		// TODO receber a duração em um formato mais human readable
-		await ctx.reply('Digite o novo atraso de notificação no formato de ISO Duration:');
+		await ctx.reply(
+			'Digite o novo atraso de notificação no formato de ISO Duration:'
+		);
 
 		const durationResponse = await cvs.waitUntil(
 			(ctx) => {
@@ -73,9 +90,15 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 			},
 			(ctx) => ctx.reply('Formato inválido.')
 		);
-		const newDurationString = durationResponse.message!.text!;
+
+		const newDurationString = durationResponse.message?.text;
+
+		invariant(newDurationString, 'Duration string is not defined');
+
 		const newDuration = parse(newDurationString);
-		await cvs.external(() => setConfig('pet', 'notificationDelay', pet.id, newDuration));
+		await cvs.external(() =>
+			setConfig('pet', 'notificationDelay', pet.id, newDuration)
+		);
 		await ctx.reply(
 			`O atraso de notificação para ${pet.name} foi definido para ${newDurationString}.`
 		);
@@ -83,7 +106,11 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		await cvs.external(async () => {
 			const lastPetFood = await getLastPetFood(pet.id);
 			if (lastPetFood) {
-				await schedulePetFoodNotification(pet.id, lastPetFood.id, lastPetFood.time);
+				await schedulePetFoodNotification(
+					pet.id,
+					lastPetFood.id,
+					lastPetFood.time
+				);
 			}
 		});
 

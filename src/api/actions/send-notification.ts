@@ -1,12 +1,12 @@
-import { Bot } from 'grammy';
-import { NotifyParams } from '../types/notify-params.js';
-import { getUserFromApiKey, User } from '../../lib/entities/user.js';
+import type { Bot } from 'grammy';
+import type { Context } from '../../common/types/context.js';
 import {
+	type Notification,
 	createNotificationHistory,
-	getNotificationByOwnerAndKeyword,
-	Notification
+	getNotificationByOwnerAndKeyword
 } from '../../lib/entities/notification.js';
-import { Context } from '../../common/types/context.js';
+import { type User, getUserFromApiKey } from '../../lib/entities/user.js';
+import type { NotifyParams } from '../types/notify-params.js';
 
 function parseMessage(message: string, variables: NotifyParams['variables']) {
 	if (!variables) {
@@ -40,16 +40,17 @@ async function sendNotificationAndLog({
 	});
 }
 
-export const sendNotification = async (bot: Bot<Context>, params: NotifyParams) => {
+export const sendNotification = async (
+	bot: Bot<Context>,
+	params: NotifyParams
+) => {
 	const user = await getUserFromApiKey(params.apiKey);
 	if (!user) {
 		throw new Error(`User not found: "${params.apiKey}"`);
 	}
 
-	const { notification, usersToNotify } = await getNotificationByOwnerAndKeyword(
-		user.id!,
-		params.keyword
-	);
+	const { notification, usersToNotify } =
+		await getNotificationByOwnerAndKeyword(user.id, params.keyword);
 
 	if (!notification) {
 		throw new Error(`Notification not found: "${params.keyword}"`);
@@ -79,8 +80,8 @@ export const sendNotification = async (bot: Bot<Context>, params: NotifyParams) 
 	) as PromiseRejectedResult[];
 
 	if (errors.length) {
-		errors.forEach((error) => {
+		for (const error of errors) {
 			console.warn(`Failed to send message to user: ${error.reason}`);
-		});
+		}
 	}
 };

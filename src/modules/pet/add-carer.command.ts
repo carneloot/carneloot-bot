@@ -1,16 +1,26 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
-import { addCarer, getUserOwnedPets, isUserCarer } from '../../lib/entities/pet.js';
+import invariant from 'tiny-invariant';
+
+import {
+	addCarer,
+	getUserOwnedPets,
+	isUserCarer
+} from '../../lib/entities/pet.js';
 import { getUserByUsername } from '../../lib/entities/user.js';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const addCarerConversation = (async (conversation, ctx) => {
-	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const pets = await conversation.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
@@ -18,7 +28,9 @@ export const addCarerConversation = (async (conversation, ctx) => {
 		message: 'Escolha um pet para adicionar um cuidador'
 	})(conversation, ctx);
 
-	await ctx.reply(`Você escolheu o pet ${pet.name}. Agora, quem vai ser o cuidador?`);
+	await ctx.reply(
+		`Você escolheu o pet ${pet.name}. Agora, quem vai ser o cuidador?`
+	);
 
 	const carerUsername = await conversation.form.text((ctx) =>
 		ctx.reply('Mande o usuário do cuidador para eu salvar.')
@@ -42,14 +54,17 @@ export const addCarerConversation = (async (conversation, ctx) => {
 	}
 
 	// Check if carer is already a carer for the pet
-	const isCarerAlready = await conversation.external(() => isUserCarer(pet.id, carer.id));
+	const isCarerAlready = await conversation.external(() =>
+		isUserCarer(pet.id, carer.id)
+	);
 
 	if (isCarerAlready) {
 		let message: string;
 
 		switch (isCarerAlready.status) {
 			case 'pending':
-				message = 'O cuidador já foi adicionado, mas ainda não aceitou o convite.';
+				message =
+					'O cuidador já foi adicionado, mas ainda não aceitou o convite.';
 				break;
 			case 'accepted':
 				message = 'O cuidador já foi adicionado.';
@@ -63,7 +78,7 @@ export const addCarerConversation = (async (conversation, ctx) => {
 	} else {
 		await conversation.external(() => addCarer(pet.id, carer.id));
 
-		const owner = getUserDisplay(ctx.from!);
+		const owner = getUserDisplay(user);
 
 		await ctx.api.sendMessage(
 			carer.telegramID,

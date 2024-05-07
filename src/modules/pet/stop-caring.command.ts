@@ -1,17 +1,25 @@
-import { ConversationFn } from '@grammyjs/conversations';
+import type { ConversationFn } from '@grammyjs/conversations';
 
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
-import { getUserByID } from '../../lib/entities/user.js';
+import invariant from 'tiny-invariant';
+
 import { getUserCaredPets, removeCarer } from '../../lib/entities/pet.js';
+import { getUserByID } from '../../lib/entities/user.js';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
-import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
 export const stopCaringConversation = (async (conversation, ctx) => {
-	const caringPets = await conversation.external(() => getUserCaredPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const caringPets = await conversation.external(() =>
+		getUserCaredPets(user.id)
+	);
 
 	if (!caringPets.length) {
 		await ctx.reply('Você não está cuidando de nenhum pet');
@@ -24,18 +32,19 @@ export const stopCaringConversation = (async (conversation, ctx) => {
 		message: 'Escolha um pet para parar de cuidar:'
 	})(conversation, ctx);
 
-	const answer = await showYesOrNoQuestion('Tem certeza que deseja parar de cuidar deste pet?')(
-		conversation,
-		ctx
-	);
+	const answer = await showYesOrNoQuestion(
+		'Tem certeza que deseja parar de cuidar deste pet?'
+	)(conversation, ctx);
 
 	if (answer) {
-		await conversation.external(() => removeCarer(pet.id, ctx.user!.id));
+		await conversation.external(() => removeCarer(pet.id, user.id));
 		await ctx.reply('Você parou de cuidar deste pet');
 
-		const petOwner = await conversation.external(() => getUserByID(pet.ownerID));
+		const petOwner = await conversation.external(() =>
+			getUserByID(pet.ownerID)
+		);
 		if (petOwner) {
-			const carerDisplay = getUserDisplay(ctx.user!);
+			const carerDisplay = getUserDisplay(user);
 
 			await ctx.api.sendMessage(
 				petOwner.telegramID,

@@ -1,10 +1,19 @@
-import { MiddlewareFn } from 'grammy';
 import { Menu } from '@grammyjs/menu';
-import { Context } from '../../common/types/context.js';
-import { generateApiKeyForUser, userHasApiKey } from '../../lib/entities/user.js';
+
+import type { MiddlewareFn } from 'grammy';
+
+import invariant from 'tiny-invariant';
+
+import type { Context } from '../../common/types/context.js';
+import {
+	generateApiKeyForUser,
+	userHasApiKey
+} from '../../lib/entities/user.js';
 
 async function generateApiKeyAndSend(ctx: Context) {
-	const newApiKey = await generateApiKeyForUser(ctx.user!.id);
+	invariant(ctx.user, 'User is not defined');
+
+	const newApiKey = await generateApiKeyForUser(ctx.user.id);
 
 	await ctx.reply(`Aqui está: <pre>${newApiKey}</pre>`, { parse_mode: 'HTML' });
 }

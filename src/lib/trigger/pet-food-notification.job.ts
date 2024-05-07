@@ -4,15 +4,15 @@ import { z } from 'zod';
 
 import Qty from 'js-quantities';
 
-import { triggerClient } from './trigger-client.js';
-import { PetID } from '../database/schema.js';
-import { getPetByID, getPetCarers } from '../entities/pet.js';
-import { getConfig } from '../entities/config.js';
-import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
-import { getDailyFoodConsumption } from '../entities/pet-food.js';
-import { createNotificationHistory } from '../entities/notification.js';
-import { Context } from '../../common/types/context.js';
 import { Env } from '../../common/env.js';
+import type { Context } from '../../common/types/context.js';
+import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { PetID } from '../database/schema.js';
+import { getConfig } from '../entities/config.js';
+import { createNotificationHistory } from '../entities/notification.js';
+import { getDailyFoodConsumption } from '../entities/pet-food.js';
+import { getPetByID, getPetCarers } from '../entities/pet.js';
+import { triggerClient } from './trigger-client.js';
 
 triggerClient.defineJob({
 	id: 'pet-food-notification',
@@ -45,7 +45,11 @@ triggerClient.defineJob({
 
 		const { from, to } = getDailyFromTo(now, dayStart);
 
-		const dailyConsumption = await getDailyFoodConsumption(payload.petID, from, to);
+		const dailyConsumption = await getDailyFoodConsumption(
+			payload.petID,
+			from,
+			to
+		);
 
 		const carers = await getPetCarers(payload.petID).then((carers) =>
 			carers.filter((carer) => carer.status === 'accepted')
@@ -65,7 +69,10 @@ triggerClient.defineJob({
 
 		for (const { carer } of [{ carer: pet.owner }, ...carers]) {
 			await io.runTask(`send-pet-notification:${carer.id}`, async () => {
-				const sentMessage = await bot.api.sendMessage(carer.telegramID, message);
+				const sentMessage = await bot.api.sendMessage(
+					carer.telegramID,
+					message
+				);
 
 				await createNotificationHistory({
 					messageID: sentMessage.message_id,

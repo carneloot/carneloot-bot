@@ -3,23 +3,26 @@ import { emojiParser } from '@grammyjs/emoji';
 
 import { Bot, session } from 'grammy';
 
-import { Module } from './common/module/module.js';
-import { getCommandForHelp, getDescriptionForHelp } from './common/types/command.js';
-import { Context } from './common/types/context.js';
 import { Env } from './common/env.js';
+import { Module } from './common/module/module.js';
+import {
+	getCommandForHelp,
+	getDescriptionForHelp
+} from './common/types/command.js';
+import type { Context } from './common/types/context.js';
 
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
 
 import { AuthModule } from './modules/auth/auth-module.js';
-import { PetModule } from './modules/pet/pet.module.js';
-import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 import { NotificationModule } from './modules/notification/notification.module.js';
+import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
+import { PetModule } from './modules/pet/pet.module.js';
 
 import { createSessionStorage } from './lib/entities/session.js';
 
+import { CafeCommand } from './commands/cafe-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
-import { CafeCommand } from './commands/cafe-command.js';
 
 type ConversationSessionData = Context['session']['conversation'];
 export const createBot = () => {
@@ -39,7 +42,9 @@ export const createBot = () => {
 	bot.command('cancelar', async (ctx) => {
 		await ctx.conversation.exit();
 
-		await ctx.reply('Operação cancelada', { reply_markup: { remove_keyboard: true } });
+		await ctx.reply('Operação cancelada', {
+			reply_markup: { remove_keyboard: true }
+		});
 	});
 
 	bot.use(emojiParser());
@@ -48,18 +53,22 @@ export const createBot = () => {
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
 
-	bot.command(PingCommand.command!, PingCommand);
-	bot.command(WhatsCommand.command!, WhatsCommand);
-	bot.command(CafeCommand.command!, CafeCommand);
+	bot.command(PingCommand.command, PingCommand);
+	bot.command(WhatsCommand.command, WhatsCommand);
+	bot.command(CafeCommand.command, CafeCommand);
 
 	bot.use(AuthModule);
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
 	bot.use(NotificationModule);
 
-	bot.on(':text').hears(/hello/i, (ctx) =>
-		ctx.replyWithPhoto('https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg')
-	);
+	bot
+		.on(':text')
+		.hears(/hello/i, (ctx) =>
+			ctx.replyWithPhoto(
+				'https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'
+			)
+		);
 
 	return {
 		bot,

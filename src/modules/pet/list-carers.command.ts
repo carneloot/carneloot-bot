@@ -1,15 +1,21 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
+
+import invariant from 'tiny-invariant';
 
 import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context.js';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const listCarersConversation = (async (conversation, ctx) => {
-	const pets = await conversation.external(() => getUserOwnedPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const pets = await conversation.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
@@ -37,7 +43,9 @@ export const listCarersConversation = (async (conversation, ctx) => {
 		return `${carerDisplay} (${status})`;
 	});
 
-	await ctx.reply(`Cuidadores:\n${parsedInvites.join('\n')}`, { parse_mode: 'HTML' });
+	await ctx.reply(`Cuidadores:\n${parsedInvites.join('\n')}`, {
+		parse_mode: 'HTML'
+	});
 }) satisfies ConversationFn<Context>;
 
 export const ListCarersCommand = (async (ctx) => {

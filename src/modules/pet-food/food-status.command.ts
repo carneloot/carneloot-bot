@@ -1,14 +1,15 @@
 import { fromUnixTime } from 'date-fns';
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
 
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
 
-import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
-import { getConfig } from '../../lib/entities/config.js';
+import invariant from 'tiny-invariant';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getRelativeTime } from '../../common/utils/get-relative-time.js';
+import { getConfig } from '../../lib/entities/config.js';
+import { getDailyFoodConsumption } from '../../lib/entities/pet-food.js';
 
 export const FoodStatusCommand = (async (ctx) => {
 	if (!ctx.user) {
@@ -34,14 +35,22 @@ export const FoodStatusCommand = (async (ctx) => {
 		return;
 	}
 
-	const now = fromUnixTime(ctx.message!.date);
+	invariant(ctx.message, 'Message object not found.');
+
+	const now = fromUnixTime(ctx.message.date);
 
 	const { from, to } = getDailyFromTo(now, dayStart);
 
-	const dailyFoodConsumption = await getDailyFoodConsumption(currentPet.id, from, to);
+	const dailyFoodConsumption = await getDailyFoodConsumption(
+		currentPet.id,
+		from,
+		to
+	);
 
 	if (!dailyFoodConsumption || dailyFoodConsumption.total === 0) {
-		await ctx.reply('Ainda não foi colocado ração hoje. Utilize o comando /colocar_racao');
+		await ctx.reply(
+			'Ainda não foi colocado ração hoje. Utilize o comando /colocar_racao'
+		);
 		return;
 	}
 

@@ -1,13 +1,15 @@
-import { ConversationFn } from '@grammyjs/conversations';
+import type { ConversationFn } from '@grammyjs/conversations';
 import { getTimeZones } from '@vvo/tzdb';
 
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
+
+import invariant from 'tiny-invariant';
 
 import { getConfig, setConfig } from '../../lib/entities/config.js';
 
-import { Context } from '../../common/types/context.js';
-import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import type { Context } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 
 const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
@@ -16,7 +18,11 @@ const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
 }));
 
 export const setDayStartConversation = (async (cvs, ctx) => {
-	const pets = await cvs.external(() => getUserOwnedPets(ctx.user!.id));
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
+	const pets = await cvs.external(() => getUserOwnedPets(user.id));
 
 	if (pets.length === 0) {
 		await ctx.reply('Você ainda não cadastrou nenhum pet.');
@@ -29,7 +35,9 @@ export const setDayStartConversation = (async (cvs, ctx) => {
 		message: 'Escolha o pet para configurar:'
 	})(cvs, ctx);
 
-	const dayStart = await cvs.external(() => getConfig('pet', 'dayStart', pet.id));
+	const dayStart = await cvs.external(() =>
+		getConfig('pet', 'dayStart', pet.id)
+	);
 
 	const message = dayStart
 		? `O horário de início atual do pet ${pet.name} é ${dayStart.hour}h no fuso horário "${dayStart.timezone}".`
@@ -61,7 +69,10 @@ export const setDayStartConversation = (async (cvs, ctx) => {
 	})(cvs, ctx);
 
 	await cvs.external(() =>
-		setConfig('pet', 'dayStart', pet.id, { hour: hour.value, timezone: timezone.name })
+		setConfig('pet', 'dayStart', pet.id, {
+			hour: hour.value,
+			timezone: timezone.name
+		})
 	);
 
 	await ctx.reply(

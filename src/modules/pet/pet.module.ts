@@ -1,20 +1,38 @@
 import { createConversation } from '@grammyjs/conversations';
 
 import { Module } from '../../common/module/module.js';
-import { Context } from '../../common/types/context.js';
+import type { Context } from '../../common/types/context.js';
 
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
 
-import { ListPetsCommand } from './list-pets.command.js';
-import { AddPetCommand, addPetConversation } from './add-pet.command.js';
 import { AddCarerCommand, addCarerConversation } from './add-carer.command.js';
-import { PetInvitesCommand, petInvitesConversation } from './pet-invites.command.js';
-import { DeletePetCommand, deletePetConversation } from './delete-pet.command.js';
-import { RemoveCarerCommand, removeCarerConversation } from './remove-carer.command.js';
-import { ListCarersCommand, listCarersConversation } from './list-carers.command.js';
-import { StopCaringCommand, stopCaringConversation } from './stop-caring.command.js';
+import { AddPetCommand, addPetConversation } from './add-pet.command.js';
+import {
+	DeletePetCommand,
+	deletePetConversation
+} from './delete-pet.command.js';
+import {
+	ListCarersCommand,
+	listCarersConversation
+} from './list-carers.command.js';
+import { ListPetsCommand } from './list-pets.command.js';
+import {
+	PetInvitesCommand,
+	petInvitesConversation
+} from './pet-invites.command.js';
+import {
+	RemoveCarerCommand,
+	removeCarerConversation
+} from './remove-carer.command.js';
+import {
+	StopCaringCommand,
+	stopCaringConversation
+} from './stop-caring.command.js';
 
-export const PetModule = new Module<Context>('', 'Opções de gerenciamento de pet');
+export const PetModule = new Module<Context>(
+	'',
+	'Opções de gerenciamento de pet'
+);
 
 // Add pet
 PetModule.use(createConversation(addPetConversation, 'addPet'));
@@ -35,7 +53,12 @@ PetModule.setCommand(
 );
 
 // List pets
-PetModule.setCommand('listar_pets', 'Lista os seus pets', UserMiddleware, ListPetsCommand);
+PetModule.setCommand(
+	'listar_pets',
+	'Lista os seus pets',
+	UserMiddleware,
+	ListPetsCommand
+);
 
 // Add carer
 PetModule.use(createConversation(addCarerConversation, 'addCarer'));

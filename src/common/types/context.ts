@@ -1,11 +1,11 @@
 import type { ConversationFlavor } from '@grammyjs/conversations';
-import { EmojiFlavor } from '@grammyjs/emoji';
+import type { EmojiFlavor } from '@grammyjs/emoji';
 
-import { Context as GrammyContext, SessionFlavor } from 'grammy';
+import type { Context as GrammyContext, SessionFlavor } from 'grammy';
 
-import { User } from '../../lib/entities/user.js';
+import type { User } from '../../lib/entities/user.js';
 
-import { SessionData } from './session.js';
+import type { SessionData } from './session.js';
 
 type MyContext = {
 	user: User | undefined;

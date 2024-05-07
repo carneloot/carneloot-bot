@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { StorageAdapter } from 'grammy';
 import { and, eq } from 'drizzle-orm';
+import type { StorageAdapter } from 'grammy';
 
 import { db } from '../database/db.js';
 import { sessionsTable } from '../database/schema.js';
@@ -14,7 +14,9 @@ export const createSessionStorage = <T>(context: string) => {
 					value: sessionsTable.value
 				})
 				.from(sessionsTable)
-				.where(and(eq(sessionsTable.context, context), eq(sessionsTable.key, key)))
+				.where(
+					and(eq(sessionsTable.context, context), eq(sessionsTable.key, key))
+				)
 				.get();
 
 			if (!result) {
@@ -44,7 +46,9 @@ export const createSessionStorage = <T>(context: string) => {
 		delete: async (key: string) => {
 			await db
 				.delete(sessionsTable)
-				.where(and(eq(sessionsTable.context, context), eq(sessionsTable.key, key)));
+				.where(
+					and(eq(sessionsTable.context, context), eq(sessionsTable.key, key))
+				);
 		}
 	} satisfies StorageAdapter<T>;
 };

@@ -1,12 +1,12 @@
 import { errAsync, okAsync } from 'neverthrow';
 
-import Qty from 'js-quantities';
+import type Qty from 'js-quantities';
 
-import { Context } from '../../../common/types/context.js';
-import { PetID } from '../../../lib/database/schema.js';
-import { User } from '../../../lib/entities/user.js';
-import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
+import type { Context } from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
+import type { PetID } from '../../../lib/database/schema.js';
+import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
+import type { User } from '../../../lib/entities/user.js';
 
 export const sendAddedFoodNotification = async (
 	ctx: Context,
@@ -23,7 +23,9 @@ export const sendAddedFoodNotification = async (
 		.filter(({ status }) => status === 'accepted')
 		.map(({ carer }) => carer);
 
-	const usersToNotify = [...carers, pet.owner].filter((carer) => carer.id !== user.id);
+	const usersToNotify = [...carers, pet.owner].filter(
+		(carer) => carer.id !== user.id
+	);
 
 	const username = getUserDisplay(user);
 	const message = `${username} colocou ${quantity} de ração para o pet ${pet.name}.`;

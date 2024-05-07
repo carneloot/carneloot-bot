@@ -1,4 +1,4 @@
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
 export const LoggerMiddleware =
 	(userIds: number[]): MiddlewareFn =>
@@ -6,9 +6,11 @@ export const LoggerMiddleware =
 		const message = `[LOGGER] User "${ctx.from?.username}" ran command "${ctx.message?.text}"`;
 
 		// Ignore user sending the command
-		userIds = userIds.filter((userId) => ctx.from?.id !== userId);
+		const usersToLog = userIds.filter((userId) => ctx.from?.id !== userId);
 
-		await Promise.all(userIds.map((userId) => ctx.api.sendMessage(userId, message)));
+		await Promise.all(
+			usersToLog.map((userId) => ctx.api.sendMessage(userId, message))
+		);
 
 		await next();
 	};

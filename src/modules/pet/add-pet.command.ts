@@ -1,11 +1,16 @@
 import type { ConversationFn } from '@grammyjs/conversations';
-import { MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 
 import { createPet } from '../../lib/entities/pet.js';
 
-import { Context } from '../../common/types/context.js';
+import invariant from 'tiny-invariant';
+import type { Context } from '../../common/types/context.js';
 
 export const addPetConversation = (async (conversation, ctx) => {
+	const user = ctx.user;
+
+	invariant(user, 'User is not defined');
+
 	await ctx.reply('Qual o nome do seu pet?');
 
 	const petName = await conversation.form.text((ctx) =>
@@ -13,7 +18,7 @@ export const addPetConversation = (async (conversation, ctx) => {
 	);
 
 	// Adicionar pet no banco de dados
-	await conversation.external(() => createPet(petName, ctx.user!.id));
+	await conversation.external(() => createPet(petName, user.id));
 
 	await ctx.reply('Pet cadastrado com sucesso!');
 }) satisfies ConversationFn<Context>;

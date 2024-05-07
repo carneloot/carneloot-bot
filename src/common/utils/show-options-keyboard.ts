@@ -1,9 +1,9 @@
-import { Conversation } from '@grammyjs/conversations';
+import type { Conversation } from '@grammyjs/conversations';
 import { InlineKeyboard, Keyboard } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
-import { Context } from '../types/context.js';
+import type { Context } from '../types/context.js';
 
 type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 	values: T[];
@@ -14,11 +14,14 @@ type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 	rowNum?: number;
 };
 
-type ShowOptionsKeyboardResponse<T, AddCancel extends boolean> = AddCancel extends true
-	? T | undefined
-	: T;
+type ShowOptionsKeyboardResponse<
+	T,
+	AddCancel extends boolean
+> = AddCancel extends true ? T | undefined : T;
 export const showOptionsKeyboard =
-	<T, AddCancel extends boolean = false>(options: ShowOptionsKeyboardOpts<T, AddCancel>) =>
+	<T, AddCancel extends boolean = false>(
+		options: ShowOptionsKeyboardOpts<T, AddCancel>
+	) =>
 	async (
 		conversation: Conversation<Context>,
 		ctx: Context
@@ -62,7 +65,11 @@ export const showOptionsKeyboard =
 				return undefined as ShowOptionsKeyboardResponse<T, AddCancel>;
 			}
 
-			const resultValue = options.values.at(+response.match[1]!);
+			const rawValue = response.match[1];
+
+			invariant(rawValue, 'Could not find value');
+
+			const resultValue = options.values.at(+rawValue);
 
 			invariant(resultValue);
 
@@ -76,8 +83,9 @@ export const showOptionsKeyboard =
 			selectOptions.set('Cancelar', undefined);
 		}
 
-		const response = await conversation.form.select([...selectOptions.keys()], (ctx) =>
-			ctx.reply('Por favor, escolha uma opção')
+		const response = await conversation.form.select(
+			[...selectOptions.keys()],
+			(ctx) => ctx.reply('Por favor, escolha uma opção')
 		);
 
 		if (response === 'Cancelar') {
@@ -85,5 +93,8 @@ export const showOptionsKeyboard =
 			return undefined as ShowOptionsKeyboardResponse<T, AddCancel>;
 		}
 
-		return selectOptions.get(response) as ShowOptionsKeyboardResponse<T, AddCancel>;
+		return selectOptions.get(response) as ShowOptionsKeyboardResponse<
+			T,
+			AddCancel
+		>;
 	};

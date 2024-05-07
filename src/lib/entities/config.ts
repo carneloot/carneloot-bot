@@ -1,11 +1,16 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { Duration } from 'tinyduration';
 import { and, eq } from 'drizzle-orm';
+import type { Duration } from 'tinyduration';
 import { z } from 'zod';
 
 import { db } from '../database/db.js';
-import { ConfigID, configsTable, PetID, UserID } from '../database/schema.js';
+import {
+	type ConfigID,
+	PetID,
+	UserID,
+	configsTable
+} from '../database/schema.js';
 
 const Configs = {
 	user: {
@@ -29,9 +34,14 @@ type Configs = typeof Configs;
 
 type ConfigContext = keyof Configs;
 
-type ConfigKey<Context extends ConfigContext> = Exclude<keyof Configs[Context], 'identifier'>;
+type ConfigKey<Context extends ConfigContext> = Exclude<
+	keyof Configs[Context],
+	'identifier'
+>;
 
-type ContextIdentifier<Context extends ConfigContext> = z.infer<Configs[Context]['identifier']>;
+type ContextIdentifier<Context extends ConfigContext> = z.infer<
+	Configs[Context]['identifier']
+>;
 
 type ConfigSchema<
 	Context extends ConfigContext,
@@ -41,7 +51,9 @@ type ConfigSchema<
 export type ConfigValue<
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>
-> = Configs[Context][Key] extends z.ZodTypeAny ? z.infer<Configs[Context][Key]> : never;
+> = Configs[Context][Key] extends z.ZodTypeAny
+	? z.infer<Configs[Context][Key]>
+	: never;
 
 export const getConfig = async <
 	Context extends ConfigContext,
@@ -56,7 +68,10 @@ export const getConfig = async <
 		.select({ value: configsTable.value })
 		.from(configsTable)
 		.where(
-			and(eq(configsTable.context, `${context}:${id}`), eq(configsTable.key, key as string))
+			and(
+				eq(configsTable.context, `${context}:${id}`),
+				eq(configsTable.key, key as string)
+			)
 		)
 		.get();
 
@@ -119,6 +134,9 @@ export const deleteConfig = async <
 	await db
 		.delete(configsTable)
 		.where(
-			and(eq(configsTable.context, `${context}:${id}`), eq(configsTable.key, key as string))
+			and(
+				eq(configsTable.context, `${context}:${id}`),
+				eq(configsTable.key, key as string)
+			)
 		);
 };

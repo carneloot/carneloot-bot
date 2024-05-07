@@ -1,18 +1,27 @@
 import { createId } from '@paralleldrive/cuid2';
 
+import { add, set } from 'date-fns';
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { fromPromise } from 'neverthrow';
-import { add, set } from 'date-fns';
 
-import { PetFoodID, petFoodTable, PetID, petsTable } from '../database/schema.js';
-import { db } from '../database/db.js';
-import { getConfig } from './config.js';
-import { triggerClient } from '../trigger/trigger-client.js';
 import { isDebug } from '../../common/utils/is-debug.js';
+import { db } from '../database/db.js';
+import {
+	type PetFoodID,
+	type PetID,
+	petFoodTable,
+	petsTable
+} from '../database/schema.js';
+import { triggerClient } from '../trigger/trigger-client.js';
+import { getConfig } from './config.js';
 
 type PetFood = typeof petFoodTable.$inferSelect;
 
-export const getDailyFoodConsumption = async (petID: PetFood['petID'], from: Date, to: Date) => {
+export const getDailyFoodConsumption = async (
+	petID: PetFood['petID'],
+	from: Date,
+	to: Date
+) => {
 	return db
 		.select({
 			id: petsTable.id,
@@ -33,7 +42,9 @@ export const getDailyFoodConsumption = async (petID: PetFood['petID'], from: Dat
 		.get();
 };
 
-export const addPetFood = (values: Omit<typeof petFoodTable.$inferInsert, 'id'>) => {
+export const addPetFood = (
+	values: Omit<typeof petFoodTable.$inferInsert, 'id'>
+) => {
 	return db
 		.insert(petFoodTable)
 		.values({
@@ -48,9 +59,15 @@ export const addPetFood = (values: Omit<typeof petFoodTable.$inferInsert, 'id'>)
 
 export const updatePetFood = async (
 	petFoodID: PetFoodID,
-	values: Pick<typeof petFoodTable.$inferInsert, 'time' | 'messageID' | 'quantity'>
+	values: Pick<
+		typeof petFoodTable.$inferInsert,
+		'time' | 'messageID' | 'quantity'
+	>
 ) => {
-	await db.update(petFoodTable).set(values).where(eq(petFoodTable.id, petFoodID));
+	await db
+		.update(petFoodTable)
+		.set(values)
+		.where(eq(petFoodTable.id, petFoodID));
 };
 
 export const getLastPetFood = (petID: PetID) => {
@@ -80,8 +97,9 @@ export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
 		return;
 	}
 
-	await fromPromise(triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`), () =>
-		console.warn('Failed to cancel previous notification')
+	await fromPromise(
+		triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`),
+		() => console.warn('Failed to cancel previous notification')
 	);
 };
 

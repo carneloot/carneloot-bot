@@ -1,9 +1,9 @@
-import { Context } from 'grammy';
+import type { Context } from 'grammy';
 import { table } from 'table';
 
 import Qty from 'js-quantities';
 
-import { Command } from '../common/types/command.js';
+import type { Command } from '../common/types/command.js';
 
 async function sendMissingInformationMessage(ctx: Context) {
 	await ctx.reply('Me envie a quantidade inicial de água em ml. 😄');
@@ -38,7 +38,7 @@ export const CafeCommand: Command<'cafe'> = {
 		}
 
 		if (Math.random() <= 0.5) {
-			await ctx.reply(`Lembre-se de molhar o filtro antes de colocar o café!`);
+			await ctx.reply('Lembre-se de molhar o filtro antes de colocar o café!');
 		}
 
 		const coffeeWaterRatio = _coffeeWaterRatio
