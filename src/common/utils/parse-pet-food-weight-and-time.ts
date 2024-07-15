@@ -1,4 +1,4 @@
-import { fromUnixTime, set } from 'date-fns';
+import { fromUnixTime, isAfter, set, subDays } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { err, ok } from 'neverthrow';
 
@@ -56,7 +56,7 @@ export const parsePetFoodWeightAndTime = ({
 	let timeChanged = false;
 	if (groups.hour !== undefined && groups.minute !== undefined) {
 		timeChanged = true;
-		time = zonedTimeToUtc(
+		const newTime = zonedTimeToUtc(
 			set(utcToZonedTime(time, timezone), {
 				date: groups.day,
 				month: groups.month ? groups.month - 1 : undefined,
@@ -68,6 +68,12 @@ export const parsePetFoodWeightAndTime = ({
 			}),
 			timezone
 		);
+
+		if (isAfter(newTime, time)) {
+			time = subDays(newTime, newTime.getDate() - time.getDate());
+		} else {
+			time = newTime;
+		}
 	}
 
 	return ok({

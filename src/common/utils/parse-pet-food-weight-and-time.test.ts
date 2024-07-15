@@ -129,4 +129,22 @@ describe('parsePetFoodWeightAndTime', () => {
 			expect(result.value.timeChanged).toBeTrue();
 		}
 	});
+
+	it('should return the last day if the time is after the message time', () => {
+		const date = zonedTimeToUtc(new Date(2024, 6, 15, 0, 5, 0), timezone);
+		const result = parsePetFoodWeightAndTime({
+			messageMatch: '10 23:55',
+			messageTime: getUnixTime(date),
+			timezone
+		});
+
+		const expectedDate = zonedTimeToUtc(new Date(2024, 6, 14, 23, 55, 0), timezone);
+
+		expect(result.isOk()).toBeTrue();
+		if (result.isOk()) {
+			expect(result.value.quantity.scalar).toEqual(10);
+			expect(result.value.time).toEqual(expectedDate);
+			expect(result.value.timeChanged).toBeTrue();
+		}
+	});
 });
