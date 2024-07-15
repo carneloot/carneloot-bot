@@ -59,7 +59,7 @@ export const parsePetFoodWeightAndTime = ({
 		time = zonedTimeToUtc(
 			set(utcToZonedTime(time, timezone), {
 				date: groups.day,
-				month: groups.month,
+				month: groups.month ? groups.month - 1 : undefined,
 				year: groups.year,
 				hours: groups.hour,
 				minutes: groups.minute,

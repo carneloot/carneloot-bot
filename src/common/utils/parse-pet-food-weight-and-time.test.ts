@@ -112,7 +112,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		const time = zonedTimeToUtc(
 			set(utcToZonedTime(date, timezone), {
 				date: 1,
-				month: 3,
+				month: 2,
 				year: 2024,
 				hours: 14,
 				minutes: 30,
