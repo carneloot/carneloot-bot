@@ -50,7 +50,9 @@ export const showOptionsKeyboard =
 			keyboard.text('Cancelar');
 		}
 
-		await ctx.reply(options.message, { reply_markup: keyboard });
+		const optionsMessage = await ctx.reply(options.message, {
+			reply_markup: keyboard
+		});
 
 		if (keyboard instanceof InlineKeyboard) {
 			const trigger = addCancel ? [/values-(\d+)/, 'Cancelar'] : /values-(\d+)/;
@@ -72,6 +74,15 @@ export const showOptionsKeyboard =
 			const resultValue = options.values.at(+rawValue);
 
 			invariant(resultValue);
+
+			await ctx.api.editMessageText(
+				optionsMessage.chat.id,
+				optionsMessage.message_id,
+				`${options.message}\n>>${options.labelFn(resultValue).replaceAll('|', '\\|')}`,
+				{
+					parse_mode: 'MarkdownV2'
+				}
+			);
 
 			return resultValue;
 		}

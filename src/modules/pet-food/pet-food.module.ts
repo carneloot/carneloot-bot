@@ -20,6 +20,7 @@ import {
 	SetNotificationDelayCommand,
 	setNotificationDelayConversation
 } from './set-notification-delay.command.js';
+import { DeleteFoodCommand, deleteFoodConversation } from './delete-food.command.js';
 
 export const PetFoodModule = new Module<Context>(
 	'',
@@ -71,6 +72,15 @@ PetFoodModule.setCommand(
 	'Adiciona ração ao rastreamento de ração',
 	UserMiddleware,
 	AddFoodCommand
+);
+
+// Delete food
+PetFoodModule.use(createConversation(deleteFoodConversation, 'deleteFood'));
+PetFoodModule.setCommand(
+	'deletar_racao',
+	'Deleta ração do rastreamento de ração',
+	UserMiddleware,
+	DeleteFoodCommand
 );
 
 // Correct food

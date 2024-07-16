@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 
 import { add, set } from 'date-fns';
-import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { fromPromise } from 'neverthrow';
 
 import { isDebug } from '../../common/utils/is-debug.js';
@@ -10,7 +10,8 @@ import {
 	type PetFoodID,
 	type PetID,
 	petFoodTable,
-	petsTable
+	petsTable,
+	usersTable
 } from '../database/schema.js';
 import { triggerClient } from '../trigger/trigger-client.js';
 import { getConfig } from './config.js';
@@ -70,6 +71,10 @@ export const updatePetFood = async (
 		.where(eq(petFoodTable.id, petFoodID));
 };
 
+export const deletePetFood = async (petFoodID: PetFoodID) => {
+	await db.delete(petFoodTable).where(eq(petFoodTable.id, petFoodID));
+};
+
 export const getLastPetFood = (petID: PetID) => {
 	return db
 		.select({ id: petFoodTable.id, time: petFoodTable.time })
@@ -90,6 +95,27 @@ export const getPetFoodByMessageId = (messageID: number) => {
 		.from(petFoodTable)
 		.where(eq(petFoodTable.messageID, messageID))
 		.get();
+};
+
+export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
+	return db
+		.select({
+			id: petFoodTable.id,
+			quantity: petFoodTable.quantity,
+			time: petFoodTable.time,
+			user: usersTable
+		})
+		.from(petFoodTable)
+		.where(
+			and(
+				gte(petFoodTable.time, from),
+				lte(petFoodTable.time, to),
+				eq(petFoodTable.petID, petID)
+			)
+		)
+		.innerJoin(usersTable, eq(petFoodTable.userID, usersTable.id))
+		.orderBy(asc(petFoodTable.time))
+		.all();
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
