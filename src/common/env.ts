@@ -11,7 +11,7 @@ const envSchema = z.object({
 	DEBUG: z.string().optional(),
 
 	RUN_MODE: z.enum(['polling', 'webhook']).optional().default('polling'),
-	PORT: z.number().optional().default(3000),
+	PORT: z.coerce.number().optional().default(3000),
 });
 
 // eslint-disable-next-line n/no-process-env
