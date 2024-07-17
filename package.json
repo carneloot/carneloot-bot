@@ -10,8 +10,7 @@
     "db:migrate": "bun run scripts/migrate.mjs",
     "build:dev": "tsc",
     "dev": "nodemon",
-    "start": "bunx tsx src/index.ts",
-    "format": "prettier --plugin-search-dir . --write .",
+    "start": "bun run src/index.ts",
     "set-webhook": "curl $BOT_URL/api/set-webhook"
   },
   "devDependencies": {
