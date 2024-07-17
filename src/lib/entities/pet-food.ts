@@ -119,10 +119,6 @@ export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
-	if (isDebug()) {
-		return;
-	}
-
 	await fromPromise(
 		triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`),
 		() => console.warn('Failed to cancel previous notification')
@@ -134,10 +130,6 @@ export const schedulePetFoodNotification = async (
 	petFoodID: PetFoodID,
 	time: Date
 ) => {
-	if (isDebug()) {
-		return;
-	}
-
 	const delay = await getConfig('pet', 'notificationDelay', petID);
 
 	if (!delay) {
