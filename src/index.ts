@@ -1,5 +1,7 @@
 import { createMiddleware } from '@trigger.dev/hono';
+
 import { webhookCallback } from 'grammy';
+import { logger } from 'hono/logger';
 import { Hono } from 'hono';
 
 import { createBot } from './bot.js';
@@ -8,7 +10,8 @@ import { Env } from './common/env.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { sendNotification } from './api/actions/send-notification.js';
 import { triggerClient } from './lib/trigger/trigger-client.js';
-import { logger } from 'hono/logger';
+
+import './lib/trigger/pet-food-notification.job.js';
 
 const { bot, setCommands, setWebhook } = createBot();
 
