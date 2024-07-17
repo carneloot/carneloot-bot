@@ -25,10 +25,16 @@ const api = new Hono();
 
 api
 	.post('notify', async (c) => {
-		const parsedBodyResult = NotifyParams.safeParse(c.req.json());
+		const parsedBodyResult = NotifyParams.safeParse(await c.req.json());
 
 		if (!parsedBodyResult.success) {
-			return c.json({ message: 'Invalid body' }, 400);
+			return c.json(
+				{
+					message: 'Invalid body',
+					error: parsedBodyResult.error.flatten().fieldErrors
+				},
+				400
+			);
 		}
 
 		const { data: body } = parsedBodyResult;
