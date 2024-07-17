@@ -54,7 +54,7 @@ if (Env.RUN_MODE === 'webhook') {
 		return c.json({ message: 'Done!' });
 	});
 
-	api.get('/webhook/:secret', async (c) => {
+	api.post('/webhook/:secret', async (c) => {
 		const { secret } = c.req.param();
 		if (secret !== Env.BOT_TOKEN) {
 			return c.json({ message: 'Unauthorized' }, 401);
