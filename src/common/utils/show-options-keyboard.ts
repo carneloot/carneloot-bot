@@ -63,7 +63,15 @@ export const showOptionsKeyboard =
 			await response.answerCallbackQuery();
 
 			if (addCancel && response.callbackQuery.data === 'Cancelar') {
-				await ctx.reply('Operação cancelada');
+				await ctx.api.editMessageText(
+					optionsMessage.chat.id,
+					optionsMessage.message_id,
+					`${options.message}\n>>Cancelado`,
+					{
+						parse_mode: 'MarkdownV2'
+					}
+				);
+
 				return undefined as ShowOptionsKeyboardResponse<T, AddCancel>;
 			}
 

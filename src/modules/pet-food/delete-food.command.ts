@@ -53,7 +53,13 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		labelFn: (v) => `${Qty(v.quantity, 'g')} | ${utcToZonedTime(v.time, dayStart.timezone).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
 		message: 'Escolha a ração para deletar:',
 		rowNum: 1,
+		addCancel: true,
 	})(cvs, ctx);
+
+	if (!selectedFood) {
+		await ctx.reply('Operação cancelada');
+		return;
+	}
 
 	await cvs.external(() => deletePetFood(selectedFood.id));
 
