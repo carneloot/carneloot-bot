@@ -138,7 +138,10 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		});
 
-		const expectedDate = zonedTimeToUtc(new Date(2024, 6, 14, 23, 55, 0), timezone);
+		const expectedDate = zonedTimeToUtc(
+			new Date(2024, 6, 14, 23, 55, 0),
+			timezone
+		);
 
 		expect(result.isOk()).toBeTrue();
 		if (result.isOk()) {

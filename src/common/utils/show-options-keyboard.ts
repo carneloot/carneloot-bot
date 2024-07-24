@@ -86,7 +86,9 @@ export const showOptionsKeyboard =
 			await ctx.api.editMessageText(
 				optionsMessage.chat.id,
 				optionsMessage.message_id,
-				`${options.message}\n>>${options.labelFn(resultValue).replaceAll('|', '\\|')}`,
+				`${options.message}\n>>${options
+					.labelFn(resultValue)
+					.replaceAll('|', '\\|')}`,
 				{
 					parse_mode: 'MarkdownV2'
 				}

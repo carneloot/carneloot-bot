@@ -10,7 +10,10 @@ import Qty from 'js-quantities';
 import type { Context } from '../../common/types/context.js';
 import { getConfig } from '../../lib/entities/config.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
-import { deletePetFood, getPetFoodByRange } from '../../lib/entities/pet-food.js';
+import {
+	deletePetFood,
+	getPetFoodByRange
+} from '../../lib/entities/pet-food.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 
@@ -22,7 +25,9 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const currentPet = await cvs.external(() => getConfig('user', 'currentPet', user.id));
+	const currentPet = await cvs.external(() =>
+		getConfig('user', 'currentPet', user.id)
+	);
 
 	if (!currentPet) {
 		await ctx.reply(
@@ -31,7 +36,9 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const dayStart = await cvs.external(() => getConfig('pet', 'dayStart', currentPet.id));
+	const dayStart = await cvs.external(() =>
+		getConfig('pet', 'dayStart', currentPet.id)
+	);
 
 	if (!dayStart) {
 		await ctx.reply(
@@ -46,14 +53,20 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 
 	const { from, to } = getDailyFromTo(now, dayStart);
 
-	const petFoods = await cvs.external(() => getPetFoodByRange(currentPet.id, from, to));
+	const petFoods = await cvs.external(() =>
+		getPetFoodByRange(currentPet.id, from, to)
+	);
 
 	const selectedFood = await showOptionsKeyboard({
 		values: petFoods,
-		labelFn: (v) => `${Qty(v.quantity, 'g')} | ${utcToZonedTime(v.time, dayStart.timezone).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
+		labelFn: (v) =>
+			`${Qty(v.quantity, 'g')} | ${utcToZonedTime(
+				v.time,
+				dayStart.timezone
+			).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
 		message: 'Escolha a ração para deletar:',
 		rowNum: 1,
-		addCancel: true,
+		addCancel: true
 	})(cvs, ctx);
 
 	if (!selectedFood) {
@@ -64,7 +77,6 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	await cvs.external(() => deletePetFood(selectedFood.id));
 
 	await ctx.reply('Ração deletada com sucesso!');
-
 }) satisfies ConversationFn<Context>;
 
 export const DeleteFoodCommand = (async (ctx) => {
