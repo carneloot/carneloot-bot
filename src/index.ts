@@ -69,7 +69,7 @@ if (Env.RUN_MODE === 'webhook') {
 			return c.json({ message: 'Unauthorized' }, 401);
 		}
 
-		await webhookCallback(bot, 'hono')(c);
+		return await webhookCallback(bot, 'hono')(c);
 	});
 }
 
