@@ -11,6 +11,10 @@ import {
 	CorrectFoodCommand,
 	correctFoodConversation
 } from './correct-food.command.js';
+import {
+	DeleteFoodCommand,
+	deleteFoodConversation
+} from './delete-food.command.js';
 import { FoodStatusCommand } from './food-status.command.js';
 import {
 	SetDayStartCommand,
@@ -20,10 +24,6 @@ import {
 	SetNotificationDelayCommand,
 	setNotificationDelayConversation
 } from './set-notification-delay.command.js';
-import {
-	DeleteFoodCommand,
-	deleteFoodConversation
-} from './delete-food.command.js';
 
 export const PetFoodModule = new Module<Context>(
 	'',
