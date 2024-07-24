@@ -11,7 +11,8 @@
 		"build:dev": "tsc",
 		"dev": "nodemon",
 		"start": "bun run src/index.ts",
-		"set-webhook": "curl $BOT_URL/api/set-webhook"
+		"set-webhook": "curl $BOT_URL/api/set-webhook",
+		"test": "bun test"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.8.3",
