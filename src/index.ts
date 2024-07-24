@@ -63,14 +63,7 @@ if (Env.RUN_MODE === 'webhook') {
 		return c.json({ message: 'Done!' });
 	});
 
-	api.post('/webhook/:secret', async (c) => {
-		const { secret } = c.req.param();
-		if (secret !== Env.BOT_TOKEN) {
-			return c.json({ message: 'Unauthorized' }, 401);
-		}
-
-		return await webhookCallback(bot, 'hono')(c);
-	});
+	api.post('/webhook/:secret', webhookCallback(bot, 'hono'));
 }
 
 app.route('/api', api);
