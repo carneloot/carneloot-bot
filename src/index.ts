@@ -1,3 +1,4 @@
+import { zValidator } from '@hono/zod-validator';
 import { createMiddleware } from '@trigger.dev/hono';
 
 import { webhookCallback } from 'grammy';
@@ -24,24 +25,13 @@ app.use(logger());
 const api = new Hono();
 
 api
-	.post('notify', async (c) => {
-		const parsedBodyResult = NotifyParams.safeParse(await c.req.json());
-
-		if (!parsedBodyResult.success) {
-			return c.json(
-				{
-					message: 'Invalid body',
-					error: parsedBodyResult.error.flatten().fieldErrors
-				},
-				400
-			);
-		}
-
-		const { data: body } = parsedBodyResult;
+	.post('notify', zValidator('json', NotifyParams), async (c) => {
+		const body = c.req.valid('json');
 
 		try {
 			await sendNotification(bot, body);
 		} catch (e: unknown) {
+			console.error('Error sending notification', e);
 			return c.json({ message: 'Internal error' }, 500);
 		}
 

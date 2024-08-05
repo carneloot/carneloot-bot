@@ -31,6 +31,7 @@
 		"@grammyjs/conversations": "^1.2.0",
 		"@grammyjs/emoji": "^1.2.0",
 		"@grammyjs/menu": "^1.2.1",
+		"@hono/zod-validator": "^0.2.2",
 		"@libsql/client": "^0.5.2",
 		"@paralleldrive/cuid2": "^2.2.2",
 		"@trigger.dev/hono": "^2.3.19",
