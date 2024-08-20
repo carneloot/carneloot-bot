@@ -78,8 +78,6 @@ export const AddFoodCommand = (async (ctx) => {
 		await schedulePetFoodNotification(currentPet.id, petFood.id, time);
 	}
 
-	await sendAddedFoodNotification(ctx, currentPet.id, quantity, ctx.user);
-
 	const message = [
 		`Foram adicionados ${quantity} de ração para o pet ${currentPet.name}.`,
 		timeChanged &&
@@ -93,4 +91,11 @@ export const AddFoodCommand = (async (ctx) => {
 
 	await ctx.reply(message);
 	await ctx.react(Reactions.thumbs_up);
+
+	await sendAddedFoodNotification(ctx, {
+		id: currentPet.id,
+		quantity,
+		user: ctx.user,
+		time: timeChanged ? time : undefined
+	});
 }) satisfies MiddlewareFn<Context>;

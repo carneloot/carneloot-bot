@@ -77,7 +77,12 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			await schedulePetFoodNotification(petID, petFood.id, time);
 		}
 
-		await sendAddedFoodNotification(ctx, petID, quantity, ctx.user);
+		await sendAddedFoodNotification(ctx, {
+			id: petID,
+			quantity,
+			user: ctx.user,
+			time: timeChanged ? time : undefined
+		});
 
 		await ctx.react(Reactions.thumbs_up);
 	}) satisfies MiddlewareFn<Context>;
