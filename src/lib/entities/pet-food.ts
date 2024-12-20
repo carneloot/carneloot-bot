@@ -1,10 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { add, set } from 'date-fns';
+import { add, differenceInMilliseconds, milliseconds, set } from 'date-fns';
 import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { fromPromise } from 'neverthrow';
 
-import { isDebug } from '../../common/utils/is-debug.js';
 import { db } from '../database/db.js';
 import {
 	type PetFoodID,
@@ -13,7 +12,7 @@ import {
 	petsTable,
 	usersTable
 } from '../database/schema.js';
-import { triggerClient } from '../trigger/trigger-client.js';
+import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
 import { getConfig } from './config.js';
 
 type PetFood = typeof petFoodTable.$inferSelect;
@@ -119,9 +118,8 @@ export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
-	await fromPromise(
-		triggerClient.cancelEvent(`pet-food-notification:${petFoodID}`),
-		() => console.warn('Failed to cancel previous notification')
+	await fromPromise(petFoodNotificationJob.queue.remove(petFoodID), () =>
+		console.warn('Failed to cancel previous notification')
 	);
 };
 
@@ -136,17 +134,18 @@ export const schedulePetFoodNotification = async (
 		return;
 	}
 
+	const newTime = add(time, delay);
+	const delayFromNowInMs = differenceInMilliseconds(newTime, new Date());
+
 	await fromPromise(
-		triggerClient.sendEvent(
+		petFoodNotificationJob.queue.add(
+			`pet-${petID}}`,
 			{
-				id: `pet-food-notification:${petFoodID}`,
-				name: 'pet-food-notification',
-				payload: {
-					petID: petID
-				}
+				petID
 			},
 			{
-				deliverAt: set(add(time, delay), { seconds: 0, milliseconds: 0 })
+				jobId: petFoodID,
+				delay: Math.max(delayFromNowInMs, 0)
 			}
 		),
 		(err) => console.log('Failed to schedule notifications', err)

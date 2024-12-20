@@ -1,14 +1,15 @@
 import type { Config } from 'drizzle-kit';
+import invariant from 'tiny-invariant';
 
-import { Env } from './src/common/env.js';
+invariant(process.env.DATABASE_URL, 'DATABASE_URL is required');
 
 export default {
 	out: './migrations',
 	schema: './src/lib/database/schema.ts',
-	driver: 'turso',
+	dialect: 'turso',
 	dbCredentials: {
-		url: Env.DATABASE_URL,
-		authToken: Env.DATABASE_AUTH_TOKEN
+		url: process.env.DATABASE_URL,
+		authToken: process.env.DATABASE_AUTH_TOKEN
 	},
 	verbose: true,
 	strict: true

@@ -3,7 +3,6 @@ import { z } from 'zod';
 const envSchema = z.object({
 	BOT_TOKEN: z.string(),
 	WEBHOOK_URL: z.string().optional(),
-	TRIGGER_API_KEY: z.string(),
 
 	DATABASE_URL: z.string(),
 	DATABASE_AUTH_TOKEN: z.string().optional(),
@@ -11,7 +10,9 @@ const envSchema = z.object({
 	DEBUG: z.string().optional(),
 
 	RUN_MODE: z.enum(['polling', 'webhook']).optional().default('polling'),
-	PORT: z.coerce.number().optional().default(3000)
+	PORT: z.coerce.number().optional().default(3000),
+
+	REDIS_URL: z.string()
 });
 
 // eslint-disable-next-line n/no-process-env

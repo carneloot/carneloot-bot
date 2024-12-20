@@ -1,5 +1,4 @@
 import { zValidator } from '@hono/zod-validator';
-import { createMiddleware } from '@trigger.dev/hono';
 
 import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
@@ -10,9 +9,7 @@ import { createBot } from './bot.js';
 import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { Env } from './common/env.js';
-import { triggerClient } from './lib/trigger/trigger-client.js';
-
-import './lib/trigger/pet-food-notification.job.js';
+import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
 
 const { bot, setCommands, setWebhook } = createBot();
 
@@ -24,20 +21,18 @@ app.use(logger());
 
 const api = new Hono();
 
-api
-	.post('notify', zValidator('json', NotifyParams), async (c) => {
-		const body = c.req.valid('json');
+api.post('notify', zValidator('json', NotifyParams), async (c) => {
+	const body = c.req.valid('json');
 
-		try {
-			await sendNotification(bot, body);
-		} catch (e: unknown) {
-			console.error('Error sending notification', e);
-			return c.json({ message: 'Internal error' }, 500);
-		}
+	try {
+		await sendNotification(bot, body);
+	} catch (e: unknown) {
+		console.error('Error sending notification', e);
+		return c.json({ message: 'Internal error' }, 500);
+	}
 
-		return c.json({ message: 'Notification sent successfully!' });
-	})
-	.use('/trigger', createMiddleware(triggerClient));
+	return c.json({ message: 'Notification sent successfully!' });
+});
 
 if (Env.RUN_MODE === 'webhook') {
 	api.get('/set-webhook', async (c) => {
@@ -55,6 +50,8 @@ if (Env.RUN_MODE === 'webhook') {
 
 	api.post('/webhook/:secret', webhookCallback(bot, 'hono'));
 }
+
+const worker = petFoodNotificationJob.createWorker();
 
 app.route('/api', api);
 
