@@ -88,7 +88,10 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 					return false;
 				}
 			},
-			(ctx) => ctx.reply('Formato inválido.')
+			(ctx) =>
+				ctx.reply(
+					'Formato inválido. Envie uma duração no formato ISO Duration.'
+				)
 		);
 
 		const newDurationString = durationResponse.message?.text;
