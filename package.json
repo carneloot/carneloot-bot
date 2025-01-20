@@ -39,6 +39,7 @@
 		"date-fns": "^2.30.0",
 		"date-fns-tz": "^2.0.1",
 		"drizzle-orm": "^0.37.0",
+		"effect": "^3.12.5",
 		"grammy": "^1.32.0",
 		"hono": "^4.6.12",
 		"js-quantities": "^1.8.0",

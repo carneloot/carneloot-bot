@@ -1,4 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
+
+import { Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -66,12 +68,12 @@ export const AddFoodCommand = (async (ctx) => {
 			dayStart
 		});
 
-	if (addPetFoodResult.isErr()) {
-		await ctx.reply(addPetFoodResult.error);
+	if (Either.isLeft(addPetFoodResult)) {
+		await ctx.reply(addPetFoodResult.left);
 		return;
 	}
 
-	const { message } = addPetFoodResult.value;
+	const { message } = addPetFoodResult.right;
 
 	await ctx.reply(message);
 	await ctx.react(Reactions.thumbs_up);
