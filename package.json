@@ -8,6 +8,7 @@
 	"type": "module",
 	"scripts": {
 		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
 		"build:dev": "tsc",
 		"dev": "nodemon",
 		"start": "bun run src/index.ts",
@@ -17,7 +18,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@total-typescript/ts-reset": "^0.6.1",
-		"@types/bun": "^1.1.14",
+		"@types/bun": "^1.1.17",
 		"@types/js-quantities": "^1.6.6",
 		"@types/ms": "^0.7.34",
 		"cross-env": "^7.0.3",

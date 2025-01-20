@@ -17,7 +17,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .bumrc
+          bun-version-file: .tool-versions
 
       - name: Verify Bun installation
         run: bun --version
