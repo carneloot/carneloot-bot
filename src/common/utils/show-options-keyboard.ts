@@ -88,7 +88,7 @@ export const showOptionsKeyboard =
 			await ctx.api.editMessageText(
 				optionsMessage.chat.id,
 				optionsMessage.message_id,
-				`${parseMessageForMarkdown(options.message)}\n>>${options.labelFn(resultValue)}`,
+				`${parseMessageForMarkdown(options.message)}\n>>${parseMessageForMarkdown(options.labelFn(resultValue))}`,
 				{
 					parse_mode: 'MarkdownV2'
 				}
