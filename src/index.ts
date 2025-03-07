@@ -10,6 +10,7 @@ import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { Env } from './common/env.js';
 import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
+import { serveStatic } from 'hono/bun';
 
 const { bot, setCommands, setWebhook } = createBot();
 
@@ -54,6 +55,7 @@ if (Env.RUN_MODE === 'webhook') {
 const worker = petFoodNotificationJob.createWorker();
 
 app.route('/api', api);
+app.use('*', serveStatic({ root: '../public/' }));
 
 Bun.serve({
 	...app,
