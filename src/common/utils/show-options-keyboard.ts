@@ -4,6 +4,7 @@ import { InlineKeyboard, Keyboard } from 'grammy';
 import invariant from 'tiny-invariant';
 
 import type { Context } from '../types/context.js';
+import { parseMessageForMarkdown } from './parse-message-for-makdown.js';
 
 type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 	values: T[];
@@ -86,9 +87,7 @@ export const showOptionsKeyboard =
 			await ctx.api.editMessageText(
 				optionsMessage.chat.id,
 				optionsMessage.message_id,
-				`${options.message}\n>>${options
-					.labelFn(resultValue)
-					.replaceAll('|', '\\|')}`,
+				`${options.message}\n>>${parseMessageForMarkdown(options.labelFn(resultValue))}`,
 				{
 					parse_mode: 'MarkdownV2'
 				}
