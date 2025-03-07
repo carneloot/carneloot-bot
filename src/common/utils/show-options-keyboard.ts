@@ -6,7 +6,7 @@ import invariant from 'tiny-invariant';
 import type { Context } from '../types/context.js';
 import { parseMessageForMarkdown } from './parse-message-for-makdown.js';
 
-type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
+type ShowOptionsKeyboardOpts<T, AddCancel extends boolean = false> = {
 	values: T[];
 	labelFn: (value: T) => string;
 	message: string;
@@ -30,6 +30,7 @@ export const showOptionsKeyboard =
 	): Promise<ShowOptionsKeyboardResponse<T, AddCancel>> => {
 		const keyboardType = options.keyboardType ?? 'inline';
 		const rowNum = options.rowNum ?? 2;
+		const addCancel = options.addCancel ?? false;
 
 		const keyboard = options.values.reduce(
 			(keyboard, value, index) => {
@@ -45,8 +46,6 @@ export const showOptionsKeyboard =
 		if (keyboard instanceof Keyboard) {
 			keyboard.oneTime();
 		}
-
-		const addCancel = options.addCancel ?? false;
 
 		if (addCancel) {
 			keyboard.text('Cancelar');
