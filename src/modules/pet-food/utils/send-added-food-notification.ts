@@ -1,5 +1,4 @@
-import { errAsync, okAsync } from 'neverthrow';
-
+import { Either } from 'effect';
 import type Qty from 'js-quantities';
 
 import { utcToZonedTime } from 'date-fns-tz';
@@ -23,16 +22,16 @@ export const sendAddedFoodNotification = async (
 		user: User;
 		time?: Date;
 	}
-) => {
+): Promise<Either.Either<undefined, string>> => {
 	const pet = await getPetByID(id, { withOwner: true });
 	if (!pet) {
-		return errAsync('Pet não encontrado');
+		return Either.left('Pet não encontrado');
 	}
 
 	const dayStart = await getConfig('pet', 'dayStart', id);
 
 	if (!dayStart) {
-		return errAsync('Horário de início do dia não configurado');
+		return Either.left('Horário de início do dia não configurado');
 	}
 
 	const carers = (await getPetCarers(id))
@@ -62,5 +61,5 @@ export const sendAddedFoodNotification = async (
 		});
 	}
 
-	return okAsync(null);
+	return Either.right(undefined);
 };

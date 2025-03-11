@@ -12,9 +12,10 @@ import {
 	getLastPetFood,
 	schedulePetFoodNotification
 } from '../entities/pet-food.js';
+import type { Pet } from '../entities/pet.js';
 
 type Params = {
-	petID: PetID;
+	pet: Pick<Pet, 'id' | 'name'>;
 	messageID: number;
 	userID: UserID;
 
@@ -32,7 +33,7 @@ type Result = {
 const LIMIT_DURATION = Duration.decode('1 minutes');
 
 const addPetFoodAndScheduleNotification = async ({
-	petID,
+	pet,
 	messageID,
 	userID,
 
@@ -42,7 +43,7 @@ const addPetFoodAndScheduleNotification = async ({
 
 	dayStart
 }: Params): Promise<Either.Either<Result, string>> => {
-	const lastPetFood = await getLastPetFood(petID);
+	const lastPetFood = await getLastPetFood(pet.id);
 
 	const shouldIgnoreEntry = pipe(
 		lastPetFood,
@@ -61,7 +62,7 @@ const addPetFoodAndScheduleNotification = async ({
 	}
 
 	const petFood = await addPetFood({
-		petID,
+		petID: pet.id,
 		messageID,
 		userID,
 
@@ -70,7 +71,7 @@ const addPetFoodAndScheduleNotification = async ({
 	});
 
 	const message = [
-		`Foram adicionados ${quantity} de ração.`,
+		`Foram adicionados ${quantity} de ração para o pet ${pet.name}.`,
 		timeChanged &&
 			`A ração foi adicionada para ${utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR')}`
 	]
@@ -82,7 +83,7 @@ const addPetFoodAndScheduleNotification = async ({
 			await cancelPetFoodNotification(lastPetFood.id);
 		}
 
-		await schedulePetFoodNotification(petID, petFood.id, time);
+		await schedulePetFoodNotification(pet.id, petFood.id, time);
 	}
 
 	return Either.right({ message });

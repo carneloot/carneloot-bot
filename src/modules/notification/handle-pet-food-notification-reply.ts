@@ -10,6 +10,7 @@ import type { PetID } from '../../lib/database/schema.js';
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
+import { getPetByID } from '../../lib/entities/pet.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
 
@@ -17,6 +18,15 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 	(async (ctx) => {
 		invariant(ctx.message, 'Message object not found.');
 		invariant(ctx.user, 'User is not defined.');
+
+		const pet = await getPetByID(petID);
+
+		if (!pet) {
+			await ctx.reply(
+				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.'
+			);
+			return;
+		}
 
 		const dayStart = await getConfig('pet', 'dayStart', petID);
 
@@ -43,7 +53,7 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 
 		const addPetFoodResult =
 			await petFoodService.addPetFoodAndScheduleNotification({
-				petID,
+				pet,
 				messageID: ctx.message.message_id,
 				userID: ctx.user.id,
 

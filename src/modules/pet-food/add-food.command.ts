@@ -57,7 +57,7 @@ export const AddFoodCommand = (async (ctx) => {
 
 	const addPetFoodResult =
 		await petFoodService.addPetFoodAndScheduleNotification({
-			petID: currentPet.id,
+			pet: currentPet,
 			messageID: ctx.message.message_id,
 			userID: ctx.user.id,
 
