@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 
 import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
+import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 
 import { createBot } from './bot.js';
@@ -10,7 +11,6 @@ import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { Env } from './common/env.js';
 import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
-import { serveStatic } from 'hono/bun';
 
 const { bot, setCommands, setWebhook } = createBot();
 
