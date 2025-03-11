@@ -8,7 +8,6 @@ import {
 	answerPendingPetInvite,
 	getPendingPetInvites
 } from '../../lib/entities/pet.js';
-import { getUserByID } from '../../lib/entities/user.js';
 
 import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
@@ -31,7 +30,9 @@ export const petInvitesConversation = (async (conversation, ctx) => {
 
 	const invite = await showOptionsKeyboard({
 		values: pendingInvites,
-		labelFn: (invite) => invite.petName,
+		rowNum: 1,
+		labelFn: (invite) =>
+			`${invite.petName} (${getUserDisplay(invite.petOwner)})`,
 		message:
 			'Você tem convites pendentes para os seguintes pets. Escolha um para aceitar ou recusar:'
 	})(conversation, ctx);
@@ -46,20 +47,14 @@ export const petInvitesConversation = (async (conversation, ctx) => {
 
 	await ctx.reply(`Você ${answer ? 'aceitou' : 'recusou'} o convite!`);
 
-	const petOwner = await conversation.external(() =>
-		getUserByID(invite.petOwner)
+	const carerDisplay = getUserDisplay(user);
+
+	await ctx.api.sendMessage(
+		invite.petOwner.telegramID,
+		`O cuidador ${carerDisplay} ${
+			answer ? 'aceitou' : 'recusou'
+		} o convite para cuidar do pet ${invite.petName}`
 	);
-
-	if (petOwner) {
-		const carerDisplay = getUserDisplay(user);
-
-		await ctx.api.sendMessage(
-			petOwner.telegramID,
-			`O cuidador ${carerDisplay} ${
-				answer ? 'aceitou' : 'recusou'
-			} o convite para cuidar do pet ${invite.petName}`
-		);
-	}
 }) satisfies ConversationFn<Context>;
 
 export const PetInvitesCommand = (async (ctx) => {

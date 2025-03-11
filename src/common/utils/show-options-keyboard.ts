@@ -12,6 +12,7 @@ type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 	message: string;
 	addCancel?: AddCancel;
 	keyboardType?: 'inline' | 'custom';
+	/** number of items per row */
 	rowNum?: number;
 };
 

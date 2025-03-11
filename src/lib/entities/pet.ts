@@ -139,10 +139,11 @@ export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
 		.select({
 			id: petCarersTable.id,
 			petName: petsTable.name,
-			petOwner: petsTable.ownerID
+			petOwner: usersTable
 		})
 		.from(petCarersTable)
 		.innerJoin(petsTable, eq(petCarersTable.petID, petsTable.id))
+		.innerJoin(usersTable, eq(petsTable.ownerID, usersTable.id))
 		.where(
 			and(
 				eq(petCarersTable.carerID, carerID),
