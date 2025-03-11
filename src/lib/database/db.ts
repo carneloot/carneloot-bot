@@ -6,7 +6,7 @@ import { Duration } from 'effect';
 import { Env } from '../../common/env.js';
 
 export const dbClient = createClient({
-	url: 'file:local.db',
+	url: 'file:./data/local.db',
 	authToken: Env.DATABASE_AUTH_TOKEN,
 	syncUrl: Env.DATABASE_URL,
 	syncInterval: Duration.toSeconds('1 hour')
