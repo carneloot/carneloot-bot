@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 
 import type { Prettify } from '../../common/types/prettify.js';
-import { db } from '../database/db.js';
+import { db, dbClient } from '../database/db.js';
 import {
 	type PetCarerStatus,
 	petCarersTable,
@@ -21,10 +21,13 @@ export const createPet = async (name: Pet['name'], ownerID: Pet['ownerID']) => {
 		name,
 		ownerID
 	});
+
+	await dbClient.sync();
 };
 
 export const deletePet = async (petID: Pet['id']) => {
 	await db.delete(petsTable).where(eq(petsTable.id, petID));
+	await dbClient.sync();
 };
 
 type GetPetByIDOptions<WithOwner extends boolean> = {
@@ -121,6 +124,7 @@ export const addCarer = async (
 		carerID,
 		petID
 	});
+	await dbClient.sync();
 };
 
 export const removeCarer = async (
@@ -132,6 +136,7 @@ export const removeCarer = async (
 		.where(
 			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID))
 		);
+	await dbClient.sync();
 };
 
 export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
@@ -161,4 +166,5 @@ export const answerPendingPetInvite = async (
 		.update(petCarersTable)
 		.set({ status: answer })
 		.where(eq(petCarersTable.id, inviteID));
+	await dbClient.sync();
 };

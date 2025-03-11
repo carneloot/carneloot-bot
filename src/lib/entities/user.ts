@@ -4,7 +4,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 
 import { hashString } from '../../common/utils/hash-string.js';
-import { db } from '../database/db.js';
+import { db, dbClient } from '../database/db.js';
 import { apiKeysTable, usersTable } from '../database/schema.js';
 
 export type User = typeof usersTable.$inferSelect;
@@ -29,6 +29,7 @@ export async function createUser(user: TelegramUser) {
 			}
 		})
 		.run();
+	await dbClient.sync();
 }
 
 export async function getUserByTelegramID(telegramID: TelegramUser['id']) {
@@ -83,6 +84,8 @@ export async function generateApiKeyForUser(userID: User['id']) {
 			}
 		})
 		.run();
+
+	await dbClient.sync();
 
 	return apiKey;
 }

@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
-import { db } from '../database/db.js';
+import { db, dbClient } from '../database/db.js';
 import {
 	notificationHistoryTable,
 	notificationsTable,
@@ -83,6 +83,7 @@ export async function createNotificationHistory({
 			}
 		})
 		.run();
+	await dbClient.sync();
 }
 
 export async function getNotificationFromHistory(
