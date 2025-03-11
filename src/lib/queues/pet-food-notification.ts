@@ -1,5 +1,6 @@
 import { type Processor, Queue, Worker } from 'bullmq';
 
+import { Duration } from 'effect';
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
@@ -20,7 +21,16 @@ type Data = {
 	petID: PetID;
 };
 
-const queue = new Queue<Data>(QUEUE_NAME, { connection });
+const queue = new Queue<Data>(QUEUE_NAME, {
+	connection,
+	defaultJobOptions: {
+		attempts: 3,
+		backoff: {
+			type: 'exponential',
+			delay: Duration.toMillis('10 second')
+		}
+	}
+});
 
 const handler: Processor<Data> = async (job) => {
 	const payload = job.data;
