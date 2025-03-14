@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import type { Duration } from 'tinyduration';
 import { z } from 'zod';
 
-import { db, dbClient } from '../database/db.js';
+import { db } from '../database/db.js';
 import {
 	type ConfigID,
 	PetID,
@@ -120,7 +120,6 @@ export const setConfig = async <
 				value: parsedValue
 			}
 		});
-	await dbClient.sync();
 };
 
 export const deleteConfig = async <
@@ -140,5 +139,4 @@ export const deleteConfig = async <
 				eq(configsTable.key, key as string)
 			)
 		);
-	await dbClient.sync();
 };

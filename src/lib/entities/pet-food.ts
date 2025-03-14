@@ -1,10 +1,10 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { add, differenceInMilliseconds } from 'date-fns';
+import { add, differenceInMilliseconds, milliseconds, set } from 'date-fns';
 import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { fromPromise } from 'neverthrow';
 
-import { db, dbClient } from '../database/db.js';
+import { db } from '../database/db.js';
 import {
 	type PetFoodID,
 	type PetID,
@@ -42,10 +42,10 @@ export const getDailyFoodConsumption = async (
 		.get();
 };
 
-export const addPetFood = async (
+export const addPetFood = (
 	values: Omit<typeof petFoodTable.$inferInsert, 'id'>
 ) => {
-	const result = await db
+	return db
 		.insert(petFoodTable)
 		.values({
 			id: createId() as PetFood['id'],
@@ -55,8 +55,6 @@ export const addPetFood = async (
 			id: petFoodTable.id
 		})
 		.get();
-	await dbClient.sync();
-	return result;
 };
 
 export const updatePetFood = async (
@@ -70,12 +68,10 @@ export const updatePetFood = async (
 		.update(petFoodTable)
 		.set(values)
 		.where(eq(petFoodTable.id, petFoodID));
-	await dbClient.sync();
 };
 
 export const deletePetFood = async (petFoodID: PetFoodID) => {
 	await db.delete(petFoodTable).where(eq(petFoodTable.id, petFoodID));
-	await dbClient.sync();
 };
 
 export const getLastPetFood = (petID: PetID) => {

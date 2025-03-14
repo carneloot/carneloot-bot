@@ -3,7 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import type { StorageAdapter } from 'grammy';
 
-import { db, dbClient } from '../database/db.js';
+import { db } from '../database/db.js';
 import { sessionsTable } from '../database/schema.js';
 
 export const createSessionStorage = <T>(context: string) => {
@@ -41,7 +41,6 @@ export const createSessionStorage = <T>(context: string) => {
 						value: value
 					}
 				});
-			await dbClient.sync();
 		},
 
 		delete: async (key: string) => {
@@ -50,7 +49,6 @@ export const createSessionStorage = <T>(context: string) => {
 				.where(
 					and(eq(sessionsTable.context, context), eq(sessionsTable.key, key))
 				);
-			await dbClient.sync();
 		}
 	} satisfies StorageAdapter<T>;
 };

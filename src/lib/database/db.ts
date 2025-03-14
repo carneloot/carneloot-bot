@@ -1,17 +1,10 @@
 import { createClient } from '@libsql/client';
-
 import { drizzle } from 'drizzle-orm/libsql';
-import { Duration } from 'effect';
-
 import { Env } from '../../common/env.js';
 
-export const dbClient = createClient({
-	url: 'file:local.db',
-	authToken: Env.DATABASE_AUTH_TOKEN,
-	syncUrl: Env.DATABASE_URL,
-	syncInterval: Duration.toSeconds('1 hour')
+const client = createClient({
+	url: Env.DATABASE_URL,
+	authToken: Env.DATABASE_AUTH_TOKEN
 });
 
-await dbClient.sync();
-
-export const db = drizzle(dbClient);
+export const db = drizzle(client);
