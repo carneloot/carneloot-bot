@@ -1,10 +1,5 @@
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+
 import { Env } from '../../common/env.js';
 
-const client = createClient({
-	url: Env.DATABASE_URL,
-	authToken: Env.DATABASE_AUTH_TOKEN
-});
-
-export const db = drizzle(client);
+export const db = drizzle(Env.DATABASE_URL);
