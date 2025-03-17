@@ -1,11 +1,12 @@
-import { fromUnixTime, startOfDay } from 'date-fns';
+import { fromUnixTime } from 'date-fns';
+import { Array as EffectArray, Option, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
+import invariant from 'tiny-invariant';
 
 import type { Context } from '../../common/types/context.js';
 
-import invariant from 'tiny-invariant';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getRelativeTime } from '../../common/utils/get-relative-time.js';
 import { getConfig } from '../../lib/entities/config.js';
@@ -22,10 +23,10 @@ export const FoodStatusCommand = (async (ctx) => {
 
 	const now = fromUnixTime(ctx.message.date);
 
-	const ownedPets = await getUserOwnedPets(ctx.user.id);
-	const caredPets = await getUserCaredPets(ctx.user.id);
-
-	const allPets = ownedPets.concat(caredPets);
+	const allPets = await Promise.all([
+		getUserOwnedPets(ctx.user.id),
+		getUserCaredPets(ctx.user.id)
+	]).then(EffectArray.flatten);
 
 	const petMessages = await Promise.all(
 		allPets.map(async (pet) => {
@@ -44,23 +45,39 @@ export const FoodStatusCommand = (async (ctx) => {
 				pet.id,
 				from,
 				to
+			).then(Option.fromNullable);
+
+			const qty = pipe(
+				dailyFoodConsumption,
+				Option.map((v) => v.total),
+				Option.getOrElse(() => 0),
+				(quantity) => Qty(quantity, 'g')
 			);
 
-			const qtd = Qty(dailyFoodConsumption?.total ?? 0, 'g');
-			const lastTime = dailyFoodConsumption
-				? fromUnixTime(dailyFoodConsumption.lastTime)
-				: startOfDay(now);
-			let timeSinceLast = getRelativeTime(lastTime, now, {
-				units: ['years', 'months', 'weeks', 'days', 'hours', 'minutes']
-			});
+			const timeSinceLast = pipe(
+				dailyFoodConsumption,
+				Option.map((v) => fromUnixTime(v.lastTime)),
+				Option.map((v) =>
+					getRelativeTime(v, now, {
+						units: ['years', 'months', 'weeks', 'days', 'hours', 'minutes']
+					})
+				),
+				Option.map((v) => (v.length === 0 ? 'menos de um minuto' : v))
+			);
 
-			if (timeSinceLast.length === 0) {
-				timeSinceLast = 'menos de um minuto';
-			}
-
-			return `- Pet ${pet.name}: ${qtd} há ${timeSinceLast}`;
+			return pipe(
+				[
+					Option.some(`\\- ${pet.name}: ${qty}`),
+					Option.map(timeSinceLast, (v) => `há ${v}`)
+				],
+				EffectArray.filter(Option.isSome),
+				EffectArray.map((v) => v.value),
+				EffectArray.join(' ')
+			);
 		})
 	);
 
-	await ctx.reply(petMessages.join('\n'), { parse_mode: 'MarkdownV2' });
+	await ctx.reply(petMessages.filter(Boolean).join('\n'), {
+		parse_mode: 'MarkdownV2'
+	});
 }) satisfies MiddlewareFn<Context>;
