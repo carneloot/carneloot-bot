@@ -23,11 +23,18 @@ import { PetModule } from './modules/pet/pet.module.js';
 import { CafeCommand } from './commands/cafe-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
-import { connection } from './lib/queues/connection.js';
 
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN);
-	const redis = new Redis({ ...connection, keyPrefix: 'session:' });
+
+	const redisUrl = new URL(Env.REDIS_URL);
+	const redis = new Redis({
+		host: redisUrl.hostname,
+		port: Number.parseInt(redisUrl.port),
+		username: redisUrl.username,
+		password: redisUrl.password,
+		keyPrefix: 'session:'
+	});
 
 	bot.use(
 		session({
