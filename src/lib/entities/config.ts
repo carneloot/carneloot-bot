@@ -7,18 +7,18 @@ import { z } from 'zod';
 import { db } from '../database/db.js';
 import {
 	type ConfigID,
-	PetID,
-	UserID,
+	type PetID,
+	type UserID,
 	configsTable
 } from '../database/schema.js';
 
 const Configs = {
 	user: {
-		identifier: UserID,
+		identifier: '' as UserID,
 		showNotifications: z.boolean()
 	},
 	pet: {
-		identifier: PetID,
+		identifier: '' as PetID,
 		notificationDelay: z.any({}).transform((v) => v as Duration),
 		dayStart: z.object({
 			hour: z.number().min(0).max(14),
@@ -35,9 +35,8 @@ type ConfigKey<Context extends ConfigContext> = Exclude<
 	'identifier'
 >;
 
-type ContextIdentifier<Context extends ConfigContext> = z.infer<
-	Configs[Context]['identifier']
->;
+type ContextIdentifier<Context extends ConfigContext> =
+	Configs[Context]['identifier'];
 
 type ConfigSchema<
 	Context extends ConfigContext,

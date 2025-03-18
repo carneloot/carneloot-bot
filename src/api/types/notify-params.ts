@@ -1,9 +1,15 @@
-import { z } from 'zod';
+import { Schema } from 'effect';
 
-export const NotifyParams = z.object({
-	apiKey: z.string(),
-	keyword: z.string(),
-	variables: z.record(z.string(), z.union([z.string(), z.number()])).optional()
+export const NotifyParamsSchema = Schema.Struct({
+	apiKey: Schema.String,
+	keyword: Schema.String,
+	variables: Schema.UndefinedOr(
+		Schema.Record({
+			key: Schema.String,
+			value: Schema.Union(Schema.String, Schema.Number)
+		})
+	)
 });
 
-export type NotifyParams = z.infer<typeof NotifyParams>;
+export type NotifyParams = Schema.Schema.Type<typeof NotifyParamsSchema>;
+export const NotifyParams = Schema.standardSchemaV1(NotifyParamsSchema);

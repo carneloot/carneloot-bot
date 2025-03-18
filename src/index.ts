@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { sValidator } from '@hono/standard-validator';
 
 import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
@@ -22,7 +22,7 @@ app.use(logger());
 
 const api = new Hono();
 
-api.post('notify', zValidator('json', NotifyParams), async (c) => {
+api.post('notify', sValidator('json', NotifyParams), async (c) => {
 	const body = c.req.valid('json');
 
 	try {
@@ -58,7 +58,7 @@ app.route('/api', api);
 app.use('*', serveStatic({ root: '../public/' }));
 
 Bun.serve({
-	...app,
+	fetch: app.fetch,
 	port: Env.PORT
 });
 
