@@ -1,4 +1,4 @@
-import { Either } from 'effect';
+import { Effect, Either } from 'effect';
 import type Qty from 'js-quantities';
 
 import { utcToZonedTime } from 'date-fns-tz';
@@ -56,9 +56,17 @@ export const sendAddedFoodNotification = async (
 		.join(' ');
 
 	for (const userToNotify of usersToNotify) {
-		await ctx.api.sendMessage(userToNotify.telegramID, message, {
-			disable_notification: true
-		});
+		await Effect.tryPromise({
+			try: () =>
+				ctx.api.sendMessage(userToNotify.telegramID, message, {
+					disable_notification: true
+				}),
+			catch: (err) =>
+				console.error(
+					`Error sending notification to ${getUserDisplay(userToNotify)}`,
+					err
+				)
+		}).pipe(Effect.either, Effect.runPromise);
 	}
 
 	return Either.right(undefined);

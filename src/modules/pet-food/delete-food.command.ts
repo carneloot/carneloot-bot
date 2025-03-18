@@ -2,6 +2,7 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { fromUnixTime } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
+import { Array as Arr } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -16,25 +17,30 @@ import {
 	deletePetFood,
 	getPetFoodByRange
 } from '../../lib/entities/pet-food.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 
 export const deleteFoodConversation = (async (cvs, ctx) => {
 	const user = ctx.user;
-
 	if (!user) {
 		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 		return;
 	}
 
-	const currentPet = await cvs.external(() =>
-		getConfig('user', 'currentPet', user.id)
+	const allPets = await cvs.external(() =>
+		Promise.all([
+			getUserOwnedPets(user.id),
+			getUserCaredPets(user.id).then(
+				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` }))
+			)
+		]).then(Arr.flatten)
 	);
 
-	if (!currentPet) {
-		await ctx.reply(
-			'Você ainda não configurou o pet atual.\nUtilize o comando /escolher_pet para configurar'
-		);
-		return;
-	}
+	const currentPet = await showOptionsKeyboard({
+		values: allPets,
+		labelFn: (pet) => pet.name,
+		message: 'Selecione o pet para apagar a comida:',
+		rowNum: 2
+	})(cvs, ctx);
 
 	const dayStart = await cvs.external(() =>
 		getConfig('pet', 'dayStart', currentPet.id)

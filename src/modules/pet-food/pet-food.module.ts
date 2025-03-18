@@ -2,11 +2,7 @@ import { createConversation } from '@grammyjs/conversations';
 import { Module } from '../../common/module/module.js';
 import type { Context } from '../../common/types/context.js';
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
-import { AddFoodCommand } from './add-food.command.js';
-import {
-	ChooseCurrentPetCommand,
-	chooseCurrentPetConversation
-} from './choose-current-pet.command.js';
+import { AddFoodCommand, addFoodConversation } from './add-food.command.js';
 import {
 	CorrectFoodCommand,
 	correctFoodConversation
@@ -50,17 +46,6 @@ PetFoodModule.setCommand(
 	SetNotificationDelayCommand
 );
 
-// Chooses current pet
-PetFoodModule.use(
-	createConversation(chooseCurrentPetConversation, 'chooseCurrentPet')
-);
-PetFoodModule.setCommand(
-	'escolher_pet',
-	'Escolhe o pet atual para rastreamento de ração',
-	UserMiddleware,
-	ChooseCurrentPetCommand
-);
-
 // Food status
 PetFoodModule.setCommand(
 	'status_racao',
@@ -70,6 +55,7 @@ PetFoodModule.setCommand(
 );
 
 // Add food
+PetFoodModule.use(createConversation(addFoodConversation, 'addFood'));
 PetFoodModule.setCommand(
 	'colocar_racao',
 	'Adiciona ração ao rastreamento de ração',

@@ -1,6 +1,6 @@
 import { type Processor, Queue, Worker } from 'bullmq';
 
-import { Duration, Option } from 'effect';
+import { Duration, Effect, Either, Option } from 'effect';
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
@@ -9,6 +9,7 @@ import { connection } from './connection.js';
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import type { PetID } from '../database/schema.js';
 import { getConfig } from '../entities/config.js';
 import { createNotificationHistory } from '../entities/notification.js';
@@ -72,16 +73,24 @@ const handler: Processor<Data> = async (job) => {
 		})
 	].join(' ');
 
-	// No need to wrap in io.runTask anymore
 	for (const { carer } of [{ carer: pet.owner }, ...carers]) {
-		const sentMessage = await bot.api.sendMessage(carer.telegramID, message);
+		const sentMessage = await Effect.tryPromise({
+			try: () => bot.api.sendMessage(carer.telegramID, message),
+			catch: (err) =>
+				console.error(
+					`Error sending notification to ${getUserDisplay(carer)}`,
+					err
+				)
+		}).pipe(Effect.either, Effect.runPromise);
 
-		await createNotificationHistory({
-			messageID: sentMessage.message_id,
-			userID: carer.id,
-			petID: payload.petID,
-			notificationID: null
-		});
+		if (Either.isRight(sentMessage)) {
+			await createNotificationHistory({
+				messageID: sentMessage.right.message_id,
+				userID: carer.id,
+				petID: payload.petID,
+				notificationID: null
+			});
+		}
 	}
 };
 

@@ -15,10 +15,6 @@ import {
 const Configs = {
 	user: {
 		identifier: UserID,
-		currentPet: z.object({
-			id: z.string().transform((v) => v as PetID),
-			name: z.string()
-		}),
 		showNotifications: z.boolean()
 	},
 	pet: {
