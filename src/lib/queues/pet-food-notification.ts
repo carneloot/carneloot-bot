@@ -1,6 +1,6 @@
 import { type Processor, Queue, Worker } from 'bullmq';
 
-import { Duration } from 'effect';
+import { Duration, Option } from 'effect';
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
@@ -62,15 +62,15 @@ const handler: Processor<Data> = async (job) => {
 
 	const bot = new Bot<Context>(Env.BOT_TOKEN);
 
-	const quantity = dailyConsumption ? Qty(dailyConsumption.total, 'g') : null;
+	const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
 
 	const message = [
 		`🚨 Hora de dar comida para o pet ${pet.name}.`,
-		!!quantity && `Já foram ${quantity} hoje.`,
-		!quantity && 'Ainda não foi dado comida hoje.'
-	]
-		.filter(Boolean)
-		.join(' ');
+		Option.match(quantity, {
+			onSome: (q) => `Já foram ${q} hoje.`,
+			onNone: () => 'Ainda não foi dado comida hoje.'
+		})
+	].join(' ');
 
 	// No need to wrap in io.runTask anymore
 	for (const { carer } of [{ carer: pet.owner }, ...carers]) {

@@ -1,8 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { add, differenceInMilliseconds, milliseconds, set } from 'date-fns';
+import { add, differenceInMilliseconds } from 'date-fns';
 import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
-import { fromPromise } from 'neverthrow';
+import { Effect, Option } from 'effect';
 
 import { db } from '../database/db.js';
 import {
@@ -39,7 +39,8 @@ export const getDailyFoodConsumption = async (
 			)
 		)
 		.groupBy(petsTable.id)
-		.get();
+		.get()
+		.then(Option.fromNullable);
 };
 
 export const addPetFood = (
@@ -118,9 +119,10 @@ export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
 };
 
 export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
-	await fromPromise(petFoodNotificationJob.queue.remove(petFoodID), () =>
-		console.warn('Failed to cancel previous notification')
-	);
+	await Effect.tryPromise({
+		try: () => petFoodNotificationJob.queue.remove(petFoodID),
+		catch: () => console.warn('Failed to cancel previous notification')
+	}).pipe(Effect.either, Effect.runPromise);
 };
 
 export const schedulePetFoodNotification = async (
@@ -137,17 +139,18 @@ export const schedulePetFoodNotification = async (
 	const newTime = add(time, delay);
 	const delayFromNowInMs = differenceInMilliseconds(newTime, new Date());
 
-	await fromPromise(
-		petFoodNotificationJob.queue.add(
-			`pet-${petID}}`,
-			{
-				petID
-			},
-			{
-				jobId: petFoodID,
-				delay: Math.max(delayFromNowInMs, 0)
-			}
-		),
-		(err) => console.log('Failed to schedule notifications', err)
-	);
+	await Effect.tryPromise({
+		try: () =>
+			petFoodNotificationJob.queue.add(
+				`pet-${petID}}`,
+				{
+					petID
+				},
+				{
+					jobId: petFoodID,
+					delay: Math.max(delayFromNowInMs, 0)
+				}
+			),
+		catch: (err) => console.log('Failed to schedule notifications', err)
+	}).pipe(Effect.either, Effect.runPromise);
 };

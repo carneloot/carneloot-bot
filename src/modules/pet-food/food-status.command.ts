@@ -45,7 +45,7 @@ export const FoodStatusCommand = (async (ctx) => {
 				pet.id,
 				from,
 				to
-			).then(Option.fromNullable);
+			);
 
 			const qty = pipe(
 				dailyFoodConsumption,
