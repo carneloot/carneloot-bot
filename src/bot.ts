@@ -1,7 +1,9 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
+import { RedisAdapter } from '@grammyjs/storage-redis';
 
 import { Bot, session } from 'grammy';
+import { Redis } from 'ioredis';
 
 import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
@@ -18,21 +20,20 @@ import { NotificationModule } from './modules/notification/notification.module.j
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 import { PetModule } from './modules/pet/pet.module.js';
 
-import { createSessionStorage } from './lib/entities/session.js';
-
 import { CafeCommand } from './commands/cafe-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
+import { connection } from './lib/queues/connection.js';
 
-type ConversationSessionData = Context['session']['conversation'];
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN);
+	const redis = new Redis({ ...connection, keyPrefix: 'session:' });
 
 	bot.use(
 		session({
 			type: 'multi',
 			conversation: {
-				storage: createSessionStorage<ConversationSessionData>('conversation')
+				storage: new RedisAdapter({ instance: redis })
 			}
 		})
 	);
