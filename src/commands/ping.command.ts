@@ -1,22 +1,42 @@
-import ms from 'ms';
+import { Duration, Effect, Option, Predicate, Schema } from 'effect';
+
+import invariant from 'tiny-invariant';
 
 import type { Command } from '../common/types/command.js';
-import { sleep } from '../common/utils/sleep.js';
 
-const MAX_DURATION = ms('10s');
+const MAX_DURATION = Duration.decode('10 seconds');
 
 export const PingCommand: Command<'ping'> = {
 	command: 'ping',
 	description: 'Ponga de volta',
-	middleware: () => async (ctx) => {
-		const duration = ctx.match ? ms(ctx.match?.toString()) : null;
+	middleware: () => (ctx) =>
+		Effect.gen(function* () {
+			const message = ctx.message;
 
-		if (duration && duration <= MAX_DURATION) {
-			await sleep(duration);
-		}
+			invariant(message);
 
-		await ctx.reply('pong', {
-			reply_to_message_id: ctx.msg?.message_id
-		});
-	}
+			const duration = Option.fromNullable(ctx.match).pipe(
+				Option.filter(Predicate.isString),
+				Option.andThen(Schema.decodeOption(Schema.NumberFromString)),
+				Option.andThen(Duration.millis),
+				Option.filter(Duration.lessThanOrEqualTo(MAX_DURATION))
+			);
+
+			if (Option.isSome(duration)) {
+				yield* Effect.sleep(duration.value);
+			}
+
+			const replyMessage = Option.match(duration, {
+				onNone: () => 'pong',
+				onSome: (v) => `pong ${Duration.format(v)}`
+			});
+
+			yield* Effect.tryPromise(() =>
+				ctx.reply(replyMessage, {
+					reply_parameters: {
+						message_id: message.message_id
+					}
+				})
+			);
+		}).pipe(Effect.runPromise)
 };
