@@ -1,5 +1,5 @@
 import { fromUnixTime } from 'date-fns';
-import { Array as Arr, Option, pipe } from 'effect';
+import { Array as Arr, Option, Predicate, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -34,7 +34,7 @@ export const FoodStatusCommand = (async (ctx) => {
 
 			if (!dayStart) {
 				await ctx.reply(
-					'Você ainda não configurou o horário de início do dia.\nUtilize o comando /configurar_inicio_dia para configurar'
+					`Você ainda não configurou o horário de início do dia para o pet ${pet.name}.\nUtilize o comando /configurar_inicio_dia para configurar`
 				);
 				return;
 			}
@@ -67,11 +67,10 @@ export const FoodStatusCommand = (async (ctx) => {
 
 			return pipe(
 				[
-					Option.some(`\\- ${pet.name}: ${qty}`),
-					Option.map(timeSinceLast, (v) => `há ${v}`)
+					`\\- ${pet.name}: ${qty}`,
+					Option.map(timeSinceLast, (v) => `há ${v}`).pipe(Option.getOrNull)
 				],
-				Arr.filter(Option.isSome),
-				Arr.map((v) => v.value),
+				Arr.filter(Predicate.isNotNull),
 				Arr.join(' ')
 			);
 		})
