@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { getUnixTime, set } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { err } from 'neverthrow';
+import { Either } from 'effect';
+
+import Qty from 'js-quantities';
 
 import { parsePetFoodWeightAndTime } from './parse-pet-food-weight-and-time.js';
 
@@ -18,7 +20,7 @@ describe('parsePetFoodWeightAndTime', () => {
 			messageTime: getUnixTime(date),
 			timezone
 		});
-		expect(result).toEqual(err('Por favor, envie uma mensagem'));
+		expect(result).toEqual(Either.left('Por favor, envie uma mensagem'));
 	});
 
 	it('returns an error when messageMatch does not match the regex', () => {
@@ -29,7 +31,7 @@ describe('parsePetFoodWeightAndTime', () => {
 		});
 
 		expect(result).toEqual(
-			err(
+			Either.left(
 				'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
 			)
 		);
@@ -42,11 +44,15 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		});
 
-		expect(result.isOk()).toBeTrue();
-		if (result.isOk()) {
-			expect(result.value.quantity.scalar).toEqual(10);
-			expect(result.value.time).toEqual(date);
-			expect(result.value.timeChanged).toBeFalse();
+		expect(result).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time: date,
+				timeChanged: false
+			})
+		);
+		if (Either.isRight(result)) {
+			expect(result.right.quantity.scalar).toEqual(10);
 		}
 	});
 
@@ -62,18 +68,26 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		});
 
-		expect(resultKilo.isOk()).toBeTrue();
-		if (resultKilo.isOk()) {
-			expect(resultKilo.value.quantity.scalar).toEqual(1000);
-			expect(resultKilo.value.time).toEqual(date);
-			expect(resultKilo.value.timeChanged).toBeFalse();
+		expect(resultKilo).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time: date,
+				timeChanged: false
+			})
+		);
+		if (Either.isRight(resultKilo)) {
+			expect(resultKilo.right.quantity.scalar).toEqual(1000);
 		}
 
-		expect(resultMilli.isOk()).toBeTrue();
-		if (resultMilli.isOk()) {
-			expect(resultMilli.value.quantity.scalar).toEqual(0.1);
-			expect(resultMilli.value.time).toEqual(date);
-			expect(resultMilli.value.timeChanged).toBeFalse();
+		expect(resultMilli).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time: date,
+				timeChanged: false
+			})
+		);
+		if (Either.isRight(resultMilli)) {
+			expect(resultMilli.right.quantity.scalar).toEqual(0.1);
 		}
 	});
 
@@ -94,11 +108,15 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		);
 
-		expect(result.isOk()).toBeTrue();
-		if (result.isOk()) {
-			expect(result.value.quantity.scalar).toEqual(5.2);
-			expect(result.value.time).toEqual(time);
-			expect(result.value.timeChanged).toBeTrue();
+		expect(result).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time,
+				timeChanged: true
+			})
+		);
+		if (Either.isRight(result)) {
+			expect(result.right.quantity.scalar).toEqual(5.2);
 		}
 	});
 
@@ -122,11 +140,15 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		);
 
-		expect(result.isOk()).toBeTrue();
-		if (result.isOk()) {
-			expect(result.value.quantity.scalar).toEqual(32);
-			expect(result.value.time).toEqual(time);
-			expect(result.value.timeChanged).toBeTrue();
+		expect(result).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time,
+				timeChanged: true
+			})
+		);
+		if (Either.isRight(result)) {
+			expect(result.right.quantity.scalar).toEqual(32);
 		}
 	});
 
@@ -143,11 +165,15 @@ describe('parsePetFoodWeightAndTime', () => {
 			timezone
 		);
 
-		expect(result.isOk()).toBeTrue();
-		if (result.isOk()) {
-			expect(result.value.quantity.scalar).toEqual(10);
-			expect(result.value.time).toEqual(expectedDate);
-			expect(result.value.timeChanged).toBeTrue();
+		expect(result).toEqual(
+			Either.right({
+				quantity: expect.any(Qty),
+				time: expectedDate,
+				timeChanged: true
+			})
+		);
+		if (Either.isRight(result)) {
+			expect(result.right.quantity.scalar).toEqual(10);
 		}
 	});
 });

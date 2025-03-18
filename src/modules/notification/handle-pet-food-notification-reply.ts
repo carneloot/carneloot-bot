@@ -43,13 +43,13 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			timezone: dayStart.timezone
 		});
 
-		if (parsePetFoodWeightAndTimeResult.isErr()) {
-			await ctx.reply(parsePetFoodWeightAndTimeResult.error);
+		if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
+			await ctx.reply(parsePetFoodWeightAndTimeResult.left);
 			return;
 		}
 
 		const { quantity, time, timeChanged } =
-			parsePetFoodWeightAndTimeResult.value;
+			parsePetFoodWeightAndTimeResult.right;
 
 		const addPetFoodResult =
 			await petFoodService.addPetFoodAndScheduleNotification({

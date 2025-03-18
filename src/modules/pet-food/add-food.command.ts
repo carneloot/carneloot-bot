@@ -48,12 +48,12 @@ export const AddFoodCommand = (async (ctx) => {
 		timezone: dayStart.timezone
 	});
 
-	if (parsePetFoodWeightAndTimeResult.isErr()) {
-		await ctx.reply(parsePetFoodWeightAndTimeResult.error);
+	if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
+		await ctx.reply(parsePetFoodWeightAndTimeResult.left);
 		return;
 	}
 
-	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.value;
+	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
 
 	const addPetFoodResult =
 		await petFoodService.addPetFoodAndScheduleNotification({

@@ -26,10 +26,6 @@ type Params = {
 	dayStart: ConfigValue<'pet', 'dayStart'>;
 };
 
-type Result = {
-	message: string;
-};
-
 const LIMIT_DURATION = Duration.decode('1 minutes');
 
 const addPetFoodAndScheduleNotification = async ({
@@ -42,7 +38,7 @@ const addPetFoodAndScheduleNotification = async ({
 	quantity,
 
 	dayStart
-}: Params): Promise<Either.Either<Result, string>> => {
+}: Params) => {
 	const lastPetFood = await getLastPetFood(pet.id);
 
 	const shouldIgnoreEntry = pipe(

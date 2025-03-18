@@ -1,6 +1,6 @@
 import { fromUnixTime, isAfter, set, subDays } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { err, ok } from 'neverthrow';
+import { Either } from 'effect';
 
 import Qty from 'js-quantities';
 
@@ -31,13 +31,13 @@ export const parsePetFoodWeightAndTime = ({
 	timezone
 }: PetFoodWeightAndTime) => {
 	if (!messageMatch) {
-		return err('Por favor, envie uma mensagem');
+		return Either.left('Por favor, envie uma mensagem');
 	}
 
 	const match = messageMatch.match(MESSAGE_REGEX);
 
 	if (!match) {
-		return err(
+		return Either.left(
 			'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
 		);
 	}
@@ -45,7 +45,7 @@ export const parsePetFoodWeightAndTime = ({
 	const safeParseResult = RegexResult.safeParse(match.groups);
 
 	if (!safeParseResult.success) {
-		return err('A quantidade de ração informada é inválida.');
+		return Either.left('A quantidade de ração informada é inválida.');
 	}
 
 	const groups = safeParseResult.data;
@@ -76,7 +76,7 @@ export const parsePetFoodWeightAndTime = ({
 		}
 	}
 
-	return ok({
+	return Either.right({
 		quantity,
 		timeChanged,
 		time

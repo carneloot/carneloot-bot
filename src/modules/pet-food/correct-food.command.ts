@@ -3,6 +3,7 @@ import type { ConversationFn } from '@grammyjs/conversations';
 import invariant from 'tiny-invariant';
 
 import { getUnixTime } from 'date-fns';
+import { Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../../common/types/context.js';
@@ -57,12 +58,12 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		timezone: dayStart.timezone
 	});
 
-	if (result.isErr()) {
-		await ctx.reply(result.error);
+	if (Either.isLeft(result)) {
+		await ctx.reply(result.left);
 		return;
 	}
 
-	const { quantity, time, timeChanged } = result.value;
+	const { quantity, time, timeChanged } = result.right;
 
 	await cvs.external(() =>
 		updatePetFood(petFood.id, {
