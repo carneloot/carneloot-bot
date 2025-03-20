@@ -1,5 +1,6 @@
 import { sValidator } from '@hono/standard-validator';
 
+import { Effect } from 'effect';
 import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
@@ -22,18 +23,35 @@ app.use(logger());
 
 const api = new Hono();
 
-api.post('notify', sValidator('json', NotifyParams), async (c) => {
-	const body = c.req.valid('json');
+api.post('notify', sValidator('json', NotifyParams), (c) =>
+	Effect.gen(function* () {
+		const body = c.req.valid('json');
 
-	try {
-		await sendNotification(bot, body);
-	} catch (e: unknown) {
-		console.error('Error sending notification', e);
-		return c.json({ message: 'Internal error' }, 500);
-	}
-
-	return c.json({ message: 'Notification sent successfully!' });
-});
+		return yield* sendNotification(bot, body).pipe(
+			Effect.map(() => c.json({ message: 'Notification sent successfully!' })),
+			Effect.catchTags({
+				UserNotFoundError: () =>
+					Effect.succeed(c.json({ message: 'User not found for apiKey' }, 404)),
+				MissingVariablesError: (err) =>
+					Effect.succeed(
+						c.json(
+							{ message: 'Missing used variables', variables: err.variables },
+							422
+						)
+					),
+				NotificationNotFoundError: () =>
+					Effect.succeed(
+						c.json(
+							{ message: 'Notification not found for user and keyword' },
+							404
+						)
+					),
+				DatabaseError: () =>
+					Effect.succeed(c.json({ message: 'Database error' }, 500))
+			})
+		);
+	}).pipe(Effect.runPromise)
+);
 
 if (Env.RUN_MODE === 'webhook') {
 	api.get('/set-webhook', async (c) => {

@@ -2,8 +2,10 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
+import { Array as A, Data, Effect, Option, Struct } from 'effect';
 
 import { db } from '../database/db.js';
+import { DatabaseError } from '../database/error.js';
 import {
 	notificationHistoryTable,
 	notificationsTable,
@@ -14,37 +16,52 @@ import {
 export type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
-export async function getNotificationByOwnerAndKeyword(
+class NotificationNotFoundError extends Data.TaggedError(
+	'NotificationNotFoundError'
+) {}
+
+export const getNotificationByOwnerAndKeyword = (
 	ownerId: Notification['ownerID'],
 	keyword: Notification['keyword']
-) {
-	const result = await db
-		.select({
-			notification: notificationsTable,
-			usersToNotify: usersTable
-		})
-		.from(notificationsTable)
-		.leftJoin(
-			usersToNotifyTable,
-			eq(notificationsTable.id, usersToNotifyTable.notificationID)
-		)
-		.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
-		.where(
-			and(
-				eq(notificationsTable.ownerID, ownerId),
-				eq(notificationsTable.keyword, keyword)
-			)
-		)
-		.all();
+) =>
+	Effect.gen(function* () {
+		const result = yield* Effect.tryPromise({
+			try: () =>
+				db
+					.select({
+						notification: notificationsTable,
+						usersToNotify: usersTable
+					})
+					.from(notificationsTable)
+					.leftJoin(
+						usersToNotifyTable,
+						eq(notificationsTable.id, usersToNotifyTable.notificationID)
+					)
+					.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
+					.where(
+						and(
+							eq(notificationsTable.ownerID, ownerId),
+							eq(notificationsTable.keyword, keyword)
+						)
+					)
+					.all(),
+			catch: (err) => new DatabaseError({ cause: err })
+		});
 
-	const notification = result[0]?.notification;
+		const notification = yield* A.head(result).pipe(
+			Option.andThen(Struct.get('notification')),
+			Option.match({
+				onSome: Effect.succeed,
+				onNone: () => Effect.fail(new NotificationNotFoundError())
+			})
+		);
 
-	const usersToNotify = result
-		.map(({ usersToNotify }) => usersToNotify)
-		.filter(Boolean);
+		const usersToNotify = A.filterMap(result, (v) =>
+			Option.fromNullable(v.usersToNotify)
+		);
 
-	return { notification, usersToNotify };
-}
+		return { notification, usersToNotify };
+	});
 
 type CreateNotificationHistory = {
 	userID: NotificationHistory['userID'];
@@ -53,37 +70,42 @@ type CreateNotificationHistory = {
 	petID: NotificationHistory['petID'];
 };
 
-export async function createNotificationHistory({
+export const createNotificationHistory = ({
 	messageID,
 	notificationID,
 	petID,
 	userID
-}: CreateNotificationHistory) {
-	const target = [
-		notificationHistoryTable.userID,
-		...(notificationID ? [notificationHistoryTable.notificationID] : []),
-		...(petID ? [notificationHistoryTable.petID] : [])
-	];
+}: CreateNotificationHistory) =>
+	Effect.gen(function* () {
+		const target = [
+			notificationHistoryTable.userID,
+			...(notificationID ? [notificationHistoryTable.notificationID] : []),
+			...(petID ? [notificationHistoryTable.petID] : [])
+		];
 
-	await db
-		.insert(notificationHistoryTable)
-		.values({
-			id: createId() as NotificationHistory['id'],
-			messageID,
-			notificationID,
-			petID,
-			userID,
-			sentAt: new Date()
-		})
-		.onConflictDoUpdate({
-			target,
-			set: {
-				messageID,
-				sentAt: new Date()
-			}
-		})
-		.run();
-}
+		yield* Effect.tryPromise({
+			try: () =>
+				db
+					.insert(notificationHistoryTable)
+					.values({
+						id: createId() as NotificationHistory['id'],
+						messageID,
+						notificationID,
+						petID,
+						userID,
+						sentAt: new Date()
+					})
+					.onConflictDoUpdate({
+						target,
+						set: {
+							messageID,
+							sentAt: new Date()
+						}
+					})
+					.run(),
+			catch: (err) => new DatabaseError({ cause: err })
+		});
+	});
 
 export async function getNotificationFromHistory(
 	messageID: NotificationHistory['messageID'],

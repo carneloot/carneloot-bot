@@ -2,9 +2,11 @@ import type { User as TelegramUser } from '@grammyjs/types';
 import { createId } from '@paralleldrive/cuid2';
 
 import { eq } from 'drizzle-orm';
+import { Data, Effect, Predicate } from 'effect';
 
 import { hashString } from '../../common/utils/hash-string.js';
 import { db } from '../database/db.js';
+import { DatabaseError } from '../database/error.js';
 import { apiKeysTable, usersTable } from '../database/schema.js';
 
 export type User = typeof usersTable.$inferSelect;
@@ -87,14 +89,26 @@ export async function generateApiKeyForUser(userID: User['id']) {
 	return apiKey;
 }
 
-export async function getUserFromApiKey(apiKey: string) {
-	const hashedApiKey = hashString(apiKey);
-	const result = await db
-		.select({ user: usersTable })
-		.from(usersTable)
-		.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
-		.where(eq(apiKeysTable.key, hashedApiKey))
-		.get();
+class UserNotFoundError extends Data.TaggedError('UserNotFoundError') {}
 
-	return result?.user ?? null;
-}
+export const getUserFromApiKey = (apiKey: string) =>
+	Effect.gen(function* () {
+		const hashedApiKey = hashString(apiKey);
+
+		const result = yield* Effect.tryPromise({
+			try: () =>
+				db
+					.select({ user: usersTable })
+					.from(usersTable)
+					.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
+					.where(eq(apiKeysTable.key, hashedApiKey))
+					.get(),
+			catch: (err) => new DatabaseError({ cause: err })
+		});
+
+		if (Predicate.isNullable(result?.user)) {
+			return yield* new UserNotFoundError();
+		}
+
+		return result.user;
+	});
