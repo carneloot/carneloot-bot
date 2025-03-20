@@ -39,7 +39,7 @@ describe('parsePetFoodWeightAndTime', () => {
 
 	it('returns the quantity and time when only the quantity is passed', () => {
 		const result = parsePetFoodWeightAndTime({
-			messageMatch: '10g',
+			messageMatch: '10',
 			messageTime: getUnixTime(date),
 			timezone
 		});
@@ -155,7 +155,7 @@ describe('parsePetFoodWeightAndTime', () => {
 	it('should return the last day if the time is after the message time', () => {
 		const date = zonedTimeToUtc(new Date(2024, 6, 15, 0, 5, 0), timezone);
 		const result = parsePetFoodWeightAndTime({
-			messageMatch: '10 23:55',
+			messageMatch: '10g 23:55',
 			messageTime: getUnixTime(date),
 			timezone
 		});

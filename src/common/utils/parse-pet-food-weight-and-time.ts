@@ -1,10 +1,8 @@
 import { fromUnixTime, isAfter, set, subDays } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { Either } from 'effect';
+import { Either, Schema } from 'effect';
 
 import Qty from 'js-quantities';
-
-import { z } from 'zod';
 
 const MESSAGE_REGEX =
 	/(?<quantity>\d+(?:\.\d+)?)(?<unit>mg|g|kg)?(?:\s+(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?:-(?<year>\d{4}))?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2}))?/i;
@@ -15,14 +13,16 @@ interface PetFoodWeightAndTime {
 	timezone: string;
 }
 
-const RegexResult = z.object({
-	quantity: z.coerce.number(),
-	unit: z.enum(['mg', 'g', 'kg']).default('g'),
-	day: z.coerce.number().optional(),
-	month: z.coerce.number().optional(),
-	year: z.coerce.number().optional(),
-	hour: z.coerce.number().optional(),
-	minute: z.coerce.number().optional()
+const RegexResultSchema = Schema.Struct({
+	quantity: Schema.NumberFromString,
+	unit: Schema.optionalWith(Schema.Literal('mg', 'g', 'kg'), {
+		default: () => 'g'
+	}),
+	day: Schema.optional(Schema.NumberFromString),
+	month: Schema.optional(Schema.NumberFromString),
+	year: Schema.optional(Schema.NumberFromString),
+	hour: Schema.optional(Schema.NumberFromString),
+	minute: Schema.optional(Schema.NumberFromString)
 });
 
 export const parsePetFoodWeightAndTime = ({
@@ -42,13 +42,19 @@ export const parsePetFoodWeightAndTime = ({
 		);
 	}
 
-	const safeParseResult = RegexResult.safeParse(match.groups);
+	const safeParseResult = Schema.decodeUnknownEither(RegexResultSchema)(
+		match.groups
+	);
 
-	if (!safeParseResult.success) {
+	if (Either.isLeft(safeParseResult)) {
+		console.error(
+			'Error parsing pet food weight and time',
+			safeParseResult.left.message
+		);
 		return Either.left('A quantidade de ração informada é inválida.');
 	}
 
-	const groups = safeParseResult.data;
+	const groups = safeParseResult.right;
 
 	const quantity = Qty(groups.quantity, groups.unit).to('g');
 
