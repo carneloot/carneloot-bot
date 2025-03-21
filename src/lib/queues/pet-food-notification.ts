@@ -84,12 +84,12 @@ const handler: Processor<Data> = async (job) => {
 		}).pipe(Effect.either, Effect.runPromise);
 
 		if (Either.isRight(sentMessage)) {
-			await createNotificationHistory({
+			await Effect.runPromise(createNotificationHistory({
 				messageID: sentMessage.right.message_id,
 				userID: carer.id,
 				petID: payload.petID,
 				notificationID: null
-			});
+			}));
 		}
 	}
 };
