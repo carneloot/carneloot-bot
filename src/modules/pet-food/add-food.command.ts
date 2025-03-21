@@ -77,10 +77,11 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	);
 
 	invariant(foodResponse.message, 'Message is not defined');
+	invariant(ctx.message, 'Invalid message');
 
 	const parsePetFoodWeightAndTimeResult = parsePetFoodWeightAndTime({
 		messageMatch: foodResponse.message.text,
-		messageTime: foodResponse.message.date,
+		messageTime: ctx.message.date,
 		timezone: dayStart.timezone
 	});
 
