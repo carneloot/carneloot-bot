@@ -19,6 +19,7 @@ import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromToEffect } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { runtime } from '../../runtime.js';
 import { DatabaseError } from '../database/db.js';
 import type { PetID } from '../database/schema.js';
 import { getConfig } from '../entities/config.js';
@@ -26,7 +27,6 @@ import { createNotificationHistory } from '../entities/notification.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
 import { redis } from '../redis/redis.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
-import { runtime } from '../../runtime.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 

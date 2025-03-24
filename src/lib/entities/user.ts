@@ -5,8 +5,8 @@ import { eq } from 'drizzle-orm';
 import { Data, Effect, Predicate } from 'effect';
 
 import { hashString } from '../../common/utils/hash-string.js';
-import { apiKeysTable, usersTable } from '../database/schema.js';
 import { db } from '../database/db.js';
+import { apiKeysTable, usersTable } from '../database/schema.js';
 
 import * as Database from '../database/db.js';
 
