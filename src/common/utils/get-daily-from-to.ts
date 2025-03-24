@@ -47,7 +47,9 @@ export const getDailyFromToEffect = (
 			millis: 0
 		}),
 		(v) =>
-			DateTime.greaterThan(v, nowZoned) ? DateTime.addDuration(v, '1 day') : v
+			DateTime.greaterThan(v, nowZoned)
+				? DateTime.subtractDuration(v, '1 day')
+				: v
 	);
 
 	const toZoned = DateTime.addDuration(fromZoned, '1 day');
