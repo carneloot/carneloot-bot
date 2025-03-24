@@ -4,8 +4,8 @@ import { and, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { Array as A, Data, Effect, Option, Struct } from 'effect';
 
+import * as Database from '../database/db.js';
 import { db } from '../database/db.js';
-import { DatabaseError } from '../database/error.js';
 import {
 	notificationHistoryTable,
 	notificationsTable,
@@ -25,28 +25,28 @@ export const getNotificationByOwnerAndKeyword = (
 	keyword: Notification['keyword']
 ) =>
 	Effect.gen(function* () {
-		const result = yield* Effect.tryPromise({
-			try: () =>
-				db
-					.select({
-						notification: notificationsTable,
-						usersToNotify: usersTable
-					})
-					.from(notificationsTable)
-					.leftJoin(
-						usersToNotifyTable,
-						eq(notificationsTable.id, usersToNotifyTable.notificationID)
+		const db = yield* Database.Database;
+
+		const result = yield* db.execute((client) =>
+			client
+				.select({
+					notification: notificationsTable,
+					usersToNotify: usersTable
+				})
+				.from(notificationsTable)
+				.leftJoin(
+					usersToNotifyTable,
+					eq(notificationsTable.id, usersToNotifyTable.notificationID)
+				)
+				.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
+				.where(
+					and(
+						eq(notificationsTable.ownerID, ownerId),
+						eq(notificationsTable.keyword, keyword)
 					)
-					.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
-					.where(
-						and(
-							eq(notificationsTable.ownerID, ownerId),
-							eq(notificationsTable.keyword, keyword)
-						)
-					)
-					.all(),
-			catch: (err) => new DatabaseError({ cause: err })
-		});
+				)
+				.all()
+		);
 
 		const notification = yield* A.head(result).pipe(
 			Option.andThen(Struct.get('notification')),
@@ -77,34 +77,34 @@ export const createNotificationHistory = ({
 	userID
 }: CreateNotificationHistory) =>
 	Effect.gen(function* () {
+		const db = yield* Database.Database;
+
 		const target = [
 			notificationHistoryTable.userID,
 			...(notificationID ? [notificationHistoryTable.notificationID] : []),
 			...(petID ? [notificationHistoryTable.petID] : [])
 		];
 
-		yield* Effect.tryPromise({
-			try: () =>
-				db
-					.insert(notificationHistoryTable)
-					.values({
-						id: createId() as NotificationHistory['id'],
+		yield* db.execute((client) =>
+			client
+				.insert(notificationHistoryTable)
+				.values({
+					id: createId() as NotificationHistory['id'],
+					messageID,
+					notificationID,
+					petID,
+					userID,
+					sentAt: new Date()
+				})
+				.onConflictDoUpdate({
+					target,
+					set: {
 						messageID,
-						notificationID,
-						petID,
-						userID,
 						sentAt: new Date()
-					})
-					.onConflictDoUpdate({
-						target,
-						set: {
-							messageID,
-							sentAt: new Date()
-						}
-					})
-					.run(),
-			catch: (err) => new DatabaseError({ cause: err })
-		});
+					}
+				})
+				.run()
+		);
 	});
 
 export async function getNotificationFromHistory(

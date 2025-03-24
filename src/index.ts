@@ -12,6 +12,7 @@ import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { Env } from './common/env.js';
 import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
+import { runtime } from './runtime.js';
 
 const { bot, setCommands, setWebhook } = createBot();
 
@@ -50,7 +51,7 @@ api.post('notify', sValidator('json', NotifyParams), (c) =>
 					Effect.succeed(c.json({ message: 'Database error' }, 500))
 			})
 		);
-	}).pipe(Effect.runPromise)
+	}).pipe(runtime.runPromise)
 );
 
 if (Env.RUN_MODE === 'webhook') {

@@ -5,9 +5,10 @@ import { eq } from 'drizzle-orm';
 import { Data, Effect, Predicate } from 'effect';
 
 import { hashString } from '../../common/utils/hash-string.js';
-import { db } from '../database/db.js';
-import { DatabaseError } from '../database/error.js';
 import { apiKeysTable, usersTable } from '../database/schema.js';
+import { db } from '../database/db.js';
+
+import * as Database from '../database/db.js';
 
 export type User = typeof usersTable.$inferSelect;
 type ApiKey = typeof apiKeysTable.$inferSelect;
@@ -93,18 +94,17 @@ class UserNotFoundError extends Data.TaggedError('UserNotFoundError') {}
 
 export const getUserFromApiKey = (apiKey: string) =>
 	Effect.gen(function* () {
+		const db = yield* Database.Database;
 		const hashedApiKey = hashString(apiKey);
 
-		const result = yield* Effect.tryPromise({
-			try: () =>
-				db
-					.select({ user: usersTable })
-					.from(usersTable)
-					.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
-					.where(eq(apiKeysTable.key, hashedApiKey))
-					.get(),
-			catch: (err) => new DatabaseError({ cause: err })
-		});
+		const result = yield* db.execute((client) =>
+			client
+				.select({ user: usersTable })
+				.from(usersTable)
+				.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
+				.where(eq(apiKeysTable.key, hashedApiKey))
+				.get()
+		);
 
 		if (Predicate.isNullable(result?.user)) {
 			return yield* new UserNotFoundError();

@@ -1,5 +1,5 @@
 import { fromUnixTime } from 'date-fns';
-import { Array as Arr, Option, Predicate, pipe } from 'effect';
+import { Array as A, Option, Predicate, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -26,7 +26,7 @@ export const FoodStatusCommand = (async (ctx) => {
 	const allPets = await Promise.all([
 		getUserOwnedPets(ctx.user.id),
 		getUserCaredPets(ctx.user.id)
-	]).then(Arr.flatten);
+	]).then(A.flatten);
 
 	const petMessages = await Promise.all(
 		allPets.map(async (pet) => {
@@ -70,8 +70,8 @@ export const FoodStatusCommand = (async (ctx) => {
 					`\\- ${pet.name}: ${qty}`,
 					Option.map(timeSinceLast, (v) => `há ${v}`).pipe(Option.getOrNull)
 				],
-				Arr.filter(Predicate.isNotNull),
-				Arr.join(' ')
+				A.filter(Predicate.isNotNull),
+				A.join(' ')
 			);
 		})
 	);
