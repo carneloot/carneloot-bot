@@ -1,7 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { Either } from 'effect';
-import type { MiddlewareFn } from 'grammy';
+import { DateTime, Effect, Either } from 'effect';
 
 import invariant from 'tiny-invariant';
 
@@ -9,33 +8,28 @@ import type { PetID } from '../../lib/database/schema.js';
 
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-import { getConfig } from '../../lib/entities/config.js';
+import { getConfigEffect } from '../../lib/entities/config.js';
 import { getPetByID } from '../../lib/entities/pet.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
 
-export const handlePetFoodNotificationReply = (petID: PetID) =>
-	(async (ctx) => {
+export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
+	Effect.gen(function* () {
 		invariant(ctx.message, 'Message object not found.');
 		invariant(ctx.user, 'User is not defined.');
 
-		const pet = await getPetByID(petID);
+		const pet = yield* Effect.tryPromise(() => getPetByID(petID));
 
 		if (!pet) {
-			await ctx.reply(
-				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.'
+			yield* Effect.tryPromise(() =>
+				ctx.reply(
+					'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.'
+				)
 			);
 			return;
 		}
 
-		const dayStart = await getConfig('pet', 'dayStart', petID);
-
-		if (!dayStart) {
-			await ctx.reply(
-				'Por favor, configure o horário de início do dia para o pet.'
-			);
-			return;
-		}
+		const dayStart = yield* getConfigEffect('pet', 'dayStart', petID);
 
 		const parsePetFoodWeightAndTimeResult = parsePetFoodWeightAndTime({
 			messageMatch: ctx.message.text,
@@ -44,7 +38,9 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 		});
 
 		if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
-			await ctx.reply(parsePetFoodWeightAndTimeResult.left);
+			yield* Effect.tryPromise(() =>
+				ctx.reply(parsePetFoodWeightAndTimeResult.left)
+			);
 			return;
 		}
 
@@ -52,12 +48,12 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			parsePetFoodWeightAndTimeResult.right;
 
 		const addPetFoodResult =
-			await petFoodService.addPetFoodAndScheduleNotification({
+			yield* petFoodService.addPetFoodAndScheduleNotification({
 				pet,
 				messageID: ctx.message.message_id,
 				userID: ctx.user.id,
 
-				time,
+				time: DateTime.unsafeMake(time),
 				quantity,
 				timeChanged,
 
@@ -65,19 +61,27 @@ export const handlePetFoodNotificationReply = (petID: PetID) =>
 			});
 
 		if (Either.isLeft(addPetFoodResult)) {
-			await ctx.reply(addPetFoodResult.left);
+			yield* Effect.tryPromise(() => ctx.reply(addPetFoodResult.left));
 			return;
 		}
 
 		const { message } = addPetFoodResult.right;
 
-		await ctx.reply(message);
-		await ctx.react(Reactions.thumbs_up);
+		yield* Effect.all(
+			[
+				Effect.tryPromise(() => ctx.reply(message)),
+				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up))
+			],
+			{ concurrency: 'unbounded' }
+		).pipe(Effect.either);
 
-		await sendAddedFoodNotification(ctx, {
-			id: petID,
-			quantity,
-			user: ctx.user,
-			time: timeChanged ? time : undefined
-		});
-	}) satisfies MiddlewareFn<Context>;
+		yield* Effect.tryPromise(() =>
+			sendAddedFoodNotification(ctx, {
+				id: petID,
+				quantity,
+				// biome-ignore lint/style/noNonNullAssertion: remove when effect.tryPromise is removed
+				user: ctx.user!,
+				time: timeChanged ? time : undefined
+			})
+		);
+	});

@@ -1,5 +1,3 @@
-import type { LibsqlError } from '@libsql/client';
-
 import { type Job, Queue, Worker } from 'bullmq';
 import {
 	Array as A,
@@ -17,12 +15,11 @@ import Qty from 'js-quantities';
 
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
-import { getDailyFromToEffect } from '../../common/utils/get-daily-from-to.js';
+import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { runtime } from '../../runtime.js';
-import { DatabaseError } from '../database/db.js';
 import type { PetID } from '../database/schema.js';
-import { getConfig } from '../entities/config.js';
+import { getConfigEffect } from '../entities/config.js';
 import { createNotificationHistory } from '../entities/notification.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
 import { redis } from '../redis/redis.js';
@@ -47,19 +44,6 @@ const queue = new Queue<Data>(QUEUE_NAME, {
 
 class MissingPetId extends D.TaggedError('MissingPetId') {}
 
-class MissingPetDayStart extends D.TaggedError('MissingPetDayStart') {}
-
-const getDayStart = (petId: PetID) =>
-	Effect.tryPromise({
-		try: () => getConfig('pet', 'dayStart', petId),
-		catch: (err) => new DatabaseError({ cause: err as LibsqlError })
-	}).pipe(
-		Effect.andThen(Option.fromNullable),
-		Effect.catchTag('NoSuchElementException', () =>
-			Effect.fail(new MissingPetDayStart())
-		)
-	);
-
 const handler = (job: Job<Data>) =>
 	Effect.gen(function* () {
 		const payload = job.data;
@@ -75,15 +59,16 @@ const handler = (job: Job<Data>) =>
 			)
 		);
 
-		const dayStart = yield* getDayStart(payload.petID);
+		const dayStart = yield* getConfigEffect('pet', 'dayStart', payload.petID);
 
-		const now = yield* pipe(
+		const now = pipe(
 			job.processedOn,
 			Option.fromNullable,
-			Option.andThen(DateTime.make)
+			Option.andThen(DateTime.make),
+			Option.getOrElse(() => DateTime.unsafeNow())
 		);
 
-		const { from, to } = getDailyFromToEffect(now, dayStart);
+		const { from, to } = getDailyFromTo(now, dayStart);
 
 		const dailyConsumption = yield* petFoodRepository.getDailyFoodConsumption({
 			petID: payload.petID,

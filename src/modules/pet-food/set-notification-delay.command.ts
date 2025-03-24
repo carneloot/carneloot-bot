@@ -1,5 +1,6 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
+import { DateTime, Effect } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 import { parse, serialize } from 'tinyduration';
 
@@ -9,16 +10,14 @@ import type { Context } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import {
-	deleteConfig,
+	deleteConfigEffect,
 	getConfig,
 	setConfig
 } from '../../lib/entities/config.js';
-import {
-	cancelPetFoodNotification,
-	getLastPetFood,
-	schedulePetFoodNotification
-} from '../../lib/entities/pet-food.js';
+import { getLastPetFood } from '../../lib/entities/pet-food.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
+import { petFoodService } from '../../lib/services/pet-food.js';
+import { runtime } from '../../runtime.js';
 
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	const user = ctx.user;
@@ -106,16 +105,22 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 			`O atraso de notificação para ${pet.name} foi definido para ${newDurationString}.`
 		);
 
-		await cvs.external(async () => {
-			const lastPetFood = await getLastPetFood(pet.id);
-			if (lastPetFood) {
-				await schedulePetFoodNotification(
-					pet.id,
-					lastPetFood.id,
-					lastPetFood.time
+		await cvs.external(() =>
+			Effect.gen(function* () {
+				const lastPetFood = yield* Effect.tryPromise(() =>
+					getLastPetFood(pet.id)
 				);
-			}
-		});
+
+				if (lastPetFood) {
+					yield* petFoodService.cancelPetFoodNotification(lastPetFood.id);
+					yield* petFoodService.schedulePetFoodNotification(
+						pet.id,
+						lastPetFood.id,
+						DateTime.unsafeMake(lastPetFood.time)
+					);
+				}
+			}).pipe(runtime.runPromise)
+		);
 
 		return;
 	}
@@ -128,13 +133,18 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	await cvs.external(() => deleteConfig('pet', 'notificationDelay', pet.id));
-	await cvs.external(async () => {
-		const lastPetFood = await getLastPetFood(pet.id);
-		if (lastPetFood) {
-			await cancelPetFoodNotification(lastPetFood.id);
-		}
-	});
+	await cvs.external(() =>
+		Effect.gen(function* () {
+			yield* deleteConfigEffect('pet', 'notificationDelay', pet.id);
+
+			const lastPetFood = yield* Effect.tryPromise(() =>
+				getLastPetFood(pet.id)
+			);
+			if (lastPetFood) {
+				yield* petFoodService.cancelPetFoodNotification(lastPetFood.id);
+			}
+		}).pipe(runtime.runPromise)
+	);
 
 	await ctx.reply('Atraso de notificação excluído e notificação desabilitada.');
 }) satisfies ConversationFn<Context>;

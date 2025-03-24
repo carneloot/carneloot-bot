@@ -3,4 +3,5 @@ export const parseMessageForMarkdown = (message: string) =>
 		.replaceAll('.', '\\.')
 		.replaceAll('|', '\\|')
 		.replaceAll('(', '\\(')
-		.replaceAll(')', '\\)');
+		.replaceAll(')', '\\)')
+		.replaceAll('_', '\\_');

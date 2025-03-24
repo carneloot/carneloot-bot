@@ -2,7 +2,7 @@ import type { ConversationFn } from '@grammyjs/conversations';
 
 import { fromUnixTime } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
-import { Array as Arr } from 'effect';
+import { Array as Arr, DateTime } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -55,12 +55,12 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 
 	invariant(ctx.message, 'Message object not found.');
 
-	const now = fromUnixTime(ctx.message.date);
+	const now = DateTime.unsafeMake(ctx.message.date * 1000);
 
 	const { from, to } = getDailyFromTo(now, dayStart);
 
 	const petFoods = await cvs.external(() =>
-		getPetFoodByRange(currentPet.id, from, to)
+		getPetFoodByRange(currentPet.id, DateTime.toDate(from), DateTime.toDate(to))
 	);
 
 	const selectedFood = await showOptionsKeyboard({

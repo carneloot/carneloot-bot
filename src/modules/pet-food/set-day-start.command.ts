@@ -12,7 +12,7 @@ import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 
-const hoursOptions = Array.from({ length: 24 }, (_, i) => ({
+const hoursOptions = Array.from({ length: 12 }, (_, i) => ({
 	value: i,
 	label: `${i}h`
 }));

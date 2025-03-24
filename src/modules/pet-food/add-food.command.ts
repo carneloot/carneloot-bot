@@ -1,7 +1,7 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 import { Reactions } from '@grammyjs/emoji';
 
-import { Array as Arr, Either } from 'effect';
+import { Array as Arr, DateTime, Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -12,6 +12,7 @@ import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js
 import { getConfig } from '../../lib/entities/config.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
+import { runtime } from '../../runtime.js';
 import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
 export const addFoodConversation = (async (cvs, ctx) => {
@@ -93,18 +94,20 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
 
 	const addPetFoodResult = await cvs.external(() =>
-		petFoodService.addPetFoodAndScheduleNotification({
-			pet: currentPet,
-			// biome-ignore lint/style/noNonNullAssertion: <explanation>
-			messageID: foodResponse.message!.message_id,
-			userID: user.id,
+		petFoodService
+			.addPetFoodAndScheduleNotification({
+				pet: currentPet,
+				// biome-ignore lint/style/noNonNullAssertion: <explanation>
+				messageID: foodResponse.message!.message_id,
+				userID: user.id,
 
-			time,
-			quantity,
-			timeChanged,
+				time: DateTime.unsafeMake(time),
+				quantity,
+				timeChanged,
 
-			dayStart
-		})
+				dayStart
+			})
+			.pipe(runtime.runPromise)
 	);
 
 	if (Either.isLeft(addPetFoodResult)) {

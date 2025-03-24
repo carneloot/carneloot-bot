@@ -1,47 +1,16 @@
 import { createId } from '@paralleldrive/cuid2';
 
-import { add, differenceInMilliseconds } from 'date-fns';
-import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
-import { Effect, Option } from 'effect';
+import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 
 import { db } from '../database/db.js';
 import {
 	type PetFoodID,
 	type PetID,
 	petFoodTable,
-	petsTable,
 	usersTable
 } from '../database/schema.js';
-import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
-import { getConfig } from './config.js';
 
 type PetFood = typeof petFoodTable.$inferSelect;
-
-export const getDailyFoodConsumption = async (
-	petID: PetFood['petID'],
-	from: Date,
-	to: Date
-) => {
-	return db
-		.select({
-			id: petsTable.id,
-			name: petsTable.name,
-			total: sql<number>`sum(${petFoodTable.quantity})`,
-			lastTime: sql<number>`max(${petFoodTable.time})`
-		})
-		.from(petFoodTable)
-		.innerJoin(petsTable, eq(petFoodTable.petID, petsTable.id))
-		.where(
-			and(
-				eq(petFoodTable.petID, petID),
-				gte(petFoodTable.time, from),
-				lt(petFoodTable.time, to)
-			)
-		)
-		.groupBy(petsTable.id)
-		.get()
-		.then(Option.fromNullable);
-};
 
 export const addPetFood = (
 	values: Omit<typeof petFoodTable.$inferInsert, 'id'>
@@ -116,41 +85,4 @@ export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
 		.innerJoin(usersTable, eq(petFoodTable.userID, usersTable.id))
 		.orderBy(asc(petFoodTable.time))
 		.all();
-};
-
-export const cancelPetFoodNotification = async (petFoodID: PetFoodID) => {
-	await Effect.tryPromise({
-		try: () => petFoodNotificationJob.queue.remove(petFoodID),
-		catch: () => console.warn('Failed to cancel previous notification')
-	}).pipe(Effect.either, Effect.runPromise);
-};
-
-export const schedulePetFoodNotification = async (
-	petID: PetID,
-	petFoodID: PetFoodID,
-	time: Date
-) => {
-	const delay = await getConfig('pet', 'notificationDelay', petID);
-
-	if (!delay) {
-		return;
-	}
-
-	const newTime = add(time, delay);
-	const delayFromNowInMs = differenceInMilliseconds(newTime, new Date());
-
-	await Effect.tryPromise({
-		try: () =>
-			petFoodNotificationJob.queue.add(
-				`pet-${petID}}`,
-				{
-					petID
-				},
-				{
-					jobId: petFoodID,
-					delay: Math.max(delayFromNowInMs, 0)
-				}
-			),
-		catch: (err) => console.log('Failed to schedule notifications', err)
-	}).pipe(Effect.either, Effect.runPromise);
 };

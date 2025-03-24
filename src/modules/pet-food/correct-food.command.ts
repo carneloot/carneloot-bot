@@ -3,7 +3,7 @@ import type { ConversationFn } from '@grammyjs/conversations';
 import invariant from 'tiny-invariant';
 
 import { getUnixTime } from 'date-fns';
-import { Either } from 'effect';
+import { DateTime, Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../../common/types/context.js';
@@ -12,9 +12,10 @@ import { getConfig } from '../../lib/entities/config.js';
 import {
 	getLastPetFood,
 	getPetFoodByMessageId,
-	schedulePetFoodNotification,
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
+import { petFoodService } from '../../lib/services/pet-food.js';
+import { runtime } from '../../runtime.js';
 
 export const correctFoodConversation = (async (cvs, ctx) => {
 	await ctx.reply('Responda a mensagem que quer corrigir com o valor correto.');
@@ -79,7 +80,13 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {
 		await cvs.external(() =>
-			schedulePetFoodNotification(petFood.petID, petFood.id, time)
+			petFoodService
+				.schedulePetFoodNotification(
+					petFood.petID,
+					petFood.id,
+					DateTime.unsafeMake(time)
+				)
+				.pipe(runtime.runPromise)
 		);
 	}
 
