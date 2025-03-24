@@ -12,8 +12,6 @@ import {
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
-import { connection } from './connection.js';
-
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
@@ -24,6 +22,7 @@ import { getConfig } from '../entities/config.js';
 import { createNotificationHistory } from '../entities/notification.js';
 import { getDailyFoodConsumption } from '../entities/pet-food.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
+import { redis } from '../redis/redis.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 
@@ -32,7 +31,7 @@ type Data = {
 };
 
 const queue = new Queue<Data>(QUEUE_NAME, {
-	connection,
+	connection: redis,
 	defaultJobOptions: {
 		attempts: 3,
 		backoff: {
@@ -122,7 +121,7 @@ export const petFoodNotificationJob = {
 	queue,
 	createWorker: () => {
 		const worker = new Worker<Data>(QUEUE_NAME, handler, {
-			connection
+			connection: redis
 		});
 		worker.on('error', (err) => console.error('Error in job', err));
 		worker.on('active', (job) => console.log('Job started', job.id));

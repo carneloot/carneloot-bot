@@ -3,7 +3,6 @@ import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 
 import { Bot, session } from 'grammy';
-import { Redis } from 'ioredis';
 
 import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
@@ -20,6 +19,8 @@ import { NotificationModule } from './modules/notification/notification.module.j
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 import { PetModule } from './modules/pet/pet.module.js';
 
+import { redis } from './lib/redis/redis.js';
+
 import { CafeCommand } from './commands/cafe-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
@@ -27,20 +28,13 @@ import { WhatsCommand } from './commands/whats-command.js';
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN);
 
-	const redisUrl = new URL(Env.REDIS_URL);
-	const redis = new Redis({
-		host: redisUrl.hostname,
-		port: Number.parseInt(redisUrl.port),
-		username: redisUrl.username,
-		password: redisUrl.password,
-		keyPrefix: 'session:'
-	});
-
 	bot.use(
 		session({
 			type: 'multi',
 			conversation: {
-				storage: new RedisAdapter({ instance: redis })
+				storage: new RedisAdapter({
+					instance: redis.duplicate({ keyPrefix: 'session: ' })
+				})
 			}
 		})
 	);
