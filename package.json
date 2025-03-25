@@ -46,7 +46,6 @@
 		"js-quantities": "^1.8.0",
 		"table": "^6.9.0",
 		"tiny-invariant": "^1.3.3",
-		"tinyduration": "^3.3.1",
-		"zod": "^3.24.2"
+		"tinyduration": "^3.3.1"
 	}
 }

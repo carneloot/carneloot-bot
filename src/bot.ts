@@ -2,6 +2,7 @@ import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 
+import { Redacted } from 'effect';
 import { Bot, session } from 'grammy';
 
 import { Env } from './common/env.js';
@@ -26,7 +27,7 @@ import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
 
 export const createBot = () => {
-	const bot = new Bot<Context>(Env.BOT_TOKEN);
+	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 
 	bot.use(
 		session({

@@ -8,6 +8,7 @@ import {
 	Effect,
 	Either,
 	Option,
+	Redacted,
 	pipe
 } from 'effect';
 import { Bot } from 'grammy';
@@ -88,7 +89,7 @@ const handler = (job: Job<Data>) =>
 			Effect.andThen(A.filter((carer) => carer.status === 'accepted'))
 		);
 
-		const bot = new Bot<Context>(Env.BOT_TOKEN);
+		const bot = new Bot<Context>(Redacted.value(Env.BOT_TOKEN));
 
 		const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
 

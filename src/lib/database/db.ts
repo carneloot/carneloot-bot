@@ -17,6 +17,7 @@ import {
 	Exit,
 	Layer,
 	Predicate,
+	Redacted,
 	Runtime,
 	Schedule
 } from 'effect';
@@ -59,7 +60,7 @@ const makeService = Effect.gen(function* () {
 		Effect.sync(() =>
 			createClient({
 				url: Env.DATABASE_URL,
-				authToken: Env.DATABASE_AUTH_TOKEN
+				authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value)
 			})
 		),
 		(client) => Effect.sync(() => client.close())
@@ -183,7 +184,7 @@ export const layer = Layer.scoped(Database, makeService);
 
 const oldClient = createClient({
 	url: Env.DATABASE_URL,
-	authToken: Env.DATABASE_AUTH_TOKEN
+	authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value)
 });
 
 export const db = drizzle(oldClient, { schema: DbSchema });
