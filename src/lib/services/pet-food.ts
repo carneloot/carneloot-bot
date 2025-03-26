@@ -4,9 +4,9 @@ import type Qty from 'js-quantities';
 
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
 import { type ConfigValue, getConfigEffect } from '../entities/config.js';
-import { addPetFood, getLastPetFood } from '../entities/pet-food.js';
 import type { Pet } from '../entities/pet.js';
 import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
+import { PetFoodRepository } from '../repositories/pet-food.js';
 
 const LIMIT_DURATION = Duration.decode('1 minutes');
 
@@ -73,9 +73,11 @@ const addPetFoodAndScheduleNotification = ({
 	dayStart
 }: Params) =>
 	Effect.gen(function* () {
-		const lastPetFood = yield* Effect.tryPromise(() =>
-			getLastPetFood(pet.id)
-		).pipe(Effect.map(Option.fromNullable));
+		const petFoodRepository = yield* PetFoodRepository;
+
+		const lastPetFood = yield* petFoodRepository.getLastPetFood({
+			petID: pet.id
+		});
 
 		const lastPetFoodTime = lastPetFood.pipe(
 			Option.map(Struct.get('time')),
@@ -94,16 +96,14 @@ const addPetFoodAndScheduleNotification = ({
 			);
 		}
 
-		const petFood = yield* Effect.tryPromise(() =>
-			addPetFood({
-				petID: pet.id,
-				messageID,
-				userID,
+		const petFood = yield* petFoodRepository.addPetFood({
+			petID: pet.id,
+			messageID,
+			userID,
 
-				quantity: quantity.scalar,
-				time: DateTime.toDate(time)
-			})
-		);
+			quantity: quantity.scalar,
+			time: DateTime.toDate(time)
+		});
 
 		const formattedDate = time.pipe(
 			DateTime.unsafeSetZoneNamed(dayStart.timezone),

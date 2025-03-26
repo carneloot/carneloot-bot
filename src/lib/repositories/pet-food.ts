@@ -1,8 +1,15 @@
-import { and, eq, gte, lt, sql } from 'drizzle-orm';
+import { createId } from '@paralleldrive/cuid2';
+
+import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { DateTime, Effect, Option } from 'effect';
 
 import * as Database from '../database/db.js';
-import { type PetID, petFoodTable, petsTable } from '../database/schema.js';
+import {
+	type PetFoodID,
+	type PetID,
+	petFoodTable,
+	petsTable
+} from '../database/schema.js';
 
 export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 	'PetFoodRepository',
@@ -20,8 +27,8 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 						to: DateTime.DateTime;
 					}
 				) =>
-					execute((client) =>
-						client
+					execute((db) =>
+						db
 							.select({
 								id: petsTable.id,
 								name: petsTable.name,
@@ -43,8 +50,38 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 					)
 			);
 
+			const addPetFood = db.makeQuery(
+				(execute, values: Omit<typeof petFoodTable.$inferInsert, 'id'>) =>
+					execute((db) =>
+						db
+							.insert(petFoodTable)
+							.values({
+								id: createId() as PetFoodID,
+								...values
+							})
+							.returning({
+								id: petFoodTable.id
+							})
+							.get()
+					)
+			);
+			const getLastPetFood = db.makeQuery((execute, input: { petID: PetID }) =>
+				execute((db) =>
+					db
+						.select({ id: petFoodTable.id, time: petFoodTable.time })
+						.from(petFoodTable)
+						.where(eq(petFoodTable.petID, input.petID))
+						.orderBy(desc(petFoodTable.time))
+						.limit(1)
+						.get()
+						.then(Option.fromNullable)
+				)
+			);
+
 			return {
-				getDailyFoodConsumption
+				getDailyFoodConsumption,
+				getLastPetFood,
+				addPetFood
 			} as const;
 		})
 	}

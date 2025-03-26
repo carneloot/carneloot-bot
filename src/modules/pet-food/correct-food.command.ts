@@ -3,17 +3,17 @@ import type { ConversationFn } from '@grammyjs/conversations';
 import invariant from 'tiny-invariant';
 
 import { getUnixTime } from 'date-fns';
-import { DateTime, Either } from 'effect';
+import { DateTime, Effect, Either, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
 import {
-	getLastPetFood,
 	getPetFoodByMessageId,
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
+import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
@@ -73,9 +73,19 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		})
 	);
 
-	const lastFood = await cvs.external(() => getLastPetFood(petFood.petID));
+	const lastFood = await cvs.external(() =>
+		PetFoodRepository.pipe(
+			Effect.flatMap((repo) => repo.getLastPetFood({ petID: petFood.petID })),
+			runtime.runPromise
+		)
+	);
 
-	const isLastFood = petFood.id === lastFood?.id;
+	const isLastFood = lastFood.pipe(
+		Option.match({
+			onSome: (lastFood) => lastFood.id === petFood.id,
+			onNone: () => false
+		})
+	);
 
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {

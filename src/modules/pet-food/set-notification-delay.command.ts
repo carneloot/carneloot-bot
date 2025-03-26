@@ -1,6 +1,6 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
-import { DateTime, Effect } from 'effect';
+import { DateTime, Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 import { parse, serialize } from 'tinyduration';
 
@@ -14,8 +14,8 @@ import {
 	getConfig,
 	setConfig
 } from '../../lib/entities/config.js';
-import { getLastPetFood } from '../../lib/entities/pet-food.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
+import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
@@ -107,16 +107,17 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 		await cvs.external(() =>
 			Effect.gen(function* () {
-				const lastPetFood = yield* Effect.tryPromise(() =>
-					getLastPetFood(pet.id)
-				);
+				const petFoodRepository = yield* PetFoodRepository;
+				const lastPetFood = yield* petFoodRepository.getLastPetFood({
+					petID: pet.id
+				});
 
-				if (lastPetFood) {
-					yield* petFoodService.cancelPetFoodNotification(lastPetFood.id);
+				if (Option.isSome(lastPetFood)) {
+					yield* petFoodService.cancelPetFoodNotification(lastPetFood.value.id);
 					yield* petFoodService.schedulePetFoodNotification(
 						pet.id,
-						lastPetFood.id,
-						DateTime.unsafeMake(lastPetFood.time)
+						lastPetFood.value.id,
+						DateTime.unsafeMake(lastPetFood.value.time)
 					);
 				}
 			}).pipe(runtime.runPromise)
@@ -137,11 +138,13 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		Effect.gen(function* () {
 			yield* deleteConfigEffect('pet', 'notificationDelay', pet.id);
 
-			const lastPetFood = yield* Effect.tryPromise(() =>
-				getLastPetFood(pet.id)
-			);
-			if (lastPetFood) {
-				yield* petFoodService.cancelPetFoodNotification(lastPetFood.id);
+			const petFoodRepository = yield* PetFoodRepository;
+			const lastPetFood = yield* petFoodRepository.getLastPetFood({
+				petID: pet.id
+			});
+
+			if (Option.isSome(lastPetFood)) {
+				yield* petFoodService.cancelPetFoodNotification(lastPetFood.value.id);
 			}
 		}).pipe(runtime.runPromise)
 	);
