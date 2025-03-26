@@ -105,10 +105,18 @@ const addPetFoodAndScheduleNotification = ({
 			})
 		);
 
+		const formattedDate = time.pipe(
+			DateTime.unsafeSetZoneNamed(dayStart.timezone),
+			DateTime.format({
+				locale: 'pt-BR',
+				timeStyle: 'short',
+				dateStyle: 'short'
+			})
+		);
+
 		const message = [
 			`Foram adicionados ${quantity} de ração para o pet ${pet.name}.`,
-			timeChanged &&
-				`A ração foi adicionada para ${DateTime.format(DateTime.unsafeSetZoneNamed(time, dayStart.timezone), { locale: 'pt-BR' })}`
+			timeChanged && `A ração foi adicionada para ${formattedDate}`
 		]
 			.filter(Boolean)
 			.join(' ');
