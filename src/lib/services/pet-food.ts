@@ -25,7 +25,7 @@ const schedulePetFoodNotification = (
 		);
 
 		const delay = time.pipe(
-			DateTime.add(notificationDelay),
+			DateTime.addDuration(notificationDelay),
 			DateTime.distanceDuration(now),
 			Duration.toMillis
 		);

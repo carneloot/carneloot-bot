@@ -4,13 +4,15 @@ import { and, eq } from 'drizzle-orm';
 import { Data, Effect, Predicate, Schema } from 'effect';
 
 import { runtime } from '../../runtime.js';
-import * as Database from '../database/db.js';
 import {
 	type ConfigID,
 	type PetID,
 	type UserID,
 	configsTable
 } from '../database/schema.js';
+
+import * as CustomSchema from '../../common/schema.js';
+import * as Database from '../database/db.js';
 
 const Configs = {
 	user: {
@@ -19,15 +21,7 @@ const Configs = {
 	},
 	pet: {
 		identifier: '' as PetID,
-		notificationDelay: Schema.Struct({
-			years: Schema.optional(Schema.Number),
-			months: Schema.optional(Schema.Number),
-			weeks: Schema.optional(Schema.Number),
-			days: Schema.optional(Schema.Number),
-			hours: Schema.optional(Schema.Number),
-			minutes: Schema.optional(Schema.Number),
-			seconds: Schema.optional(Schema.Number)
-		}),
+		notificationDelay: CustomSchema.DurationFromParts,
 		dayStart: Schema.Struct({
 			hour: Schema.Number.pipe(
 				Schema.greaterThan(0),
