@@ -1,4 +1,4 @@
-import { Schema, Duration } from 'effect';
+import { Duration, Schema } from 'effect';
 
 export const DurationParts = Schema.Struct({
 	years: Schema.optional(Schema.Number),
