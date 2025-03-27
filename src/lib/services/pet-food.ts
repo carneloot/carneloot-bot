@@ -16,8 +16,6 @@ const schedulePetFoodNotification = (
 	time: DateTime.DateTime
 ) =>
 	Effect.gen(function* () {
-		const now = yield* DateTime.now;
-
 		const notificationDelay = yield* getConfigEffect(
 			'pet',
 			'notificationDelay',
@@ -26,7 +24,7 @@ const schedulePetFoodNotification = (
 
 		const delay = time.pipe(
 			DateTime.addDuration(notificationDelay),
-			DateTime.distanceDuration(now),
+			DateTime.distanceDuration(DateTime.unsafeNow()),
 			Duration.toMillis
 		);
 
