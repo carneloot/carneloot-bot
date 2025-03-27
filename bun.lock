@@ -23,7 +23,6 @@
         "js-quantities": "^1.8.0",
         "table": "^6.9.0",
         "tiny-invariant": "^1.3.3",
-        "tinyduration": "^3.3.1",
       },
       "devDependencies": {
         "@biomejs/biome": "1.9.4",
@@ -355,8 +354,6 @@
     "table": ["table@6.9.0", "", { "dependencies": { "ajv": "^8.0.1", "lodash.truncate": "^4.4.2", "slice-ansi": "^4.0.0", "string-width": "^4.2.3", "strip-ansi": "^6.0.1" } }, "sha512-9kY+CygyYM6j02t5YFHbNz2FN5QmYGv9zAjVp4lCDjlCw7amdckXlEt/bjMhUIfj4ThGRE4gCUH5+yGnNuPo5A=="],
 
     "tiny-invariant": ["tiny-invariant@1.3.3", "", {}, "sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg=="],
-
-    "tinyduration": ["tinyduration@3.3.1", "", {}, "sha512-39iO6CyHMFTPv9PKFxXPXa1DDc2JHog4oGK6x3fG75T+chRO+SKmuEPT00myYs3aGFIq3nQ6U5J5c5hR0PMKjw=="],
 
     "to-regex-range": ["to-regex-range@5.0.1", "", { "dependencies": { "is-number": "^7.0.0" } }, ""],
 

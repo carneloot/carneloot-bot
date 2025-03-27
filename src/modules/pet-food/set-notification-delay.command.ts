@@ -1,8 +1,7 @@
 import type { ConversationFn } from '@grammyjs/conversations';
 
-import { DateTime, Effect, Option } from 'effect';
+import { DateTime, Duration, Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
-import { parse, serialize } from 'tinyduration';
 
 import invariant from 'tiny-invariant';
 
@@ -11,7 +10,7 @@ import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import {
 	deleteConfigEffect,
-	getConfig,
+	getConfigEffect,
 	setConfig
 } from '../../lib/entities/config.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
@@ -33,21 +32,25 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	})(cvs, ctx);
 
 	const duration = await cvs.external(() =>
-		getConfig('pet', 'notificationDelay', pet.id)
+		getConfigEffect('pet', 'notificationDelay', pet.id).pipe(
+			Effect.asSome,
+			Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
+			runtime.runPromise
+		)
 	);
 
-	if (!duration) {
+	if (Option.isSome(duration)) {
 		await ctx.reply(
-			'Você ainda não definiu um atraso de notificação para este pet.'
+			`O atraso de notificação para ${pet.name} é de ${Duration.format(duration.value)}.`
 		);
 	} else {
 		await ctx.reply(
-			`O atraso de notificação para ${pet.name} é de ${serialize(duration)}.`
+			'Você ainda não definiu um atraso de notificação para este pet.'
 		);
 	}
 
 	let answer: 'Alterar' | 'Excluir' | undefined;
-	if (!duration) {
+	if (Option.isNone(duration)) {
 		const innerAnswer = await showYesOrNoQuestion(
 			'Deseja definir um atraso de notificação?'
 		)(cvs, ctx);
@@ -64,32 +67,20 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	}
 
 	if (!answer) {
+		await ctx.reply(ctx.emoji`Okay ${'beaming_face_with_smiling_eyes'}`);
 		return;
 	}
 
 	if (answer === 'Alterar') {
-		// TODO receber a duração em um formato mais human readable
 		await ctx.reply(
-			'Digite o novo atraso de notificação no formato de ISO Duration:'
+			'Digite o novo atraso de notificação no formato [número] [unidade (em ingles)]:'
 		);
 
 		const durationResponse = await cvs.waitUntil(
-			(ctx) => {
-				if (!ctx.message?.text) {
-					return false;
-				}
-
-				try {
-					parse(ctx.message.text);
-
-					return true;
-				} catch (err) {
-					return false;
-				}
-			},
+			(ctx) => Duration.decodeUnknown(ctx.message?.text).pipe(Option.isSome),
 			(ctx) =>
 				ctx.reply(
-					'Formato inválido. Envie uma duração no formato ISO Duration.'
+					'Formato inválido. Envie uma duração no formato [número] [unidade (em ingles)].'
 				)
 		);
 
@@ -97,7 +88,9 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 		invariant(newDurationString, 'Duration string is not defined');
 
-		const newDuration = parse(newDurationString);
+		const newDuration = Duration.decodeUnknown(newDurationString).pipe(
+			Option.getOrThrow // This should always be true since it is checked inside the waitUntil
+		);
 		await cvs.external(() =>
 			setConfig('pet', 'notificationDelay', pet.id, newDuration)
 		);
