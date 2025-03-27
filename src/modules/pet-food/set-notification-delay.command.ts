@@ -39,13 +39,13 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		)
 	);
 
-	if (Option.isNone(duration)) {
+	if (Option.isSome(duration)) {
 		await ctx.reply(
-			'Você ainda não definiu um atraso de notificação para este pet.'
+			`O atraso de notificação para ${pet.name} é de ${Duration.format(duration.value)}.`
 		);
 	} else {
 		await ctx.reply(
-			`O atraso de notificação para ${pet.name} é de ${Duration.format(duration.value)}.`
+			'Você ainda não definiu um atraso de notificação para este pet.'
 		);
 	}
 
@@ -73,7 +73,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 	if (answer === 'Alterar') {
 		await ctx.reply(
-			'Digite o novo atraso de notificação no formato de ISO Duration:'
+			'Digite o novo atraso de notificação no formato [número] [unidade (em ingles)]:'
 		);
 
 		const durationResponse = await cvs.waitUntil(
