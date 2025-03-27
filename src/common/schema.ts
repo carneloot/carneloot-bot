@@ -1,4 +1,4 @@
-import { Duration, Schema } from 'effect';
+import { Array as A, Duration, Option, Record, Schema, pipe } from 'effect';
 
 export const DurationParts = Schema.Struct({
 	years: Schema.optional(Schema.Number),
@@ -14,43 +14,24 @@ export const DurationFromParts = Schema.transform(
 	DurationParts,
 	Schema.DurationFromSelf,
 	{
-		decode: (parts) => {
-			let duration = Duration.zero;
-
-			if (parts.years) {
-				duration = duration.pipe(
-					Duration.sum(Duration.days(parts.years * 365))
-				);
-			}
-
-			if (parts.months) {
-				duration = duration.pipe(
-					Duration.sum(Duration.days(parts.months * 30))
-				);
-			}
-
-			if (parts.weeks) {
-				duration = duration.pipe(Duration.sum(Duration.weeks(parts.weeks)));
-			}
-
-			if (parts.days) {
-				duration = duration.pipe(Duration.sum(Duration.days(parts.days)));
-			}
-
-			if (parts.hours) {
-				duration = duration.pipe(Duration.sum(Duration.hours(parts.hours)));
-			}
-
-			if (parts.minutes) {
-				duration = duration.pipe(Duration.sum(Duration.minutes(parts.minutes)));
-			}
-
-			if (parts.seconds) {
-				duration = duration.pipe(Duration.sum(Duration.seconds(parts.seconds)));
-			}
-
-			return duration;
-		},
+		decode: (parts) =>
+			pipe(
+				[
+					Option.fromNullable(parts.years).pipe(
+						Option.map((v) => Duration.days(v * 365))
+					),
+					Option.fromNullable(parts.months).pipe(
+						Option.map((v) => Duration.days(v * 30))
+					),
+					Option.fromNullable(parts.weeks).pipe(Option.map(Duration.weeks)),
+					Option.fromNullable(parts.days).pipe(Option.map(Duration.days)),
+					Option.fromNullable(parts.hours).pipe(Option.map(Duration.hours)),
+					Option.fromNullable(parts.minutes).pipe(Option.map(Duration.minutes)),
+					Option.fromNullable(parts.seconds).pipe(Option.map(Duration.seconds))
+				],
+				A.getSomes,
+				A.reduce(Duration.zero, Duration.sum)
+			),
 		encode: (duration) => {
 			const durationParts = Duration.parts(duration);
 			const years = Math.floor(durationParts.days / 365);
@@ -60,15 +41,18 @@ export const DurationFromParts = Schema.transform(
 			);
 			const days = durationParts.days - years * 365 - months * 30 - weeks * 7;
 
-			return {
-				years,
-				months,
-				weeks,
-				days,
-				hours: durationParts.hours,
-				minutes: durationParts.minutes,
-				seconds: durationParts.seconds
-			};
+			return Record.filter(
+				{
+					years,
+					months,
+					weeks,
+					days,
+					hours: durationParts.hours,
+					minutes: durationParts.minutes,
+					seconds: durationParts.seconds
+				},
+				(v) => v > 0
+			);
 		}
 	}
 );
