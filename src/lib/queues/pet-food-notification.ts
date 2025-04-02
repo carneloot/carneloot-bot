@@ -120,7 +120,10 @@ const handler = (job: Job<Data>) =>
 				}).pipe(Effect.ignoreLogged);
 			}
 		}
-	}).pipe(runtime.runPromise);
+	}).pipe(
+		Effect.withSpan('petFoodNotificationJob.handler'),
+		runtime.runPromise
+	);
 
 export const petFoodNotificationJob = {
 	QUEUE_NAME,

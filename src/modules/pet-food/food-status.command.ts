@@ -58,7 +58,10 @@ const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 			A.filter(Predicate.isNotNull),
 			A.join(' ')
 		);
-	});
+	}).pipe(
+		Effect.tap(() => Effect.annotateCurrentSpan('pet', pet.id)),
+		Effect.withSpan('getPetMessage')
+	);
 
 export const FoodStatusCommand = ((ctx) =>
 	Effect.gen(function* () {
@@ -104,4 +107,7 @@ export const FoodStatusCommand = ((ctx) =>
 				parse_mode: 'MarkdownV2'
 			})
 		);
-	}).pipe(runtime.runPromise)) satisfies MiddlewareFn<Context>;
+	}).pipe(
+		Effect.withSpan('FoodStatusCommand'),
+		runtime.runPromise
+	)) satisfies MiddlewareFn<Context>;

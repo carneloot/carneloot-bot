@@ -47,7 +47,7 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 							.groupBy(petsTable.id)
 							.get()
 							.then(Option.fromNullable)
-					)
+					).pipe(Effect.withSpan('getDailyFoodConsumption'))
 			);
 
 			const addPetFood = db.makeQuery(
@@ -63,7 +63,7 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 								id: petFoodTable.id
 							})
 							.get()
-					)
+					).pipe(Effect.withSpan('addPetFood'))
 			);
 			const getLastPetFood = db.makeQuery((execute, input: { petID: PetID }) =>
 				execute((db) =>
@@ -75,7 +75,7 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 						.limit(1)
 						.get()
 						.then(Option.fromNullable)
-				)
+				).pipe(Effect.withSpan('getLastPetFood'))
 			);
 
 			return {

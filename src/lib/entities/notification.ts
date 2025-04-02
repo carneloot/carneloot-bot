@@ -61,7 +61,7 @@ export const getNotificationByOwnerAndKeyword = (
 		);
 
 		return { notification, usersToNotify };
-	});
+	}).pipe(Effect.withSpan('getNotificationByOwnerAndKeyword'));
 
 type CreateNotificationHistory = {
 	userID: NotificationHistory['userID'];
@@ -105,7 +105,7 @@ export const createNotificationHistory = ({
 				})
 				.run()
 		);
-	});
+	}).pipe(Effect.withSpan('createNotificationHistory'));
 
 export async function getNotificationFromHistory(
 	messageID: NotificationHistory['messageID'],

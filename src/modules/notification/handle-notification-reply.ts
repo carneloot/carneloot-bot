@@ -60,6 +60,7 @@ export const handleNotificationReply = ((ctx, next) =>
 			})
 		);
 	}).pipe(
+		Effect.withSpan('handleNotificationReply'),
 		Effect.catchIf(
 			(err) => err._tag === 'MissingConfigError' && err.key === 'dayStart',
 			() =>

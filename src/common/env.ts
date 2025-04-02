@@ -13,10 +13,14 @@ const envSchema = Schema.Struct({
 	RUN_MODE: Schema.optionalWith(Schema.Literal('polling', 'webhook'), {
 		default: () => 'polling'
 	}),
-	// RUN_MODE: z.enum(['polling', 'webhook']).optional().default('polling'),
 	PORT: Schema.optionalWith(Schema.NumberFromString, { default: () => 3000 }),
 
-	REDIS_URL: Schema.String
+	REDIS_URL: Schema.String,
+
+	// Tracer
+	OTLP_URL: Schema.optional(Schema.String),
+	OTLP_API_TOKEN: Schema.optional(Schema.Redacted(Schema.String)),
+	OTLP_DATASET: Schema.optional(Schema.String)
 });
 
 // eslint-disable-next-line n/no-process-env

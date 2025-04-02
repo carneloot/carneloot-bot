@@ -4,6 +4,8 @@ import invariant from 'tiny-invariant';
 
 import type { Command } from '../common/types/command.js';
 
+import { runtime } from '../runtime.js';
+
 const MAX_DURATION = Duration.decode('10 seconds');
 
 export const PingCommand: Command<'ping'> = {
@@ -38,5 +40,5 @@ export const PingCommand: Command<'ping'> = {
 					}
 				})
 			);
-		}).pipe(Effect.runPromise)
+		}).pipe(Effect.withSpan('PingCommand'), runtime.runPromise)
 };

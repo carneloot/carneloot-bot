@@ -84,4 +84,4 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 				time: timeChanged ? time : undefined
 			})
 		);
-	});
+	}).pipe(Effect.withSpan('handlePetFoodNotificationReply'));

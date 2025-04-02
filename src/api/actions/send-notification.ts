@@ -51,7 +51,7 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 				}, message)
 			: message;
 		return finalMessage;
-	});
+	}).pipe(Effect.withSpan('parseMessage'));
 
 interface SendNotificationAndLog {
 	bot: Bot<Context>;
@@ -76,7 +76,7 @@ const sendNotificationAndLog = ({
 			messageID: message.message_id,
 			petID: null
 		});
-	});
+	}).pipe(Effect.withSpan('sendNotificationAndLog'));
 
 export const sendNotification = (bot: Bot<Context>, params: NotifyParams) =>
 	Effect.gen(function* () {
@@ -114,4 +114,4 @@ export const sendNotification = (bot: Bot<Context>, params: NotifyParams) =>
 				),
 			{ concurrency: 'unbounded' }
 		);
-	});
+	}).pipe(Effect.withSpan('sendNotification'));

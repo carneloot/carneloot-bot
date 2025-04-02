@@ -51,7 +51,7 @@ api.post('notify', sValidator('json', NotifyParams), (c) =>
 					Effect.succeed(c.json({ message: 'Database error' }, 500))
 			})
 		);
-	}).pipe(runtime.runPromise)
+	}).pipe(Effect.withSpan('/api/post/notify'), runtime.runPromise)
 );
 
 if (Env.RUN_MODE === 'webhook') {

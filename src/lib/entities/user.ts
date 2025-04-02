@@ -111,4 +111,4 @@ export const getUserFromApiKey = (apiKey: string) =>
 		}
 
 		return result.user;
-	});
+	}).pipe(Effect.withSpan('getUserFromApiKey'));

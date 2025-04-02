@@ -39,11 +39,12 @@ const schedulePetFoodNotification = (
 					delay: Math.max(delay, 0)
 				}
 			)
-		).pipe(Effect.ignoreLogged);
+		).pipe(Effect.withSpan('schedulePetFoodNotification'), Effect.ignoreLogged);
 	});
 
 const cancelPetFoodNotification = (petFoodID: PetFoodID) =>
 	Effect.tryPromise(() => petFoodNotificationJob.queue.remove(petFoodID)).pipe(
+		Effect.withSpan('cancelPetFoodNotification'),
 		Effect.ignoreLogged
 	);
 
@@ -131,7 +132,7 @@ const addPetFoodAndScheduleNotification = ({
 		}
 
 		return Either.right({ message });
-	});
+	}).pipe(Effect.withSpan('addPetFoodAndScheduleNotification'));
 
 export const petFoodService = {
 	addPetFoodAndScheduleNotification,

@@ -70,6 +70,12 @@ export const getConfigEffect = <
 	Effect.gen(function* () {
 		const db = yield* Database.Database;
 
+		yield* Effect.annotateCurrentSpan({
+			config_context: context,
+			config_key: key,
+			config_id: id
+		});
+
 		const queryResult = yield* db.execute((client) =>
 			client
 				.select({ value: configsTable.value })
@@ -102,7 +108,7 @@ export const getConfigEffect = <
 		);
 
 		return result as ConfigValue<Context, Key>;
-	});
+	}).pipe(Effect.withSpan('getConfig'));
 
 export const setConfigEffect = <
 	Context extends ConfigContext,
@@ -116,6 +122,12 @@ export const setConfigEffect = <
 ) =>
 	Effect.gen(function* () {
 		const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
+
+		yield* Effect.annotateCurrentSpan({
+			config_context: context,
+			config_key: key,
+			config_id: id
+		});
 
 		const result = yield* Schema.encode(schema)(value);
 
@@ -136,7 +148,7 @@ export const setConfigEffect = <
 					}
 				})
 		);
-	});
+	}).pipe(Effect.withSpan('setConfig'));
 
 export const deleteConfigEffect = <
 	Context extends ConfigContext,
@@ -148,6 +160,12 @@ export const deleteConfigEffect = <
 	id: Identifier
 ) =>
 	Effect.gen(function* () {
+		yield* Effect.annotateCurrentSpan({
+			config_context: context,
+			config_key: key,
+			config_id: id
+		});
+
 		const db = yield* Database.Database;
 
 		yield* db.execute((client) =>
@@ -160,7 +178,7 @@ export const deleteConfigEffect = <
 					)
 				)
 		);
-	});
+	}).pipe(Effect.withSpan('deleteConfig'));
 
 export const getConfig = <
 	Context extends ConfigContext,
