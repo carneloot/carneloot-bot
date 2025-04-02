@@ -18,7 +18,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
 		"@total-typescript/ts-reset": "^0.6.1",
-		"@types/bun": "^1.2.5",
+		"@types/bun": "^1.2.8",
 		"@types/js-quantities": "^1.6.6",
 		"cross-env": "^7.0.3",
 		"drizzle-kit": "^0.29.0",
