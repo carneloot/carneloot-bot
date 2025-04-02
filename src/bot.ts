@@ -3,7 +3,7 @@ import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 
 import { Redacted } from 'effect';
-import { Bot, session } from 'grammy';
+import { Bot } from 'grammy';
 
 import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
@@ -28,29 +28,24 @@ import { WhatsCommand } from './commands/whats-command.js';
 
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
+	const myEmojiParser = emojiParser();
 
 	bot.use(
-		session({
-			type: 'multi',
-			conversation: {
-				storage: new RedisAdapter({
-					instance: redis.duplicate({ keyPrefix: 'session: ' })
-				})
-			}
+		conversations({
+			storage: new RedisAdapter({
+				instance: redis.duplicate({ keyPrefix: 'session: ' })
+			}),
+			plugins: [myEmojiParser]
 		})
 	);
 
-	bot.use(conversations());
-
 	bot.command('cancelar', async (ctx) => {
-		await ctx.conversation.exit();
-
 		await ctx.reply('Operação cancelada', {
 			reply_markup: { remove_keyboard: true }
 		});
 	});
 
-	bot.use(emojiParser());
+	bot.use(myEmojiParser);
 
 	bot.use(GenericErrorMiddleware);
 

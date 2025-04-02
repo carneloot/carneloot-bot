@@ -1,5 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -7,19 +5,17 @@ import invariant from 'tiny-invariant';
 import { getUserCaredPets, removeCarer } from '../../lib/entities/pet.js';
 import { getUserByID } from '../../lib/entities/user.js';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 
-export const stopCaringConversation = (async (conversation, ctx) => {
-	const user = ctx.user;
+export const stopCaringConversation = (async (cvs, ctx) => {
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
-	const caringPets = await conversation.external(() =>
-		getUserCaredPets(user.id)
-	);
+	const caringPets = await cvs.external(() => getUserCaredPets(user.id));
 
 	if (!caringPets.length) {
 		await ctx.reply('Você não está cuidando de nenhum pet');
@@ -30,19 +26,17 @@ export const stopCaringConversation = (async (conversation, ctx) => {
 		values: caringPets,
 		labelFn: (pet) => pet.name,
 		message: 'Escolha um pet para parar de cuidar:'
-	})(conversation, ctx);
+	})(cvs, ctx);
 
 	const answer = await showYesOrNoQuestion(
 		'Tem certeza que deseja parar de cuidar deste pet?'
-	)(conversation, ctx);
+	)(cvs, ctx);
 
 	if (answer) {
-		await conversation.external(() => removeCarer(pet.id, user.id));
+		await cvs.external(() => removeCarer(pet.id, user.id));
 		await ctx.reply('Você parou de cuidar deste pet');
 
-		const petOwner = await conversation.external(() =>
-			getUserByID(pet.ownerID)
-		);
+		const petOwner = await cvs.external(() => getUserByID(pet.ownerID));
 		if (petOwner) {
 			const carerDisplay = getUserDisplay(user);
 
@@ -52,7 +46,7 @@ export const stopCaringConversation = (async (conversation, ctx) => {
 			);
 		}
 	}
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const StopCaringCommand = (async (ctx) => {
 	if (!ctx.user) {

@@ -1,6 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
-import { fromUnixTime } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 import { Array as Arr, DateTime } from 'effect';
 import type { MiddlewareFn } from 'grammy';
@@ -8,7 +5,7 @@ import type { MiddlewareFn } from 'grammy';
 import Qty from 'js-quantities';
 import invariant from 'tiny-invariant';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
@@ -20,7 +17,8 @@ import {
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 
 export const deleteFoodConversation = (async (cvs, ctx) => {
-	const user = ctx.user;
+	const user = await cvs.external((ctx) => ctx.user);
+
 	if (!user) {
 		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 		return;
@@ -83,7 +81,7 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	await cvs.external(() => deletePetFood(selectedFood.id));
 
 	await ctx.reply('Ração deletada com sucesso!');
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const DeleteFoodCommand = (async (ctx) => {
 	await ctx.conversation.enter('deleteFood');

@@ -1,11 +1,9 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import { DateTime, Duration, Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import {
@@ -19,7 +17,7 @@ import { petFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
-	const user = ctx.user;
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
@@ -78,10 +76,12 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 		const durationResponse = await cvs.waitUntil(
 			(ctx) => Duration.decodeUnknown(ctx.message?.text).pipe(Option.isSome),
-			(ctx) =>
-				ctx.reply(
-					'Formato inválido. Envie uma duração no formato [número] [unidade (em ingles)].'
-				)
+			{
+				otherwise: (ctx) =>
+					ctx.reply(
+						'Formato inválido. Envie uma duração no formato [número] [unidade (em ingles)].'
+					)
+			}
 		);
 
 		const newDurationString = durationResponse.message?.text;
@@ -143,7 +143,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	);
 
 	await ctx.reply('Atraso de notificação excluído e notificação desabilitada.');
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const SetNotificationDelayCommand = (async (ctx) => {
 	if (!ctx.user) {

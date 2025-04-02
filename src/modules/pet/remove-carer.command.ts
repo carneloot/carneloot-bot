@@ -1,5 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -10,24 +8,24 @@ import {
 	removeCarer
 } from '../../lib/entities/pet.js';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
-export const removeCarerConversation = (async (conversation, ctx) => {
-	const user = ctx.user;
+export const removeCarerConversation = (async (cvs, ctx) => {
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
-	const pets = await conversation.external(() => getUserOwnedPets(user.id));
+	const pets = await cvs.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
 		message: 'Escolha um pet para remover um cuidador:'
-	})(conversation, ctx);
+	})(cvs, ctx);
 
-	const invites = await conversation.external(() => getPetCarers(pet.id));
+	const invites = await cvs.external(() => getPetCarers(pet.id));
 
 	if (invites.length === 0) {
 		await ctx.reply('Este pet não tem cuidadores');
@@ -48,9 +46,9 @@ export const removeCarerConversation = (async (conversation, ctx) => {
 			return `${userDisplay} (${status})`;
 		},
 		message: 'Escolha um cuidador para remover:'
-	})(conversation, ctx);
+	})(cvs, ctx);
 
-	await conversation.external(() => removeCarer(pet.id, invite.carer.id));
+	await cvs.external(() => removeCarer(pet.id, invite.carer.id));
 
 	await ctx.reply('Cuidador removido');
 
@@ -58,7 +56,7 @@ export const removeCarerConversation = (async (conversation, ctx) => {
 		invite.carer.telegramID,
 		`Você foi removido como cuidador do pet ${pet.name}`
 	);
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const RemoveCarerCommand = (async (ctx) => {
 	if (!ctx.user) {

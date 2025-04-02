@@ -1,4 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
 import { Reactions } from '@grammyjs/emoji';
 
 import { Array as Arr, DateTime, Either } from 'effect';
@@ -6,7 +5,7 @@ import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
@@ -16,19 +15,16 @@ import { runtime } from '../../runtime.js';
 import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
 export const addFoodConversation = (async (cvs, ctx) => {
-	const user = ctx.user;
+	const user = await cvs.external((ctx) => ctx.user);
 	if (!user) {
 		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 		return;
 	}
 
 	const allPets = await cvs.external(() =>
-		Promise.all([
-			getUserOwnedPets(user.id),
-			getUserCaredPets(user.id).then(
-				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` }))
-			)
-		]).then(Arr.flatten)
+		Promise.all([getUserOwnedPets(user.id), getUserCaredPets(user.id)]).then(
+			Arr.flatten
+		)
 	);
 
 	const currentPet = await showOptionsKeyboard({
@@ -74,7 +70,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 			return Either.isRight(result);
 		},
-		(ctx) => ctx.reply('Envie a quantidade de ração colocada')
+		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada') }
 	);
 
 	invariant(foodResponse.message, 'Message is not defined');
@@ -120,7 +116,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	await foodResponse.reply(message);
 	await foodResponse.react(Reactions.thumbs_up);
 
-	await cvs.external(() =>
+	await cvs.external((ctx) =>
 		sendAddedFoodNotification(ctx, {
 			id: currentPet.id,
 			quantity,
@@ -128,7 +124,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			time: timeChanged ? time : undefined
 		})
 	);
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const AddFoodCommand = (async (ctx) => {
 	await ctx.conversation.enter('addFood');

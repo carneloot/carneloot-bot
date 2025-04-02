@@ -1,29 +1,27 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
 import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet.js';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
-export const listCarersConversation = (async (conversation, ctx) => {
-	const user = ctx.user;
+export const listCarersConversation = (async (cvs, ctx) => {
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
-	const pets = await conversation.external(() => getUserOwnedPets(user.id));
+	const pets = await cvs.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
 		message: 'Escolha um pet:'
-	})(conversation, ctx);
+	})(cvs, ctx);
 
-	const invites = await conversation.external(() => getPetCarers(pet.id));
+	const invites = await cvs.external(() => getPetCarers(pet.id));
 
 	if (invites.length === 0) {
 		await ctx.reply('Este pet não tem cuidadores');
@@ -46,7 +44,7 @@ export const listCarersConversation = (async (conversation, ctx) => {
 	await ctx.reply(`Cuidadores:\n${parsedInvites.join('\n')}`, {
 		parse_mode: 'HTML'
 	});
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const ListCarersCommand = (async (ctx) => {
 	if (!ctx.user) {

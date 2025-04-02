@@ -1,5 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -11,28 +9,28 @@ import {
 } from '../../lib/entities/pet.js';
 import { getUserByUsername } from '../../lib/entities/user.js';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
-export const addCarerConversation = (async (conversation, ctx) => {
-	const user = ctx.user;
+export const addCarerConversation = (async (cvs, ctx) => {
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
-	const pets = await conversation.external(() => getUserOwnedPets(user.id));
+	const pets = await cvs.external(() => getUserOwnedPets(user.id));
 
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
 		message: 'Escolha um pet para adicionar um cuidador'
-	})(conversation, ctx);
+	})(cvs, ctx);
 
 	await ctx.reply(
 		`Você escolheu o pet ${pet.name}. Agora, quem vai ser o cuidador?`
 	);
 
-	const carerUsername = await conversation.form.text((ctx) =>
+	const carerUsername = await cvs.form.text((ctx) =>
 		ctx.reply('Mande o usuário do cuidador para eu salvar.')
 	);
 
@@ -42,7 +40,7 @@ export const addCarerConversation = (async (conversation, ctx) => {
 		return;
 	}
 
-	const carer = await conversation.external(() =>
+	const carer = await cvs.external(() =>
 		getUserByUsername(carerUsername.replace(/^@/, ''))
 	);
 
@@ -54,7 +52,7 @@ export const addCarerConversation = (async (conversation, ctx) => {
 	}
 
 	// Check if carer is already a carer for the pet
-	const isCarerAlready = await conversation.external(() =>
+	const isCarerAlready = await cvs.external(() =>
 		isUserCarer(pet.id, carer.id)
 	);
 
@@ -76,7 +74,7 @@ export const addCarerConversation = (async (conversation, ctx) => {
 
 		await ctx.reply(message);
 	} else {
-		await conversation.external(() => addCarer(pet.id, carer.id));
+		await cvs.external(() => addCarer(pet.id, carer.id));
 
 		const owner = getUserDisplay(user);
 
@@ -87,7 +85,7 @@ export const addCarerConversation = (async (conversation, ctx) => {
 
 		await ctx.reply('O convite foi enviado para o cuidador.');
 	}
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const AddCarerCommand = (async (ctx) => {
 	if (!ctx.user) {

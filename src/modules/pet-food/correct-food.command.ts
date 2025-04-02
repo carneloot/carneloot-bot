@@ -1,12 +1,10 @@
-import type { ConversationFn } from '@grammyjs/conversations';
-
 import invariant from 'tiny-invariant';
 
 import { getUnixTime } from 'date-fns';
 import { DateTime, Effect, Either, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { getConfig } from '../../lib/entities/config.js';
 import {
@@ -22,7 +20,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 
 	const replyResponse = await cvs.waitUntil(
 		(ctx) => ctx.message?.reply_to_message !== undefined,
-		(ctx) => ctx.reply('Por favor responda a uma mensagem.')
+		{ otherwise: (ctx) => ctx.reply('Por favor responda a uma mensagem.') }
 	);
 
 	invariant(
@@ -101,7 +99,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	}
 
 	await ctx.reply('Ração alterada com sucesso!');
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const CorrectFoodCommand = (async (ctx) => {
 	if (!ctx.user) {

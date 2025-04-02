@@ -1,4 +1,3 @@
-import type { ConversationFn } from '@grammyjs/conversations';
 import { getTimeZones } from '@vvo/tzdb';
 
 import type { MiddlewareFn } from 'grammy';
@@ -7,7 +6,7 @@ import invariant from 'tiny-invariant';
 
 import { getConfig, setConfig } from '../../lib/entities/config.js';
 
-import type { Context } from '../../common/types/context.js';
+import type { Context, ConversationFn } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
@@ -18,7 +17,7 @@ const hoursOptions = Array.from({ length: 12 }, (_, i) => ({
 }));
 
 export const setDayStartConversation = (async (cvs, ctx) => {
-	const user = ctx.user;
+	const user = await cvs.external((ctx) => ctx.user);
 
 	invariant(user, 'User is not defined');
 
@@ -78,7 +77,7 @@ export const setDayStartConversation = (async (cvs, ctx) => {
 	await ctx.reply(
 		`O horário de início do dia do pet ${pet.name} foi definido para ${hour.value}h no fuso horário "${timezone.name}".`
 	);
-}) satisfies ConversationFn<Context>;
+}) satisfies ConversationFn;
 
 export const SetDayStartCommand = (async (ctx) => {
 	if (!ctx.user) {

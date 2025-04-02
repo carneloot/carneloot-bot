@@ -1,9 +1,8 @@
-import type { Conversation } from '@grammyjs/conversations';
 import { InlineKeyboard, Keyboard } from 'grammy';
 
 import invariant from 'tiny-invariant';
 
-import type { Context } from '../types/context.js';
+import type { ConversationFn } from '../types/context.js';
 import { parseMessageForMarkdown } from './parse-message-for-makdown.js';
 
 type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
@@ -20,14 +19,10 @@ type ShowOptionsKeyboardResponse<
 	T,
 	AddCancel extends boolean
 > = AddCancel extends true ? T | undefined : T;
-export const showOptionsKeyboard =
-	<T, AddCancel extends boolean = false>(
-		options: ShowOptionsKeyboardOpts<T, AddCancel>
-	) =>
-	async (
-		conversation: Conversation<Context>,
-		ctx: Context
-	): Promise<ShowOptionsKeyboardResponse<T, AddCancel>> => {
+export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
+	options: ShowOptionsKeyboardOpts<T, AddCancel>
+) =>
+	(async (cvs, ctx): Promise<ShowOptionsKeyboardResponse<T, AddCancel>> => {
 		const keyboardType = options.keyboardType ?? 'inline';
 		const rowNum = options.rowNum ?? 2;
 
@@ -59,9 +54,9 @@ export const showOptionsKeyboard =
 		if (keyboard instanceof InlineKeyboard) {
 			const trigger = addCancel ? [/values-(\d+)/, 'Cancelar'] : /values-(\d+)/;
 
-			const response = await conversation.waitForCallbackQuery(trigger, (ctx) =>
-				ctx.reply('Por favor, escolha uma opção')
-			);
+			const response = await cvs.waitForCallbackQuery(trigger, {
+				otherwise: (ctx) => ctx.reply('Por favor, escolha uma opção')
+			});
 			await response.answerCallbackQuery();
 
 			if (addCancel && response.callbackQuery.data === 'Cancelar') {
@@ -104,9 +99,8 @@ export const showOptionsKeyboard =
 			selectOptions.set('Cancelar', undefined);
 		}
 
-		const response = await conversation.form.select(
-			[...selectOptions.keys()],
-			(ctx) => ctx.reply('Por favor, escolha uma opção')
+		const response = await cvs.form.select([...selectOptions.keys()], (ctx) =>
+			ctx.reply('Por favor, escolha uma opção')
 		);
 
 		if (response === 'Cancelar') {
@@ -118,4 +112,4 @@ export const showOptionsKeyboard =
 			T,
 			AddCancel
 		>;
-	};
+	}) satisfies ConversationFn;
