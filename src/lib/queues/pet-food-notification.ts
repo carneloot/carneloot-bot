@@ -107,25 +107,30 @@ const handler = (job: Job<Data>) =>
 			})
 		].join(' ');
 
-		for (const { carer } of [{ carer: pet.owner }, ...carers]) {
-			const sentMessage = yield* Effect.tryPromise({
-				try: () => bot.api.sendMessage(carer.telegramID, message),
-				catch: (err) =>
-					console.error(
-						`Error sending notification to ${getUserDisplay(carer)}`,
-						err
-					)
-			}).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.either);
+		yield* Effect.all(
+			[{ carer: pet.owner }, ...carers].map(({ carer }) =>
+				Effect.gen(function* () {
+					const sentMessage = yield* Effect.tryPromise({
+						try: () => bot.api.sendMessage(carer.telegramID, message),
+						catch: (err) =>
+							console.error(
+								`Error sending notification to ${getUserDisplay(carer)}`,
+								err
+							)
+					}).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.either);
 
-			if (Either.isRight(sentMessage)) {
-				yield* createNotificationHistory({
-					messageID: sentMessage.right.message_id,
-					userID: carer.id,
-					petID: payload.petID,
-					notificationID: null
-				}).pipe(Effect.ignoreLogged);
-			}
-		}
+					if (Either.isRight(sentMessage)) {
+						yield* createNotificationHistory({
+							messageID: sentMessage.right.message_id,
+							userID: carer.id,
+							petID: payload.petID,
+							notificationID: null
+						}).pipe(Effect.ignoreLogged);
+					}
+				})
+			),
+			{ concurrency: 'unbounded' }
+		);
 	}).pipe(
 		Effect.withSpan('petFoodNotificationJob.handler'),
 		runtime.runPromise
