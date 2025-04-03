@@ -69,7 +69,7 @@ const sendNotificationAndLog = ({
 	Effect.gen(function* () {
 		const message = yield* Effect.tryPromise(() =>
 			bot.api.sendMessage(user.telegramID, messageText)
-		).pipe(Effect.withSpan('bot.api.sendMesssage'));
+		).pipe(Effect.withSpan('bot.api.sendMessage'));
 
 		yield* createNotificationHistory({
 			notificationID: notification.id,
