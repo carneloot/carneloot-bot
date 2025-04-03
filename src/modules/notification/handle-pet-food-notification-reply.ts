@@ -18,14 +18,16 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 		invariant(ctx.message, 'Message object not found.');
 		invariant(ctx.user, 'User is not defined.');
 
-		const pet = yield* Effect.tryPromise(() => getPetByID(petID));
+		const pet = yield* Effect.tryPromise(() => getPetByID(petID)).pipe(
+			Effect.withSpan('getPetByID')
+		);
 
 		if (!pet) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply(
 					'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.'
 				)
-			);
+			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
 
@@ -40,7 +42,7 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 		if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply(parsePetFoodWeightAndTimeResult.left)
-			);
+			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
 
@@ -61,7 +63,10 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			});
 
 		if (Either.isLeft(addPetFoodResult)) {
-			yield* Effect.tryPromise(() => ctx.reply(addPetFoodResult.left));
+			yield* Effect.tryPromise(() => ctx.reply(addPetFoodResult.left)).pipe(
+				Effect.withSpan('ctx.reply')
+			);
+
 			return;
 		}
 
@@ -69,8 +74,12 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 
 		yield* Effect.all(
 			[
-				Effect.tryPromise(() => ctx.reply(message)),
-				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up))
+				Effect.tryPromise(() => ctx.reply(message)).pipe(
+					Effect.withSpan('ctx.reply')
+				),
+				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
+					Effect.withSpan('ctx.react')
+				)
 			],
 			{ concurrency: 'unbounded' }
 		).pipe(Effect.either);
@@ -83,5 +92,5 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 				user: ctx.user!,
 				time: timeChanged ? time : undefined
 			})
-		);
+		).pipe(Effect.withSpan('sendAddedFoodNotification'));
 	}).pipe(Effect.withSpan('handlePetFoodNotificationReply'));

@@ -39,6 +39,6 @@ export const PingCommand: Command<'ping'> = {
 						message_id: message.message_id
 					}
 				})
-			);
+			).pipe(Effect.withSpan('ctx.reply'));
 		}).pipe(Effect.withSpan('PingCommand'), runtime.runPromise)
 };

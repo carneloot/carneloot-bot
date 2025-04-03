@@ -8,6 +8,7 @@ import type { PetID } from '../../../lib/database/schema.js';
 import { getConfig } from '../../../lib/entities/config.js';
 import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
 import type { User } from '../../../lib/entities/user.js';
+import { runtime } from '../../../runtime.js';
 
 export const sendAddedFoodNotification = async (
 	ctx: Context,
@@ -66,7 +67,11 @@ export const sendAddedFoodNotification = async (
 					`Error sending notification to ${getUserDisplay(userToNotify)}`,
 					err
 				)
-		}).pipe(Effect.either, Effect.runPromise);
+		}).pipe(
+			Effect.withSpan('bot.api.sendMessage'),
+			Effect.either,
+			runtime.runPromise
+		);
 	}
 
 	return Either.right(undefined);

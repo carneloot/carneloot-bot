@@ -23,14 +23,14 @@ export const handleNotificationReply = ((ctx, next) =>
 
 		const notification = yield* Effect.tryPromise(() =>
 			getNotificationFromHistory(notificationMessage.message_id, user.id)
-		);
+		).pipe(Effect.withSpan('getNotificationFromHistory'));
 
 		if (!notification) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply(
 					'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
 				)
-			);
+			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
 
@@ -47,7 +47,7 @@ export const handleNotificationReply = ((ctx, next) =>
 		if (user.telegramID === ownerTelegramId) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply('Você não pode responder a sua própria notificação.')
-			);
+			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
 
@@ -58,7 +58,7 @@ export const handleNotificationReply = ((ctx, next) =>
 			ctx.api.sendMessage(ownerTelegramId, message, {
 				reply_to_message_id: messageToReply
 			})
-		);
+		).pipe(Effect.withSpan('bot.api.sendMessage'));
 	}).pipe(
 		Effect.withSpan('handleNotificationReply'),
 		Effect.catchIf(
