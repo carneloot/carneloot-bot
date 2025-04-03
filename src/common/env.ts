@@ -17,6 +17,8 @@ const envSchema = Schema.Struct({
 
 	REDIS_URL: Schema.String,
 
+	SOURCE_COMMIT: Schema.optional(Schema.String),
+
 	// Tracer
 	OTLP_URL: Schema.optional(Schema.String),
 	OTLP_API_TOKEN: Schema.optional(Schema.Redacted(Schema.String)),

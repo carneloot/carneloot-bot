@@ -26,7 +26,10 @@ const traceExporter = new OTLPTraceExporter({
 const consoleExporter = new ConsoleSpanExporter();
 
 const NodeSdkLive = NodeSdk.layer(() => ({
-	resource: { serviceName: 'carneloot-bot' },
+	resource: {
+		serviceName: 'carneloot-bot',
+		serviceVersion: Env.SOURCE_COMMIT?.slice(0, 6)
+	},
 	spanProcessor: new BatchSpanProcessor(
 		Env.OTLP_URL !== undefined ? traceExporter : consoleExporter
 	)
