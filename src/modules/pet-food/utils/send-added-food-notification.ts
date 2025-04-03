@@ -71,7 +71,7 @@ export const sendAddedFoodNotification =
 				.filter(Boolean)
 				.join(' ');
 
-			yield* Effect.forEach(
+			yield* Effect.all(
 				usersToNotify.map((userToNotify) =>
 					Effect.tryPromise({
 						try: () =>
@@ -85,6 +85,9 @@ export const sendAddedFoodNotification =
 							)
 					}).pipe(Effect.withSpan('bot.api.sendMessage'))
 				),
-				Effect.either
+				{
+					concurrency: 'unbounded',
+					mode: 'either'
+				}
 			);
 		}).pipe(Effect.withSpan('sendAddedFoodNotification'));
