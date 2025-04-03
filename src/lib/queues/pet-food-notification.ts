@@ -6,7 +6,6 @@ import {
 	DateTime,
 	Duration,
 	Effect,
-	Either,
 	Option,
 	Redacted,
 	pipe
@@ -14,14 +13,13 @@ import {
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
+import { sendNotificationAndLog } from '../../api/actions/send-notification.js';
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
-import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { runtime } from '../../runtime.js';
 import type { PetID } from '../database/schema.js';
 import { getConfigEffect } from '../entities/config.js';
-import { createNotificationHistory } from '../entities/notification.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
 import { redis } from '../redis/redis.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
@@ -109,24 +107,11 @@ const handler = (job: Job<Data>) =>
 
 		yield* Effect.all(
 			[{ carer: pet.owner }, ...carers].map(({ carer }) =>
-				Effect.gen(function* () {
-					const sentMessage = yield* Effect.tryPromise({
-						try: () => bot.api.sendMessage(carer.telegramID, message),
-						catch: (err) =>
-							console.error(
-								`Error sending notification to ${getUserDisplay(carer)}`,
-								err
-							)
-					}).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.either);
-
-					if (Either.isRight(sentMessage)) {
-						yield* createNotificationHistory({
-							messageID: sentMessage.right.message_id,
-							userID: carer.id,
-							petID: payload.petID,
-							notificationID: null
-						}).pipe(Effect.ignoreLogged);
-					}
+				sendNotificationAndLog({
+					bot,
+					messageText: message,
+					user: carer,
+					petID: payload.petID
 				})
 			),
 			{ concurrency: 'unbounded' }

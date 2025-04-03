@@ -11,9 +11,10 @@ import {
 } from 'effect';
 import type { Bot } from 'grammy';
 
+import { matchBotError } from '../../common/error.js';
 import type { Context } from '../../common/types/context.js';
+import type { NotificationID, PetID } from '../../lib/database/schema.js';
 import {
-	type Notification,
 	createNotificationHistory,
 	getNotificationByOwnerAndKeyword
 } from '../../lib/entities/notification.js';
@@ -56,26 +57,33 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 interface SendNotificationAndLog {
 	bot: Bot<Context>;
 	user: User;
-	notification: Notification;
+	notificationID?: NotificationID;
+	petID?: PetID;
 	messageText: string;
 }
 
-const sendNotificationAndLog = ({
+export const sendNotificationAndLog = ({
 	bot,
 	user,
-	notification,
-	messageText
+	messageText,
+	notificationID,
+	petID
 }: SendNotificationAndLog) =>
 	Effect.gen(function* () {
-		const message = yield* Effect.tryPromise(() =>
-			bot.api.sendMessage(user.telegramID, messageText)
-		).pipe(Effect.withSpan('bot.api.sendMessage'));
+		const message = yield* Effect.tryPromise({
+			try: () => bot.api.sendMessage(user.telegramID, messageText),
+			catch: (cause) => {
+				const error = matchBotError(cause);
+				if (error) return error;
+				throw cause;
+			}
+		}).pipe(Effect.withSpan('bot.api.sendMessage'));
 
 		yield* createNotificationHistory({
-			notificationID: notification.id,
+			notificationID: notificationID ?? null,
+			petID: petID ?? null,
 			userID: user.id,
-			messageID: message.message_id,
-			petID: null
+			messageID: message.message_id
 		});
 	}).pipe(Effect.withSpan('sendNotificationAndLog'));
 
@@ -86,29 +94,32 @@ export const sendNotification = (bot: Bot<Context>, params: NotifyParams) =>
 		const { notification, usersToNotify } =
 			yield* getNotificationByOwnerAndKeyword(user.id, params.keyword);
 
-		const message = yield* parseMessage(notification.message, params.variables);
+		const messageText = yield* parseMessage(
+			notification.message,
+			params.variables
+		);
 
 		yield* Effect.forEach(
 			[
 				sendNotificationAndLog({
-					bot: bot,
-					user: user,
-					notification: notification,
-					messageText: message
+					bot,
+					user,
+					notificationID: notification.id,
+					messageText
 				}),
 				...usersToNotify.map((user) =>
 					sendNotificationAndLog({
-						bot: bot,
-						user: user,
-						notification: notification,
-						messageText: message
+						bot,
+						user,
+						notificationID: notification.id,
+						messageText
 					})
 				)
 			],
 			(v) =>
 				Effect.either(
 					v.pipe(
-						Effect.catchTag('UnknownException', () =>
+						Effect.catchAll(() =>
 							Console.error('Error when sending notification to user')
 						)
 					)
