@@ -1,4 +1,4 @@
-import { Schema } from 'effect';
+import { Either, Schema } from 'effect';
 
 const envSchema = Schema.Struct({
 	BOT_TOKEN: Schema.Redacted(Schema.String),
@@ -24,4 +24,12 @@ const envSchema = Schema.Struct({
 });
 
 // eslint-disable-next-line n/no-process-env
-export const Env = Schema.decodeUnknownSync(envSchema)(process.env);
+const parsed = Schema.decodeUnknownEither(envSchema)(process.env, {
+	errors: 'all'
+});
+
+if (Either.isLeft(parsed)) {
+	throw new Error(parsed.left.message);
+}
+
+export const Env = parsed.right;
