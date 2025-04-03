@@ -23,6 +23,8 @@ const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 		const dayStart = yield* getConfigEffect('pet', 'dayStart', pet.id);
 		const petFoodRepository = yield* PetFoodRepository;
 
+		yield* Effect.annotateCurrentSpan('pet', pet.id);
+
 		const { from, to } = getDailyFromTo(now, dayStart);
 
 		const dailyFoodConsumption =
@@ -58,10 +60,7 @@ const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 			A.filter(Predicate.isNotNull),
 			A.join(' ')
 		);
-	}).pipe(
-		Effect.tap(() => Effect.annotateCurrentSpan('pet', pet.id)),
-		Effect.withSpan('getPetMessage')
-	);
+	}).pipe(Effect.withSpan('getPetMessage'));
 
 export const FoodStatusCommand = ((ctx) =>
 	Effect.gen(function* () {
