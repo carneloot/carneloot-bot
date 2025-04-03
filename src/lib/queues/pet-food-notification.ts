@@ -49,11 +49,16 @@ const handler = (job: Job<Data>) =>
 	Effect.gen(function* () {
 		const payload = job.data;
 
+		yield* Effect.annotateCurrentSpan({
+			pet: payload.petID
+		});
+
 		const petFoodRepository = yield* PetFoodRepository;
 
 		const pet = yield* Effect.tryPromise(() =>
 			getPetByID(payload.petID, { withOwner: true })
 		).pipe(
+			Effect.withSpan('getPetByID'),
 			Effect.andThen(Option.fromNullable),
 			Effect.catchTag('NoSuchElementException', () =>
 				Effect.fail(new MissingPetId())
@@ -80,6 +85,7 @@ const handler = (job: Job<Data>) =>
 		const carers = yield* Effect.tryPromise(() =>
 			getPetCarers(payload.petID)
 		).pipe(
+			Effect.withSpan('getPetCarers'),
 			Effect.catchAll(() =>
 				Effect.zipRight(
 					Console.warn('Error getting pet carers'),
@@ -109,7 +115,7 @@ const handler = (job: Job<Data>) =>
 						`Error sending notification to ${getUserDisplay(carer)}`,
 						err
 					)
-			}).pipe(Effect.either);
+			}).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.either);
 
 			if (Either.isRight(sentMessage)) {
 				yield* createNotificationHistory({
