@@ -89,6 +89,7 @@ export const FoodStatusCommand = ((ctx) =>
 		const petMessages = yield* Effect.all(
 			allPets.map((pet) =>
 				getPetMessage(pet, now).pipe(
+					Effect.scoped,
 					Effect.map(Option.some),
 					Effect.catchTag('MissingConfigError', () =>
 						Effect.zipRight(
