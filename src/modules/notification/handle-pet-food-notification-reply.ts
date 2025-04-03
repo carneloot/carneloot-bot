@@ -91,4 +91,4 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			user: ctx.user!,
 			time: timeChanged ? time : undefined
 		})(ctx);
-	}).pipe(Effect.scoped, Effect.withSpan('handlePetFoodNotificationReply'));
+	}).pipe(Effect.withSpan('handlePetFoodNotificationReply'));

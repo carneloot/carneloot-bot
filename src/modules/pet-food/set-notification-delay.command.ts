@@ -31,7 +31,6 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 	const duration = await cvs.external(() =>
 		getConfigEffect('pet', 'notificationDelay', pet.id).pipe(
-			Effect.scoped,
 			Effect.asSome,
 			Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
 			runtime.runPromise
@@ -114,7 +113,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 						DateTime.unsafeMake(lastPetFood.value.time)
 					);
 				}
-			}).pipe(Effect.scoped, runtime.runPromise)
+			}).pipe(runtime.runPromise)
 		);
 
 		return;

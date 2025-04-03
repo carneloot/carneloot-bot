@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
-import { Cache, Data, Duration, Effect, Predicate, Schema } from 'effect';
+import { Data, Effect, Predicate, Schema } from 'effect';
 
 import { runtime } from '../../runtime.js';
 import {
@@ -76,35 +76,18 @@ export const getConfigEffect = <
 			config_id: id
 		});
 
-		const cache = yield* Cache.make({
-			capacity: 100,
-			timeToLive: Duration.infinity,
-			lookup: ({
-				context,
-				key,
-				id
-			}: Record<'context' | 'key' | 'id', string>) =>
-				db
-					.execute((client) =>
-						client
-							.select({ value: configsTable.value })
-							.from(configsTable)
-							.where(
-								and(
-									eq(configsTable.context, `${context}:${id}`),
-									eq(configsTable.key, key as string)
-								)
-							)
-							.get()
+		const queryResult = yield* db.execute((client) =>
+			client
+				.select({ value: configsTable.value })
+				.from(configsTable)
+				.where(
+					and(
+						eq(configsTable.context, `${context}:${id}`),
+						eq(configsTable.key, key as string)
 					)
-					.pipe(Effect.withSpan('getConfigCacheLookup'))
-		});
-
-		const cacheKey = { context, key: key.toString(), id };
-
-		const queryResult = yield* cache.get(cacheKey);
-
-		yield* Effect.addFinalizer(() => cache.invalidate(cacheKey));
+				)
+				.get()
+		);
 
 		if (Predicate.isUndefined(queryResult)) {
 			return yield* new MissingConfigError({
@@ -205,7 +188,7 @@ export const getConfig = <
 	context: Context,
 	key: Key,
 	id: Identifier
-) => getConfigEffect(context, key, id).pipe(Effect.scoped, runtime.runPromise);
+) => getConfigEffect(context, key, id).pipe(runtime.runPromise);
 
 export const setConfig = <
 	Context extends ConfigContext,

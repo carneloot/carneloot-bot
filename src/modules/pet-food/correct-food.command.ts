@@ -42,9 +42,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const dayStart = await cvs.external(() =>
-		getConfig('pet', 'dayStart', petFood.petID)
-	);
+	const dayStart = await getConfig('pet', 'dayStart', petFood.petID);
 
 	if (!dayStart) {
 		await ctx.reply(
@@ -96,7 +94,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 					petFood.id,
 					DateTime.unsafeMake(time)
 				)
-				.pipe(Effect.scoped, runtime.runPromise)
+				.pipe(runtime.runPromise)
 		);
 	}
 
