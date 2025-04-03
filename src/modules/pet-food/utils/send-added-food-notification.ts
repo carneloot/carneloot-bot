@@ -1,18 +1,19 @@
-import { Effect, Either } from 'effect';
+import { utcToZonedTime } from 'date-fns-tz';
+import { Array as A, Console, Data, Effect, Option, flow } from 'effect';
+
 import type Qty from 'js-quantities';
 
-import { utcToZonedTime } from 'date-fns-tz';
 import type { Context } from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
 import type { PetID } from '../../../lib/database/schema.js';
-import { getConfig } from '../../../lib/entities/config.js';
+import { getConfigEffect } from '../../../lib/entities/config.js';
 import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
 import type { User } from '../../../lib/entities/user.js';
-import { runtime } from '../../../runtime.js';
 
-export const sendAddedFoodNotification = async (
-	ctx: Context,
-	{
+class MissingPetError extends Data.TaggedError('MissingPetError') {}
+
+export const sendAddedFoodNotification =
+	({
 		id,
 		quantity,
 		user,
@@ -22,57 +23,68 @@ export const sendAddedFoodNotification = async (
 		quantity: Qty;
 		user: User;
 		time?: Date;
-	}
-): Promise<Either.Either<undefined, string>> => {
-	const pet = await getPetByID(id, { withOwner: true });
-	if (!pet) {
-		return Either.left('Pet não encontrado');
-	}
-
-	const dayStart = await getConfig('pet', 'dayStart', id);
-
-	if (!dayStart) {
-		return Either.left('Horário de início do dia não configurado');
-	}
-
-	const carers = (await getPetCarers(id))
-		.filter(({ status }) => status === 'accepted')
-		.map(({ carer }) => carer);
-
-	const usersToNotify = [...carers, pet.owner].filter(
-		(carer) => carer.id !== user.id
-	);
-
-	const username = getUserDisplay(user);
-
-	const message = [
-		`${username} colocou ${quantity} de ração para o pet ${pet.name}.`,
-		time &&
-			`A ração foi adicionada às ${utcToZonedTime(
-				time,
-				dayStart.timezone
-			).toLocaleString('pt-BR')}`
-	]
-		.filter(Boolean)
-		.join(' ');
-
-	for (const userToNotify of usersToNotify) {
-		await Effect.tryPromise({
-			try: () =>
-				ctx.api.sendMessage(userToNotify.telegramID, message, {
-					disable_notification: true
-				}),
-			catch: (err) =>
-				console.error(
-					`Error sending notification to ${getUserDisplay(userToNotify)}`,
-					err
+	}) =>
+	(ctx: Context) =>
+		Effect.gen(function* () {
+			const pet = yield* Effect.tryPromise(() =>
+				getPetByID(id, { withOwner: true })
+			).pipe(
+				Effect.withSpan('getPetByID'),
+				Effect.andThen(Option.fromNullable),
+				Effect.catchTag('NoSuchElementException', () =>
+					Effect.fail(new MissingPetError())
 				)
-		}).pipe(
-			Effect.withSpan('bot.api.sendMessage'),
-			Effect.either,
-			runtime.runPromise
-		);
-	}
+			);
 
-	return Either.right(undefined);
-};
+			const dayStart = yield* getConfigEffect('pet', 'dayStart', id);
+
+			const carers = yield* Effect.tryPromise(() => getPetCarers(id)).pipe(
+				Effect.withSpan('getPetCarers'),
+				Effect.catchAll(() =>
+					Effect.zipRight(
+						Console.warn('Error getting pet carers'),
+						Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>)
+					)
+				),
+				Effect.andThen(
+					flow(
+						A.filter((carer) => carer.status === 'accepted'),
+						A.map((v) => v.carer)
+					)
+				)
+			);
+
+			const usersToNotify = [...carers, pet.owner].filter(
+				(carer) => carer.id !== user.id
+			);
+
+			const username = getUserDisplay(user);
+
+			const message = [
+				`${username} colocou ${quantity} de ração para o pet ${pet.name}.`,
+				time &&
+					`A ração foi adicionada às ${utcToZonedTime(
+						time,
+						dayStart.timezone
+					).toLocaleString('pt-BR')}`
+			]
+				.filter(Boolean)
+				.join(' ');
+
+			yield* Effect.forEach(
+				usersToNotify.map((userToNotify) =>
+					Effect.tryPromise({
+						try: () =>
+							ctx.api.sendMessage(userToNotify.telegramID, message, {
+								disable_notification: true
+							}),
+						catch: (err) =>
+							console.error(
+								`Error sending notification to ${getUserDisplay(userToNotify)}`,
+								err
+							)
+					}).pipe(Effect.withSpan('bot.api.sendMessage'))
+				),
+				Effect.either
+			);
+		}).pipe(Effect.withSpan('sendAddedFoodNotification'));

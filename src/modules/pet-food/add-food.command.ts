@@ -117,12 +117,12 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	await foodResponse.react(Reactions.thumbs_up);
 
 	await cvs.external((ctx) =>
-		sendAddedFoodNotification(ctx, {
+		sendAddedFoodNotification({
 			id: currentPet.id,
 			quantity,
 			user,
 			time: timeChanged ? time : undefined
-		})
+		})(ctx).pipe(runtime.runPromise)
 	);
 }) satisfies ConversationFn;
 

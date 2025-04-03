@@ -66,7 +66,7 @@ export const handleNotificationReply = ((ctx, next) =>
 			() =>
 				Effect.tryPromise(() =>
 					ctx.reply('Por favor, configure o inicio do dia para o seu pet')
-				).pipe(Effect.ignore)
+				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
 		),
 		Effect.catchIf(
 			(err) =>
@@ -76,7 +76,7 @@ export const handleNotificationReply = ((ctx, next) =>
 					ctx.reply(
 						'Por favor, configure o tempo de notificação para o seu pet'
 					)
-				).pipe(Effect.ignore)
+				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
 		),
 		runtime.runPromise
 	)) satisfies MiddlewareFn<Context>;

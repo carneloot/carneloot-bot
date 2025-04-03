@@ -84,13 +84,11 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			{ concurrency: 'unbounded' }
 		).pipe(Effect.either);
 
-		yield* Effect.tryPromise(() =>
-			sendAddedFoodNotification(ctx, {
-				id: petID,
-				quantity,
-				// biome-ignore lint/style/noNonNullAssertion: remove when effect.tryPromise is removed
-				user: ctx.user!,
-				time: timeChanged ? time : undefined
-			})
-		).pipe(Effect.withSpan('sendAddedFoodNotification'));
+		yield* sendAddedFoodNotification({
+			id: petID,
+			quantity,
+			// biome-ignore lint/style/noNonNullAssertion: remove when effect.tryPromise is removed
+			user: ctx.user!,
+			time: timeChanged ? time : undefined
+		})(ctx);
 	}).pipe(Effect.withSpan('handlePetFoodNotificationReply'));
