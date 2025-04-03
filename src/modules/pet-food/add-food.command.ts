@@ -1,6 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { Array as Arr, DateTime, Either } from 'effect';
+import { Array as Arr, DateTime, Effect, Either, Exit, Scope } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -89,6 +89,8 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
 
+	const scope = await Scope.make().pipe(Effect.runPromise);
+
 	const addPetFoodResult = await cvs.external(() =>
 		petFoodService
 			.addPetFoodAndScheduleNotification({
@@ -103,7 +105,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 				dayStart
 			})
-			.pipe(runtime.runPromise)
+			.pipe(Scope.extend(scope), runtime.runPromise)
 	);
 
 	if (Either.isLeft(addPetFoodResult)) {
@@ -122,8 +124,10 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			quantity,
 			user,
 			time: timeChanged ? time : undefined
-		})(ctx).pipe(runtime.runPromise)
+		})(ctx).pipe(Scope.extend(scope), runtime.runPromise)
 	);
+
+	await Scope.close(scope, Exit.void).pipe(Effect.runPromise);
 }) satisfies ConversationFn;
 
 export const AddFoodCommand = (async (ctx) => {

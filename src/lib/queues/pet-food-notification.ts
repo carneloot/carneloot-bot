@@ -117,6 +117,7 @@ const handler = (job: Job<Data>) =>
 			{ concurrency: 'unbounded' }
 		);
 	}).pipe(
+		Effect.scoped,
 		Effect.withSpan('petFoodNotificationJob.handler'),
 		runtime.runPromise
 	);

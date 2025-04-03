@@ -96,7 +96,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 					petFood.id,
 					DateTime.unsafeMake(time)
 				)
-				.pipe(runtime.runPromise)
+				.pipe(Effect.scoped, runtime.runPromise)
 		);
 	}
 
