@@ -42,7 +42,9 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const dayStart = await getConfig('pet', 'dayStart', petFood.petID);
+	const dayStart = await cvs.external(() =>
+		getConfig('pet', 'dayStart', petFood.petID)
+	);
 
 	if (!dayStart) {
 		await ctx.reply(
