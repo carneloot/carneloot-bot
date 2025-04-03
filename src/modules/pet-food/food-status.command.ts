@@ -77,14 +77,17 @@ export const FoodStatusCommand = ((ctx) =>
 
 		const now = yield* DateTime.make(ctx.message.date * 1000);
 
-		const allPets = yield* Effect.all([
-			Effect.tryPromise(() => getUserOwnedPets(user.id)).pipe(
-				Effect.withSpan('getUserOwnedPets')
-			),
-			Effect.tryPromise(() => getUserCaredPets(user.id)).pipe(
-				Effect.withSpan('getUserCaredPets')
-			)
-		]).pipe(Effect.map(A.flatten));
+		const allPets = yield* Effect.all(
+			[
+				Effect.tryPromise(() => getUserOwnedPets(user.id)).pipe(
+					Effect.withSpan('getUserOwnedPets')
+				),
+				Effect.tryPromise(() => getUserCaredPets(user.id)).pipe(
+					Effect.withSpan('getUserCaredPets')
+				)
+			],
+			{ concurrency: 'unbounded' }
+		).pipe(Effect.map(A.flatten));
 
 		const petMessages = yield* Effect.all(
 			allPets.map((pet) =>
