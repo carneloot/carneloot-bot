@@ -1,4 +1,4 @@
-import { DateTime, Duration, Effect, Option } from 'effect';
+import { DateTime, Duration, Effect, Option, Schema } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -16,6 +16,10 @@ import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
+const ExternalDurationSchema = Schema.OptionFromUndefinedOr(
+	Schema.DurationFromMillis
+);
+
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);
 
@@ -29,14 +33,17 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		message: 'Escolha o pet:'
 	})(cvs, ctx);
 
-	const duration = await cvs.external(() =>
-		getConfigEffect('pet', 'notificationDelay', pet.id).pipe(
-			Effect.scoped,
-			Effect.asSome,
-			Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
-			runtime.runPromise
-		)
-	);
+	const duration = await cvs.external({
+		task: () =>
+			getConfigEffect('pet', 'notificationDelay', pet.id).pipe(
+				Effect.scoped,
+				Effect.asSome,
+				Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
+				runtime.runPromise
+			),
+		beforeStore: Schema.encodePromise(ExternalDurationSchema),
+		afterLoad: Schema.decodePromise(ExternalDurationSchema)
+	});
 
 	if (Option.isSome(duration)) {
 		await ctx.reply(
