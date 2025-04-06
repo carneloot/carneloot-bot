@@ -3,10 +3,7 @@ import { Layer, ManagedRuntime, Redacted } from 'effect';
 import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
 
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import {
-	BatchSpanProcessor,
-	ConsoleSpanExporter
-} from '@opentelemetry/sdk-trace-base';
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 
 import * as Database from './lib/database/db.js';
 
@@ -23,7 +20,7 @@ const traceExporter = new OTLPTraceExporter({
 	}
 });
 
-const consoleExporter = new ConsoleSpanExporter();
+const jeagerExporter = new OTLPTraceExporter();
 
 const NodeSdkLive = NodeSdk.layer(() => ({
 	resource: {
@@ -31,12 +28,11 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 		serviceVersion: Env.SOURCE_COMMIT?.slice(0, 6)
 	},
 	spanProcessor: new BatchSpanProcessor(
-		Env.OTLP_URL !== undefined ? traceExporter : consoleExporter
+		Env.OTLP_URL !== undefined ? traceExporter : jeagerExporter
 	)
 }));
 
 const appLayer = Layer.mergeAll(
-	// There is some problem with telemetry right now. Apparently it is fixed on bun 1.2.9, test it then.
 	NodeSdkLive,
 	Database.layer,
 	PetFoodRepository.Default
