@@ -89,123 +89,119 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 						.pipe(Effect.withSpan('getConfigLookup'))
 			});
 
-			const getConfig = Effect.fn('getConfig')(
-				<
-					Context extends ConfigContext,
-					Key extends ConfigKey<Context>,
-					Identifier extends ContextIdentifier<Context>
-				>(
-					context: Context,
-					key: Key,
-					id: Identifier
-				) =>
-					Effect.gen(function* () {
-						yield* Effect.annotateCurrentSpan({
-							config_context: context,
-							config_key: key,
-							config_id: id
+			const getConfig = <
+				Context extends ConfigContext,
+				Key extends ConfigKey<Context>,
+				Identifier extends ContextIdentifier<Context>
+			>(
+				context: Context,
+				key: Key,
+				id: Identifier
+			) =>
+				Effect.gen(function* () {
+					yield* Effect.annotateCurrentSpan({
+						config_context: context,
+						config_key: key,
+						config_id: id
+					});
+
+					const cacheKey = { context, key: key.toString(), id };
+
+					const span = yield* Effect.currentSpan;
+
+					const queryResult = yield* getConfigCache
+						.get(cacheKey)
+						.pipe(Effect.withParentSpan(span));
+
+					yield* Effect.addFinalizer(() => getConfigCache.invalidate(cacheKey));
+
+					if (Predicate.isUndefined(queryResult)) {
+						return yield* new MissingConfigError({
+							context,
+							key
 						});
+					}
 
-						const cacheKey = { context, key: key.toString(), id };
+					const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
 
-						const queryResult = yield* getConfigCache.get(cacheKey);
-
-						yield* Effect.addFinalizer(() =>
-							getConfigCache.invalidate(cacheKey)
-						);
-
-						if (Predicate.isUndefined(queryResult)) {
-							return yield* new MissingConfigError({
-								context,
-								key
-							});
-						}
-
-						const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
-
-						const result = yield* Schema.decode(schema)(queryResult.value).pipe(
-							Effect.orDieWith(
-								(err) =>
-									new Error(
-										`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`
-									)
-							)
-						);
-
-						return result as ConfigValue<Context, Key>;
-					})
-			);
-
-			const setConfig = Effect.fn('setConfig')(
-				<
-					Context extends ConfigContext,
-					Key extends ConfigKey<Context>,
-					Identifier extends ContextIdentifier<Context>
-				>(
-					context: Context,
-					key: Key,
-					id: Identifier,
-					value: ConfigValue<Context, Key>
-				) =>
-					Effect.gen(function* () {
-						const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
-
-						yield* Effect.annotateCurrentSpan({
-							config_context: context,
-							config_key: key,
-							config_id: id
-						});
-
-						const result = yield* Schema.encode(schema)(value);
-
-						yield* db.execute((client) =>
-							client
-								.insert(configsTable)
-								.values({
-									id: createId() as ConfigID,
-									context: `${context}:${id}`,
-									key: key as string,
-									value: result
-								})
-								.onConflictDoUpdate({
-									target: [configsTable.context, configsTable.key],
-									set: {
-										value: result
-									}
-								})
-						);
-					})
-			);
-
-			const deleteConfig = Effect.fn('deleteConfig')(
-				<
-					Context extends ConfigContext,
-					Key extends ConfigKey<Context>,
-					Identifier extends ContextIdentifier<Context>
-				>(
-					context: Context,
-					key: Key,
-					id: Identifier
-				) =>
-					Effect.gen(function* () {
-						yield* Effect.annotateCurrentSpan({
-							config_context: context,
-							config_key: key,
-							config_id: id
-						});
-
-						yield* db.execute((client) =>
-							client
-								.delete(configsTable)
-								.where(
-									and(
-										eq(configsTable.context, `${context}:${id}`),
-										eq(configsTable.key, key as string)
-									)
+					const result = yield* Schema.decode(schema)(queryResult.value).pipe(
+						Effect.orDieWith(
+							(err) =>
+								new Error(
+									`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`
 								)
-						);
-					})
-			);
+						)
+					);
+
+					return result as ConfigValue<Context, Key>;
+				}).pipe(Effect.withSpan('getConfig'));
+
+			const setConfig = <
+				Context extends ConfigContext,
+				Key extends ConfigKey<Context>,
+				Identifier extends ContextIdentifier<Context>
+			>(
+				context: Context,
+				key: Key,
+				id: Identifier,
+				value: ConfigValue<Context, Key>
+			) =>
+				Effect.gen(function* () {
+					const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
+
+					yield* Effect.annotateCurrentSpan({
+						config_context: context,
+						config_key: key,
+						config_id: id
+					});
+
+					const result = yield* Schema.encode(schema)(value);
+
+					yield* db.execute((client) =>
+						client
+							.insert(configsTable)
+							.values({
+								id: createId() as ConfigID,
+								context: `${context}:${id}`,
+								key: key as string,
+								value: result
+							})
+							.onConflictDoUpdate({
+								target: [configsTable.context, configsTable.key],
+								set: {
+									value: result
+								}
+							})
+					);
+				}).pipe(Effect.withSpan('setConfig'));
+
+			const deleteConfig = <
+				Context extends ConfigContext,
+				Key extends ConfigKey<Context>,
+				Identifier extends ContextIdentifier<Context>
+			>(
+				context: Context,
+				key: Key,
+				id: Identifier
+			) =>
+				Effect.gen(function* () {
+					yield* Effect.annotateCurrentSpan({
+						config_context: context,
+						config_key: key,
+						config_id: id
+					});
+
+					yield* db.execute((client) =>
+						client
+							.delete(configsTable)
+							.where(
+								and(
+									eq(configsTable.context, `${context}:${id}`),
+									eq(configsTable.key, key as string)
+								)
+							)
+					);
+				}).pipe(Effect.withSpan('deleteConfig'));
 
 			return {
 				getConfig,
