@@ -6,7 +6,7 @@ import type Qty from 'js-quantities';
 import type { Context } from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
 import type { PetID } from '../../../lib/database/schema.js';
-import { getConfigEffect } from '../../../lib/entities/config.js';
+import { ConfigService } from '../../../lib/entities/config.js';
 import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
 import type { User } from '../../../lib/entities/user.js';
 
@@ -36,7 +36,9 @@ export const sendAddedFoodNotification =
 				)
 			);
 
-			const dayStart = yield* getConfigEffect('pet', 'dayStart', id);
+			const config = yield* ConfigService;
+
+			const dayStart = yield* config.getConfig('pet', 'dayStart', id);
 
 			const carers = yield* Effect.tryPromise(() => getPetCarers(id)).pipe(
 				Effect.withSpan('getPetCarers'),

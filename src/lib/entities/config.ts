@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
-import { Data, Duration, Effect, Predicate, Schema } from 'effect';
+import { Cache, Data, Duration, Effect, Predicate, Schema } from 'effect';
 
 import { runtime } from '../../runtime.js';
 import {
@@ -58,133 +58,163 @@ class MissingConfigError<
 	key: TKey;
 }> {}
 
-export const getConfigEffect = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
->(
-	context: Context,
-	key: Key,
-	id: Identifier
-) =>
-	Effect.gen(function* () {
-		const db = yield* Database.Database;
+export class ConfigService extends Effect.Service<ConfigService>()(
+	'ConfigService',
+	{
+		dependencies: [Database.layer],
+		effect: Effect.gen(function* () {
+			const db = yield* Database.Database;
 
-		yield* Effect.annotateCurrentSpan({
-			config_context: context,
-			config_key: key,
-			config_id: id
-		});
-
-		const [cached, invalidate] = yield* db
-			.execute((client) =>
-				client
-					.select({ value: configsTable.value })
-					.from(configsTable)
-					.where(
-						and(
-							eq(configsTable.context, `${context}:${id}`),
-							eq(configsTable.key, key as string)
+			const getConfigCache = yield* Cache.make({
+				capacity: Number.POSITIVE_INFINITY,
+				timeToLive: Duration.infinity,
+				lookup: ({
+					context,
+					key,
+					id
+				}: { context: string; key: string; id: string }) =>
+					db
+						.execute((db) =>
+							db
+								.select({ value: configsTable.value })
+								.from(configsTable)
+								.where(
+									and(
+										eq(configsTable.context, `${context}:${id}`),
+										eq(configsTable.key, key as string)
+									)
+								)
+								.get()
 						)
-					)
-					.get()
-			)
-			.pipe(Effect.cachedInvalidateWithTTL(Duration.infinity));
-
-		const queryResult = yield* cached;
-
-		yield* Effect.addFinalizer(() => invalidate);
-
-		if (Predicate.isUndefined(queryResult)) {
-			return yield* new MissingConfigError({
-				context,
-				key
+						.pipe(Effect.withSpan('getConfigLookup'))
 			});
-		}
 
-		const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
+			const getConfig = Effect.fn('getConfig')(
+				<
+					Context extends ConfigContext,
+					Key extends ConfigKey<Context>,
+					Identifier extends ContextIdentifier<Context>
+				>(
+					context: Context,
+					key: Key,
+					id: Identifier
+				) =>
+					Effect.gen(function* () {
+						yield* Effect.annotateCurrentSpan({
+							config_context: context,
+							config_key: key,
+							config_id: id
+						});
 
-		const result = yield* Schema.decode(schema)(queryResult.value).pipe(
-			Effect.orDieWith(
-				(err) =>
-					new Error(
-						`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`
-					)
-			)
-		);
+						const cacheKey = { context, key: key.toString(), id };
 
-		return result as ConfigValue<Context, Key>;
-	}).pipe(Effect.withSpan('getConfig'));
+						const queryResult = yield* getConfigCache.get(cacheKey);
 
-export const setConfigEffect = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-	value: ConfigValue<Context, Key>
-) =>
-	Effect.gen(function* () {
-		const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
+						yield* Effect.addFinalizer(() =>
+							getConfigCache.invalidate(cacheKey)
+						);
 
-		yield* Effect.annotateCurrentSpan({
-			config_context: context,
-			config_key: key,
-			config_id: id
-		});
+						if (Predicate.isUndefined(queryResult)) {
+							return yield* new MissingConfigError({
+								context,
+								key
+							});
+						}
 
-		const result = yield* Schema.encode(schema)(value);
+						const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
 
-		const db = yield* Database.Database;
-		yield* db.execute((client) =>
-			client
-				.insert(configsTable)
-				.values({
-					id: createId() as ConfigID,
-					context: `${context}:${id}`,
-					key: key as string,
-					value: result
-				})
-				.onConflictDoUpdate({
-					target: [configsTable.context, configsTable.key],
-					set: {
-						value: result
-					}
-				})
-		);
-	}).pipe(Effect.withSpan('setConfig'));
+						const result = yield* Schema.decode(schema)(queryResult.value).pipe(
+							Effect.orDieWith(
+								(err) =>
+									new Error(
+										`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`
+									)
+							)
+						);
 
-export const deleteConfigEffect = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
->(
-	context: Context,
-	key: Key,
-	id: Identifier
-) =>
-	Effect.gen(function* () {
-		yield* Effect.annotateCurrentSpan({
-			config_context: context,
-			config_key: key,
-			config_id: id
-		});
+						return result as ConfigValue<Context, Key>;
+					})
+			);
 
-		const db = yield* Database.Database;
+			const setConfig = Effect.fn('setConfig')(
+				<
+					Context extends ConfigContext,
+					Key extends ConfigKey<Context>,
+					Identifier extends ContextIdentifier<Context>
+				>(
+					context: Context,
+					key: Key,
+					id: Identifier,
+					value: ConfigValue<Context, Key>
+				) =>
+					Effect.gen(function* () {
+						const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
 
-		yield* db.execute((client) =>
-			client
-				.delete(configsTable)
-				.where(
-					and(
-						eq(configsTable.context, `${context}:${id}`),
-						eq(configsTable.key, key as string)
-					)
-				)
-		);
-	}).pipe(Effect.withSpan('deleteConfig'));
+						yield* Effect.annotateCurrentSpan({
+							config_context: context,
+							config_key: key,
+							config_id: id
+						});
+
+						const result = yield* Schema.encode(schema)(value);
+
+						yield* db.execute((client) =>
+							client
+								.insert(configsTable)
+								.values({
+									id: createId() as ConfigID,
+									context: `${context}:${id}`,
+									key: key as string,
+									value: result
+								})
+								.onConflictDoUpdate({
+									target: [configsTable.context, configsTable.key],
+									set: {
+										value: result
+									}
+								})
+						);
+					})
+			);
+
+			const deleteConfig = Effect.fn('deleteConfig')(
+				<
+					Context extends ConfigContext,
+					Key extends ConfigKey<Context>,
+					Identifier extends ContextIdentifier<Context>
+				>(
+					context: Context,
+					key: Key,
+					id: Identifier
+				) =>
+					Effect.gen(function* () {
+						yield* Effect.annotateCurrentSpan({
+							config_context: context,
+							config_key: key,
+							config_id: id
+						});
+
+						yield* db.execute((client) =>
+							client
+								.delete(configsTable)
+								.where(
+									and(
+										eq(configsTable.context, `${context}:${id}`),
+										eq(configsTable.key, key as string)
+									)
+								)
+						);
+					})
+			);
+
+			return {
+				getConfig,
+				setConfig,
+				deleteConfig
+			} as const;
+		})
+	}
+) {}
 
 export const getConfig = <
 	Context extends ConfigContext,
@@ -194,7 +224,12 @@ export const getConfig = <
 	context: Context,
 	key: Key,
 	id: Identifier
-) => getConfigEffect(context, key, id).pipe(Effect.scoped, runtime.runPromise);
+) =>
+	ConfigService.pipe(
+		Effect.andThen((config) => config.getConfig(context, key, id)),
+		Effect.scoped,
+		runtime.runPromise
+	);
 
 export const setConfig = <
 	Context extends ConfigContext,
@@ -205,7 +240,11 @@ export const setConfig = <
 	key: Key,
 	id: Identifier,
 	value: ConfigValue<Context, Key>
-) => setConfigEffect(context, key, id, value).pipe(runtime.runPromise);
+) =>
+	ConfigService.pipe(
+		Effect.andThen((config) => config.setConfig(context, key, id, value)),
+		runtime.runPromise
+	);
 
 export const deleteConfig = <
 	Context extends ConfigContext,
@@ -215,4 +254,8 @@ export const deleteConfig = <
 	context: Context,
 	key: Key,
 	id: Identifier
-) => deleteConfigEffect(context, key, id).pipe(runtime.runPromise);
+) =>
+	ConfigService.pipe(
+		Effect.andThen((config) => config.deleteConfig(context, key, id)),
+		runtime.runPromise
+	);

@@ -9,7 +9,7 @@ import type { Context } from '../../common/types/context.js';
 
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getRelativeTime } from '../../common/utils/get-relative-time.js';
-import { getConfigEffect } from '../../lib/entities/config.js';
+import { ConfigService } from '../../lib/entities/config.js';
 import {
 	type Pet,
 	getUserCaredPets,
@@ -20,8 +20,10 @@ import { runtime } from '../../runtime.js';
 
 const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 	Effect.gen(function* () {
-		const dayStart = yield* getConfigEffect('pet', 'dayStart', pet.id);
 		const petFoodRepository = yield* PetFoodRepository;
+		const config = yield* ConfigService;
+
+		const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
 
 		yield* Effect.annotateCurrentSpan('pet', pet.id);
 

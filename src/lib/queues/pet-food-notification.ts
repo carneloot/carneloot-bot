@@ -19,7 +19,7 @@ import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { runtime } from '../../runtime.js';
 import type { PetID } from '../database/schema.js';
-import { getConfigEffect } from '../entities/config.js';
+import { ConfigService } from '../entities/config.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
 import { redis } from '../redis/redis.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
@@ -52,6 +52,7 @@ const handler = (job: Job<Data>) =>
 		});
 
 		const petFoodRepository = yield* PetFoodRepository;
+		const config = yield* ConfigService;
 
 		const pet = yield* Effect.tryPromise(() =>
 			getPetByID(payload.petID, { withOwner: true })
@@ -63,7 +64,7 @@ const handler = (job: Job<Data>) =>
 			)
 		);
 
-		const dayStart = yield* getConfigEffect('pet', 'dayStart', payload.petID);
+		const dayStart = yield* config.getConfig('pet', 'dayStart', payload.petID);
 
 		const now = pipe(
 			job.processedOn,

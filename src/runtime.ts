@@ -9,6 +9,7 @@ import * as Database from './lib/database/db.js';
 
 import { Env } from './common/env.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
+import { ConfigService } from './lib/entities/config.js';
 
 const traceExporter = new OTLPTraceExporter({
 	url: Env.OTLP_URL,
@@ -35,6 +36,7 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 const appLayer = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
+	ConfigService.Default,
 	PetFoodRepository.Default
 );
 

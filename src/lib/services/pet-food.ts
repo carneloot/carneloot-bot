@@ -3,7 +3,7 @@ import { DateTime, Duration, Effect, Either, Option, Struct } from 'effect';
 import type Qty from 'js-quantities';
 
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
-import { type ConfigValue, getConfigEffect } from '../entities/config.js';
+import { type ConfigValue, ConfigService } from '../entities/config.js';
 import type { Pet } from '../entities/pet.js';
 import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
@@ -16,7 +16,8 @@ const schedulePetFoodNotification = (
 	time: DateTime.DateTime
 ) =>
 	Effect.gen(function* () {
-		const notificationDelay = yield* getConfigEffect(
+		const config = yield* ConfigService;
+		const notificationDelay = yield* config.getConfig(
 			'pet',
 			'notificationDelay',
 			petID

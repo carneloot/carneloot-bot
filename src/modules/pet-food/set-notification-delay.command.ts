@@ -6,11 +6,7 @@ import invariant from 'tiny-invariant';
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
-import {
-	deleteConfigEffect,
-	getConfigEffect,
-	setConfig
-} from '../../lib/entities/config.js';
+import { ConfigService, setConfig } from '../../lib/entities/config.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
@@ -35,7 +31,10 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 	const duration = await cvs.external({
 		task: () =>
-			getConfigEffect('pet', 'notificationDelay', pet.id).pipe(
+			ConfigService.pipe(
+				Effect.andThen((config) =>
+					config.getConfig('pet', 'notificationDelay', pet.id)
+				),
 				Effect.scoped,
 				Effect.asSome,
 				Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
@@ -137,7 +136,8 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 	await cvs.external(() =>
 		Effect.gen(function* () {
-			yield* deleteConfigEffect('pet', 'notificationDelay', pet.id);
+			const config = yield* ConfigService;
+			yield* config.deleteConfig('pet', 'notificationDelay', pet.id);
 
 			const petFoodRepository = yield* PetFoodRepository;
 			const lastPetFood = yield* petFoodRepository.getLastPetFood({
