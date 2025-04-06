@@ -79,16 +79,14 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 				),
 				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
 					Effect.withSpan('ctx.react')
-				)
+				),
+				sendAddedFoodNotification({
+					id: petID,
+					quantity,
+					user: ctx.user,
+					time: timeChanged ? time : undefined
+				})(ctx)
 			],
-			{ concurrency: 'unbounded' }
-		).pipe(Effect.either);
-
-		yield* sendAddedFoodNotification({
-			id: petID,
-			quantity,
-			// biome-ignore lint/style/noNonNullAssertion: remove when effect.tryPromise is removed
-			user: ctx.user!,
-			time: timeChanged ? time : undefined
-		})(ctx);
+			{ concurrency: 'unbounded', mode: 'either' }
+		);
 	}).pipe(Effect.scoped, Effect.withSpan('handlePetFoodNotificationReply'));

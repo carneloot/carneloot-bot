@@ -100,7 +100,7 @@ export const FoodStatusCommand = ((ctx) =>
 								ctx.reply(
 									`Você não configurou o inicio do dia para o pet ${pet.name}.`
 								)
-							).pipe(Effect.ignoreLogged),
+							).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged),
 							Effect.succeedNone
 						)
 					)
