@@ -3,7 +3,7 @@ import { DateTime, Duration, Effect, Either, Option, Struct } from 'effect';
 import type Qty from 'js-quantities';
 
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
-import { type ConfigValue, ConfigService } from '../entities/config.js';
+import { ConfigService, type ConfigValue } from '../entities/config.js';
 import type { Pet } from '../entities/pet.js';
 import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';

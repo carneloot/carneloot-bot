@@ -8,8 +8,8 @@ import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import * as Database from './lib/database/db.js';
 
 import { Env } from './common/env.js';
-import { PetFoodRepository } from './lib/repositories/pet-food.js';
 import { ConfigService } from './lib/entities/config.js';
+import { PetFoodRepository } from './lib/repositories/pet-food.js';
 
 const traceExporter = new OTLPTraceExporter({
 	url: Env.OTLP_URL,
