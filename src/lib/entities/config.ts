@@ -218,7 +218,11 @@ export const getConfig = <
 	id: Identifier
 ) =>
 	ConfigService.pipe(
-		Effect.andThen((config) => config.getConfig(context, key, id)),
+		Effect.andThen((config) =>
+			config
+				.getConfig(context, key, id)
+				.pipe(Effect.catchTag('MissingConfigError', () => Effect.succeed(null)))
+		),
 		Effect.scoped,
 		runtime.runPromise
 	);
