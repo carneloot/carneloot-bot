@@ -1,9 +1,41 @@
 import { Data, DateTime, Duration, Effect, Schema } from 'effect';
+import {
+	anyOf,
+	caseInsensitive,
+	createRegExp,
+	digit,
+	maybe,
+	oneOrMore,
+	whitespace
+} from 'magic-regexp';
 
 import Qty from 'js-quantities';
 
-const MESSAGE_REGEX =
-	/(?<quantity>\d+(?:\.\d+)?)(?<unit>mg|g|kg)?(?:\s+(?:(?<day>\d{1,2})-(?<month>\d{1,2})(?:-(?<year>\d{4}))?\s+)?(?<hour>\d{1,2}):(?<minute>\d{1,2}))?/i;
+const MESSAGE_REGEX = createRegExp(
+	oneOrMore(digit)
+		.and(maybe('.', oneOrMore(digit)))
+		.groupedAs('quantity'),
+	maybe(anyOf('mg', 'g', 'kg').groupedAs('unit')),
+	maybe(
+		oneOrMore(whitespace),
+		// Date
+		maybe(
+			digit.times.between(1, 2).groupedAs('day'),
+			anyOf('-', '/'),
+			digit.times.between(1, 2).groupedAs('month'),
+			maybe(anyOf('-', '/'), digit.times(4).groupedAs('year')),
+			oneOrMore(whitespace)
+		),
+
+		// Time
+		digit.times
+			.between(1, 2)
+			.groupedAs('hour'),
+		':',
+		digit.times.between(1, 2).groupedAs('minute')
+	),
+	[caseInsensitive]
+);
 
 interface PetFoodWeightAndTime {
 	messageMatch?: string;
