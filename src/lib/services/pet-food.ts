@@ -1,4 +1,12 @@
-import { DateTime, Duration, Effect, Either, Option, Struct } from 'effect';
+import {
+	Data,
+	DateTime,
+	Duration,
+	Effect,
+	Either,
+	Option,
+	Struct
+} from 'effect';
 
 import type Qty from 'js-quantities';
 
@@ -61,6 +69,10 @@ type Params = {
 	dayStart: ConfigValue<'pet', 'dayStart'>;
 };
 
+export class DuplicatedEntryError extends Data.TaggedError(
+	'DuplicatedEntryError'
+)<{ message: string }> {}
+
 const addPetFoodAndScheduleNotification = ({
 	pet,
 	messageID,
@@ -91,9 +103,9 @@ const addPetFoodAndScheduleNotification = ({
 		);
 
 		if (shouldIgnoreEntry) {
-			return Either.left(
-				`Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`
-			);
+			return yield* new DuplicatedEntryError({
+				message: `Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`
+			});
 		}
 
 		const petFood = yield* petFoodRepository.addPetFood({
@@ -132,7 +144,7 @@ const addPetFoodAndScheduleNotification = ({
 			yield* schedulePetFoodNotification(pet.id, petFood.id, time);
 		}
 
-		return Either.right({ message });
+		return { message };
 	}).pipe(Effect.withSpan('addPetFoodAndScheduleNotification'));
 
 export const petFoodService = {

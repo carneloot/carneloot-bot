@@ -89,8 +89,6 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
 
-	const scope = await Scope.make().pipe(Effect.runPromise);
-
 	const addPetFoodResult = await cvs.external(() =>
 		petFoodService
 			.addPetFoodAndScheduleNotification({
@@ -105,11 +103,13 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 				dayStart
 			})
-			.pipe(Scope.extend(scope), runtime.runPromise)
+			.pipe(Effect.scoped, Effect.either, runtime.runPromise)
 	);
 
 	if (Either.isLeft(addPetFoodResult)) {
-		await ctx.reply(addPetFoodResult.left);
+		if (addPetFoodResult.left._tag === 'DuplicatedEntryError') {
+			await ctx.reply(addPetFoodResult.left.message);
+		}
 		return;
 	}
 
@@ -124,10 +124,8 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			quantity,
 			user,
 			time: timeChanged ? time : undefined
-		})(ctx).pipe(Scope.extend(scope), runtime.runPromise)
+		})(ctx).pipe(Effect.scoped, runtime.runPromise)
 	);
-
-	await Scope.close(scope, Exit.void).pipe(Effect.runPromise);
 }) satisfies ConversationFn;
 
 export const AddFoodCommand = (async (ctx) => {

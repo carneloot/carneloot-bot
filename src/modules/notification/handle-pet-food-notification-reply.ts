@@ -41,8 +41,8 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			timezone: dayStart.timezone
 		});
 
-		const addPetFoodResult =
-			yield* petFoodService.addPetFoodAndScheduleNotification({
+		const { message } = yield* petFoodService.addPetFoodAndScheduleNotification(
+			{
 				pet,
 				messageID: ctx.message.message_id,
 				userID: ctx.user.id,
@@ -52,17 +52,8 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 				timeChanged,
 
 				dayStart
-			});
-
-		if (Either.isLeft(addPetFoodResult)) {
-			yield* Effect.tryPromise(() => ctx.reply(addPetFoodResult.left)).pipe(
-				Effect.withSpan('ctx.reply')
-			);
-
-			return;
-		}
-
-		const { message } = addPetFoodResult.right;
+			}
+		);
 
 		yield* Effect.all(
 			[
@@ -84,6 +75,11 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 	}).pipe(
 		Effect.catchTags({
 			ParsePetFoodError: (err) =>
+				Effect.tryPromise(() => ctx.reply(err.message)).pipe(
+					Effect.withSpan('ctx.reply'),
+					Effect.ignoreLogged
+				),
+			DuplicatedEntryError: (err) =>
 				Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 					Effect.withSpan('ctx.reply'),
 					Effect.ignoreLogged
