@@ -107,11 +107,7 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 
 					const cacheKey = { context, key: key.toString(), id };
 
-					const span = yield* Effect.currentSpan;
-
-					const queryResult = yield* getConfigCache
-						.get(cacheKey)
-						.pipe(Effect.withParentSpan(span));
+					const queryResult = yield* getConfigCache.get(cacheKey);
 
 					yield* Effect.addFinalizer(() => getConfigCache.invalidate(cacheKey));
 
