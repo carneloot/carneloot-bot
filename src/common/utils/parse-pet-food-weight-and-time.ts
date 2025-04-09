@@ -1,6 +1,4 @@
-import { fromUnixTime, isAfter, set, subDays } from 'date-fns';
-import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { Either, Schema } from 'effect';
+import { Data, DateTime, Duration, Effect, Schema } from 'effect';
 
 import Qty from 'js-quantities';
 
@@ -25,66 +23,77 @@ const RegexResultSchema = Schema.Struct({
 	minute: Schema.optional(Schema.NumberFromString)
 });
 
-export const parsePetFoodWeightAndTime = ({
-	messageMatch,
-	messageTime,
-	timezone
-}: PetFoodWeightAndTime) => {
-	if (!messageMatch) {
-		return Either.left('Por favor, envie uma mensagem');
-	}
+export class ParsePetFoodError extends Data.TaggedError('ParsePetFoodError')<{
+	message: string;
+}> {}
 
-	const match = messageMatch.match(MESSAGE_REGEX);
+export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
+	function* ({ messageMatch, messageTime, timezone }: PetFoodWeightAndTime) {
+		if (!messageMatch) {
+			return yield* new ParsePetFoodError({
+				message: 'Por favor, envie uma mensagem'
+			});
+		}
 
-	if (!match) {
-		return Either.left(
-			'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
+		const match = messageMatch.match(MESSAGE_REGEX);
+
+		if (!match) {
+			return yield* new ParsePetFoodError({
+				message:
+					'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
+			});
+		}
+
+		const groups = yield* Schema.decodeUnknown(RegexResultSchema)(
+			match.groups
+		).pipe(
+			Effect.catchTag('ParseError', () =>
+				Effect.fail(
+					new ParsePetFoodError({
+						message: 'A quantidade de ração informada é inválida.'
+					})
+				)
+			)
 		);
-	}
 
-	const safeParseResult = Schema.decodeUnknownEither(RegexResultSchema)(
-		match.groups
-	);
+		const quantity = Qty(groups.quantity, groups.unit).to('g');
 
-	if (Either.isLeft(safeParseResult)) {
-		console.error(
-			'Error parsing pet food weight and time',
-			safeParseResult.left.message
+		let time = yield* Effect.orDieWith(
+			DateTime.makeZoned(messageTime * 1000, {
+				timeZone: timezone
+			}),
+			() =>
+				new Error(
+					`Failed to create DateTime from message date with timezone ${timezone}`
+				)
 		);
-		return Either.left('A quantidade de ração informada é inválida.');
-	}
 
-	const groups = safeParseResult.right;
-
-	const quantity = Qty(groups.quantity, groups.unit).to('g');
-
-	let time = fromUnixTime(messageTime);
-	let timeChanged = false;
-	if (groups.hour !== undefined && groups.minute !== undefined) {
-		timeChanged = true;
-		const newTime = zonedTimeToUtc(
-			set(utcToZonedTime(time, timezone), {
-				date: groups.day,
-				month: groups.month ? groups.month - 1 : undefined,
+		let timeChanged = false;
+		if (groups.hour !== undefined && groups.minute !== undefined) {
+			timeChanged = true;
+			const newTime = DateTime.setParts(time, {
+				day: groups.day,
+				month: groups.month,
 				year: groups.year,
 				hours: groups.hour,
 				minutes: groups.minute,
 				seconds: 0,
-				milliseconds: 0
-			}),
-			timezone
-		);
+				millis: 0
+			});
 
-		if (isAfter(newTime, time)) {
-			time = subDays(newTime, newTime.getDate() - time.getDate());
-		} else {
-			time = newTime;
+			if (DateTime.greaterThan(newTime, time)) {
+				time = DateTime.subtract(newTime, {
+					days: DateTime.distanceDuration(newTime, time).pipe(Duration.toDays)
+				});
+			} else {
+				time = newTime;
+			}
 		}
-	}
 
-	return Either.right({
-		quantity,
-		timeChanged,
-		time
-	});
-};
+		return {
+			quantity,
+			timeChanged,
+			time: DateTime.toDateUtc(time)
+		};
+	}
+);

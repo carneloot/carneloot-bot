@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'bun:test';
 import { Array as A, Duration, Either, Schema, pipe } from 'effect';
+import { describe, expect, it } from 'vitest';
 
 import { DurationFromParts } from './schema.js';
 

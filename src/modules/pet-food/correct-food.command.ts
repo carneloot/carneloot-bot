@@ -53,14 +53,14 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const result = parsePetFoodWeightAndTime({
+	const result = await parsePetFoodWeightAndTime({
 		messageMatch: replyResponse.message?.text,
 		messageTime: getUnixTime(petFood.time),
 		timezone: dayStart.timezone
-	});
+	}).pipe(Effect.either, runtime.runPromise);
 
 	if (Either.isLeft(result)) {
-		await ctx.reply(result.left);
+		await ctx.reply(result.left.message);
 		return;
 	}
 

@@ -35,21 +35,11 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 
 		const dayStart = yield* config.getConfig('pet', 'dayStart', petID);
 
-		const parsePetFoodWeightAndTimeResult = parsePetFoodWeightAndTime({
+		const { quantity, time, timeChanged } = yield* parsePetFoodWeightAndTime({
 			messageMatch: ctx.message.text,
 			messageTime: ctx.message.date,
 			timezone: dayStart.timezone
 		});
-
-		if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
-			yield* Effect.tryPromise(() =>
-				ctx.reply(parsePetFoodWeightAndTimeResult.left)
-			).pipe(Effect.withSpan('ctx.reply'));
-			return;
-		}
-
-		const { quantity, time, timeChanged } =
-			parsePetFoodWeightAndTimeResult.right;
 
 		const addPetFoodResult =
 			yield* petFoodService.addPetFoodAndScheduleNotification({
@@ -91,4 +81,16 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			],
 			{ concurrency: 'unbounded', mode: 'either' }
 		);
-	}).pipe(Effect.scoped, Effect.withSpan('handlePetFoodNotificationReply'));
+	}).pipe(
+		Effect.catchTags({
+			ParsePetFoodError: (err) =>
+				Effect.tryPromise(() => ctx.reply(err.message)).pipe(
+					Effect.withSpan('ctx.reply'),
+					Effect.ignoreLogged
+				),
+			DatabaseError: Effect.die,
+			UnknownException: Effect.die
+		}),
+		Effect.scoped,
+		Effect.withSpan('handlePetFoodNotificationReply')
+	);

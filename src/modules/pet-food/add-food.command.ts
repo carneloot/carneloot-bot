@@ -57,16 +57,16 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	);
 
 	const foodResponse = await cvs.waitUntil(
-		(ctx) => {
+		async (ctx) => {
 			if (!ctx.message) {
 				return false;
 			}
 
-			const result = parsePetFoodWeightAndTime({
+			const result = await parsePetFoodWeightAndTime({
 				messageMatch: ctx.message.text,
 				messageTime: ctx.message.date,
 				timezone: dayStart.timezone
-			});
+			}).pipe(Effect.either, runtime.runPromise);
 
 			return Either.isRight(result);
 		},
@@ -76,14 +76,14 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	invariant(foodResponse.message, 'Message is not defined');
 	invariant(ctx.message, 'Invalid message');
 
-	const parsePetFoodWeightAndTimeResult = parsePetFoodWeightAndTime({
+	const parsePetFoodWeightAndTimeResult = await parsePetFoodWeightAndTime({
 		messageMatch: foodResponse.message.text,
 		messageTime: ctx.message.date,
 		timezone: dayStart.timezone
-	});
+	}).pipe(Effect.either, runtime.runPromise);
 
 	if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
-		await ctx.reply(parsePetFoodWeightAndTimeResult.left);
+		await ctx.reply(parsePetFoodWeightAndTimeResult.left.message);
 		return;
 	}
 

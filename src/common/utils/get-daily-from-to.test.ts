@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 
 import { DateTime } from 'effect';
 
@@ -11,7 +11,7 @@ describe('getDailyFromTo', () => {
 		DateTime.toUtc(
 			DateTime.unsafeMakeZoned(input, {
 				timeZone: timezone,
-				adjustForTimeZone: true
+				adjustForTimeZone: false
 			})
 		);
 
