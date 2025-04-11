@@ -4,11 +4,9 @@ import type { ConfigValue } from '../../lib/entities/config.js';
 
 export const getDailyFromTo = (
 	now: DateTime.DateTime,
-	dayStart: ConfigValue<'pet', 'dayStart'>
+	dayStart: Pick<ConfigValue<'pet', 'dayStart'>, 'hour'>
 ) => {
-	const nowZoned = now.pipe(DateTime.unsafeSetZoneNamed(dayStart.timezone));
-
-	const fromZoned = nowZoned.pipe(
+	const from = now.pipe(
 		DateTime.setParts({
 			hours: dayStart.hour,
 			minutes: 0,
@@ -16,15 +14,13 @@ export const getDailyFromTo = (
 			millis: 0
 		}),
 		(v) =>
-			DateTime.greaterThan(v, nowZoned)
-				? DateTime.subtractDuration(v, '1 day')
-				: v
+			DateTime.greaterThan(v, now) ? DateTime.subtractDuration(v, '1 day') : v
 	);
 
-	const toZoned = DateTime.addDuration(fromZoned, '1 day');
+	const to = DateTime.addDuration(from, '1 day');
 
 	return {
-		from: DateTime.toUtc(fromZoned),
-		to: DateTime.toUtc(toZoned)
+		from: DateTime.toUtc(from),
+		to: DateTime.toUtc(to)
 	};
 };
