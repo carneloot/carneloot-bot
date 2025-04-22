@@ -2,6 +2,7 @@ import { createConversation } from '@grammyjs/conversations';
 import { Module } from '../../common/module/module.js';
 import type { Context } from '../../common/types/context.js';
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
+import { AddFoodAllCommand } from './add-food-all.command.js';
 import { AddFoodCommand, addFoodConversation } from './add-food.command.js';
 import {
 	CorrectFoodCommand,
@@ -61,6 +62,14 @@ PetFoodModule.setCommand(
 	'Adiciona ração ao rastreamento de ração',
 	UserMiddleware,
 	AddFoodCommand
+);
+
+// Add food to all
+PetFoodModule.setCommand(
+	'colocar_racao_todos',
+	'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
+	UserMiddleware,
+	AddFoodAllCommand
 );
 
 // Delete food
