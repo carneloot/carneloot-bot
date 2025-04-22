@@ -1,3 +1,5 @@
+// biome-ignore lint/suspicious/noShadowRestrictedNames: effect is cool
+import { Array, Function, String, pipe } from 'effect';
 import { Composer, type Context, type Middleware } from 'grammy';
 
 import type { Command } from '../types/command.js';
@@ -23,13 +25,17 @@ export class Module<C extends Context> extends Composer<C> {
 		description: string,
 		...middleware: Array<Middleware<C>>
 	) {
-		const newCommand = [
-			this.name,
-			Array.isArray(command) ? command[0] : command
-		].join((this.name && Module.MODULE_SEPARATOR) ?? '');
+		const commands = pipe(
+			Array.isArray(command) ? command : [command],
+			String.isNonEmpty(this.name)
+				? Array.map((v) => `${this.name}${Module.MODULE_SEPARATOR}${v}`)
+				: Function.identity
+		);
 
-		Module.COMMANDS.push({ command: newCommand, description });
+		Module.COMMANDS.push(
+			...commands.map((command) => ({ command, description }))
+		);
 
-		return this.command(newCommand, ...middleware);
+		return this.command(commands, ...middleware);
 	}
 }

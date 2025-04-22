@@ -66,7 +66,7 @@ PetFoodModule.setCommand(
 
 // Add food to all
 PetFoodModule.setCommand(
-	'colocar_racao_todos',
+	['colocar_racao_todos', 'todos'],
 	'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
 	UserMiddleware,
 	AddFoodAllCommand
