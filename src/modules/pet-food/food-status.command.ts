@@ -57,7 +57,7 @@ const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 		return pipe(
 			[
 				`\\- ${pet.name}: ${qty}`,
-				Option.map(timeSinceLast, (v) => `há ${v}`).pipe(Option.getOrNull)
+				Option.map(timeSinceLast, (v) => `última vez há ${v}`).pipe(Option.getOrNull)
 			],
 			A.filter(Predicate.isNotNull),
 			A.join(' ')
