@@ -34,13 +34,6 @@ export const addFoodConversation = (async (cvs, ctx) => {
 		rowNum: 2
 	})(cvs, ctx);
 
-	if (!currentPet) {
-		await ctx.reply(
-			'Você ainda não configurou o pet atual.\nUtilize o comando /escolher_pet para configurar'
-		);
-		return;
-	}
-
 	const dayStart = await cvs.external(() =>
 		getConfig('pet', 'dayStart', currentPet.id)
 	);
@@ -53,7 +46,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	}
 
 	ctx.reply(
-		`Certo, voce colocou ração para o pet ${currentPet.name}. Envie a quantidade e a hora:`
+		`Certo, voce colocou ração para o pet ${currentPet.name}. Envie a quantidade. Caso não foi colocado agora, informe também o horário.`
 	);
 
 	const foodResponse = await cvs.waitUntil(
