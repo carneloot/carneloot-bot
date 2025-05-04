@@ -78,7 +78,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 	const parsePetFoodWeightAndTimeResult = await parsePetFoodWeightAndTime({
 		messageMatch: foodResponse.message.text,
-		messageTime: ctx.message.date,
+		messageTime: foodResponse.message.date,
 		timezone: dayStart.timezone
 	}).pipe(Effect.either, runtime.runPromise);
 
