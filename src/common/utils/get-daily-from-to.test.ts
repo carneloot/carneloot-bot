@@ -11,7 +11,7 @@ describe('getDailyFromTo', () => {
 		DateTime.toUtc(
 			DateTime.unsafeMakeZoned(input, {
 				timeZone: timezone,
-				adjustForTimeZone: false
+				adjustForTimeZone: true
 			})
 		);
 

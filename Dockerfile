@@ -16,6 +16,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 COPY . .
 
 ENV PORT=3000
+ENV TZ=UTC
 
 EXPOSE 3000
 

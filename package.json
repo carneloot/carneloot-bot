@@ -13,7 +13,7 @@
 		"dev": "nodemon",
 		"start": "bun run src/index.ts",
 		"set-webhook": "curl $BOT_URL/api/set-webhook",
-		"test": "vitest"
+		"test": "TZ=UTC vitest"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
