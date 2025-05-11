@@ -1,5 +1,7 @@
 import { fromUnixTime } from 'date-fns';
-import { Array as A, DateTime, Effect, Option, Predicate, pipe } from 'effect';
+
+// biome-ignore lint/suspicious/noShadowRestrictedNames: Effect is cool
+import { Array, DateTime, Effect, Option, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -56,13 +58,11 @@ const getPetMessage = (pet: Pick<Pet, 'id' | 'name'>, now: DateTime.DateTime) =>
 
 		return pipe(
 			[
-				`\\- ${pet.name}: ${qty}`,
-				Option.map(timeSinceLast, (v) => `última vez há ${v}`).pipe(
-					Option.getOrNull
-				)
+				Option.some(`\\- ${pet.name}: ${qty}`),
+				Option.map(timeSinceLast, (v) => `última vez há ${v}`)
 			],
-			A.filter(Predicate.isNotNull),
-			A.join(' ')
+			Array.getSomes,
+			Array.join(' ')
 		);
 	}).pipe(Effect.withSpan('getPetMessage'));
 
@@ -91,21 +91,22 @@ export const FoodStatusCommand = ((ctx) =>
 				)
 			],
 			{ concurrency: 'unbounded' }
-		).pipe(Effect.map(A.flatten));
+		).pipe(Effect.map(Array.flatten));
 
 		const petMessages = yield* Effect.all(
 			allPets.map((pet) =>
 				getPetMessage(pet, now).pipe(
 					Effect.scoped,
-					Effect.map(Option.some),
+					Effect.asSome,
 					Effect.catchTag('MissingConfigError', () =>
-						Effect.zipRight(
-							Effect.tryPromise(() =>
-								ctx.reply(
-									`Você não configurou o inicio do dia para o pet ${pet.name}.`
-								)
-							).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged),
-							Effect.succeedNone
+						Effect.tryPromise(() =>
+							ctx.reply(
+								`Você não configurou o inicio do dia para o pet ${pet.name}.`
+							)
+						).pipe(
+							Effect.withSpan('ctx.reply'),
+							Effect.ignoreLogged,
+							Effect.andThen(Effect.succeedNone)
 						)
 					)
 				)
@@ -114,7 +115,7 @@ export const FoodStatusCommand = ((ctx) =>
 		);
 
 		yield* Effect.tryPromise(() =>
-			ctx.reply(A.getSomes(petMessages).join('\n'), {
+			ctx.reply(Array.getSomes(petMessages).join('\n'), {
 				parse_mode: 'MarkdownV2'
 			})
 		).pipe(Effect.withSpan('ctx.reply'));
