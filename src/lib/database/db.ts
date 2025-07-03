@@ -24,6 +24,7 @@ import {
 
 import { Env } from '../../common/env.js';
 
+import { runtime } from '../../runtime.js';
 import * as DbSchema from './schema.js';
 
 type Client = LibSQLDatabase<typeof DbSchema> & {
@@ -111,7 +112,7 @@ const makeService = Effect.gen(function* () {
 			) => Effect.Effect<T, E, R>
 		) =>
 			Effect.runtime<R>().pipe(
-				Effect.map(Runtime.runPromiseExit),
+				Effect.map((runtime) => Runtime.runPromiseExit(runtime)),
 				Effect.flatMap((runPromiseExit) =>
 					Effect.async((resume) => {
 						db.transaction(async (tx) => {
