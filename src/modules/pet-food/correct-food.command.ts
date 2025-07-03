@@ -1,49 +1,52 @@
 import invariant from 'tiny-invariant';
 
-import { getUnixTime } from 'date-fns';
-import { DateTime, Effect, Either, Option } from 'effect';
+import { getUnixTime, parseISO } from 'date-fns';
+import { Array as Arr, DateTime, Effect, Either, Option, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
+import { utcToZonedTime } from 'date-fns-tz';
+import Qty from 'js-quantities';
 import type { Context, ConversationFn } from '../../common/types/context.js';
+import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
 import {
-	getPetFoodByMessageId,
+	getPetFoodByRange,
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { petFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
 export const correctFoodConversation = (async (cvs, ctx) => {
-	await ctx.reply('Responda a mensagem que quer corrigir com o valor correto.');
+	const user = await cvs.external((ctx) => ctx.user);
 
-	const replyResponse = await cvs.waitUntil(
-		(ctx) => ctx.message?.reply_to_message !== undefined,
-		{ otherwise: (ctx) => ctx.reply('Por favor responda a uma mensagem.') }
-	);
-
-	invariant(
-		replyResponse.message?.reply_to_message,
-		'Message object not found.'
-	);
-
-	const petFoodMessage = replyResponse.message.reply_to_message;
-
-	const petFood = await cvs.external(() =>
-		getPetFoodByMessageId(petFoodMessage.message_id)
-	);
-
-	if (!petFood) {
-		await ctx.reply(
-			'Não encontrei uma entrada de ração vinda dessa mensagem. Use o comando novamente para tentar de novo'
-		);
-
+	if (!user) {
+		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 		return;
 	}
 
+	const allPets = await cvs.external(() =>
+		Promise.all([
+			getUserOwnedPets(user.id),
+			getUserCaredPets(user.id).then(
+				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` }))
+			)
+		]).then(Arr.flatten)
+	);
+
+	const currentPet = await showOptionsKeyboard({
+		values: allPets,
+		labelFn: (pet) => pet.name,
+		message: 'Selecione o pet para apagar a comida:',
+		rowNum: 2
+	})(cvs, ctx);
+
 	const dayStart = await cvs.external(() =>
-		getConfig('pet', 'dayStart', petFood.petID)
+		getConfig('pet', 'dayStart', currentPet.id)
 	);
 
 	if (!dayStart) {
@@ -53,18 +56,61 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	const result = await parsePetFoodWeightAndTime({
-		messageMatch: replyResponse.message?.text,
-		messageTime: getUnixTime(petFood.time),
-		timezone: dayStart.timezone
-	}).pipe(Effect.either, runtime.runPromise);
+	invariant(ctx.message, 'Message object not found.');
 
-	if (Either.isLeft(result)) {
-		await ctx.reply(result.left.message);
+	const now = DateTime.unsafeMake(ctx.message.date * 1000);
+
+	const { from, to } = getDailyFromTo(now, dayStart);
+
+	const petFoods = await cvs.external(() =>
+		getPetFoodByRange(currentPet.id, DateTime.toDate(from), DateTime.toDate(to))
+	);
+
+	if (petFoods.length === 0) {
+		await ctx.reply('Ainda não foi colocado ração hoje');
 		return;
 	}
 
-	const { quantity, time, timeChanged } = result.right;
+	const petFood = await showOptionsKeyboard({
+		values: petFoods,
+		labelFn: (v) =>
+			`${Qty(v.quantity, 'g')} | ${utcToZonedTime(
+				v.time,
+				dayStart.timezone
+			).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
+		message: 'Escolha a ração para deletar:',
+		rowNum: 1,
+		addCancel: true
+	})(cvs, ctx);
+
+	if (!petFood) {
+		await ctx.reply('Operação cancelada');
+		return;
+	}
+
+	await ctx.reply('Qual será a nova quantidade de ração (e/ou horário)?');
+
+	const messageTime = getUnixTime(
+		typeof petFood.time === 'string' ? parseISO(petFood.time) : petFood.time
+	);
+
+	const replyResponse = await cvs.waitUntil(
+		(ctx) =>
+			parsePetFoodWeightAndTime({
+				messageMatch: ctx.message?.text,
+				messageTime,
+				timezone: dayStart.timezone
+			}).pipe(Effect.isSuccess, Effect.runPromise),
+		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada.') }
+	);
+
+	const result = await parsePetFoodWeightAndTime({
+		messageMatch: replyResponse.message?.text,
+		messageTime,
+		timezone: dayStart.timezone
+	}).pipe(Effect.orDie, runtime.runPromise);
+
+	const { quantity, time, timeChanged } = result;
 
 	await cvs.external(() =>
 		updatePetFood(petFood.id, {
@@ -75,24 +121,22 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 
 	const lastFood = await cvs.external(() =>
 		PetFoodRepository.pipe(
-			Effect.flatMap((repo) => repo.getLastPetFood({ petID: petFood.petID })),
+			Effect.flatMap((repo) => repo.getLastPetFood({ petID: currentPet.id })),
 			runtime.runPromise
 		)
 	);
 
-	const isLastFood = lastFood.pipe(
-		Option.match({
-			onSome: (lastFood) => lastFood.id === petFood.id,
-			onNone: () => false
-		})
-	);
+	const isLastFood = Option.match(lastFood, {
+		onSome: (lastFood) => lastFood.id === petFood.id,
+		onNone: () => false
+	});
 
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {
 		await cvs.external(() =>
 			petFoodService
 				.schedulePetFoodNotification(
-					petFood.petID,
+					currentPet.id,
 					petFood.id,
 					DateTime.unsafeMake(time)
 				)
