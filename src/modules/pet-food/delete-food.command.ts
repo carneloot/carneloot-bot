@@ -9,12 +9,16 @@ import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+
 import { getConfig } from '../../lib/entities/config.js';
 import {
 	deletePetFood,
 	getPetFoodByRange
 } from '../../lib/entities/pet-food.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
+import { petFoodService } from '../../lib/services/pet-food.js';
+
+import { runtime } from '../../runtime.js';
 
 export const deleteFoodConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);
@@ -78,7 +82,13 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		return;
 	}
 
-	await cvs.external(() => deletePetFood(selectedFood.id));
+	await cvs.external(async () => {
+		await deletePetFood(selectedFood.id);
+
+		await petFoodService
+			.cancelPetFoodNotification(selectedFood.id)
+			.pipe(runtime.runPromise);
+	});
 
 	await ctx.reply('Ração deletada com sucesso!');
 }) satisfies ConversationFn;
