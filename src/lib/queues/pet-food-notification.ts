@@ -1,4 +1,4 @@
-import { type Job, Queue, Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import {
 	Array as A,
 	Console,
@@ -11,6 +11,7 @@ import {
 	Redacted
 } from 'effect';
 import { Bot } from 'grammy';
+
 import Qty from 'js-quantities';
 
 import { sendNotificationAndLog } from '../../api/actions/send-notification.js';
@@ -43,93 +44,96 @@ const queue = new Queue<Data>(QUEUE_NAME, {
 
 class MissingPetId extends D.TaggedError('MissingPetId') {}
 
-const handler = (job: Job<Data>) =>
-	Effect.gen(function* () {
-		const payload = job.data;
+const handler = Effect.fn('petFoodNotificationJob.handler')(function* (
+	payload: Data,
+	now: DateTime.DateTime
+) {
+	yield* Effect.annotateCurrentSpan({
+		pet: payload.petID
+	});
 
-		yield* Effect.annotateCurrentSpan({
-			pet: payload.petID
-		});
+	const petFoodRepository = yield* PetFoodRepository;
+	const config = yield* ConfigService;
 
-		const petFoodRepository = yield* PetFoodRepository;
-		const config = yield* ConfigService;
-
-		const pet = yield* Effect.tryPromise(() =>
-			getPetByID(payload.petID, { withOwner: true })
-		).pipe(
-			Effect.withSpan('getPetByID'),
-			Effect.andThen(Option.fromNullable),
-			Effect.catchTag('NoSuchElementException', () =>
-				Effect.fail(new MissingPetId())
-			)
-		);
-
-		const dayStart = yield* config.getConfig('pet', 'dayStart', payload.petID);
-
-		const now = pipe(
-			job.processedOn,
-			Option.fromNullable,
-			Option.andThen(DateTime.make),
-			Option.getOrElse(() => DateTime.unsafeNow())
-		);
-
-		const { from, to } = getDailyFromTo(now, dayStart);
-
-		const dailyConsumption = yield* petFoodRepository.getDailyFoodConsumption({
-			petID: payload.petID,
-			from,
-			to
-		});
-
-		const carers = yield* Effect.tryPromise(() =>
-			getPetCarers(payload.petID)
-		).pipe(
-			Effect.withSpan('getPetCarers'),
-			Effect.catchAll(() =>
-				Effect.zipRight(
-					Console.warn('Error getting pet carers'),
-					Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>)
-				)
-			),
-			Effect.andThen(A.filter((carer) => carer.status === 'accepted'))
-		);
-
-		const bot = new Bot<Context>(Redacted.value(Env.BOT_TOKEN));
-
-		const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
-
-		const message = [
-			`🚨 Hora de dar comida para o pet ${pet.name}.`,
-			Option.match(quantity, {
-				onSome: (q) => `Já foram ${q} hoje.`,
-				onNone: () => 'Ainda não foi dado comida hoje.'
-			})
-		].join(' ');
-
-		yield* Effect.all(
-			[{ carer: pet.owner }, ...carers].map(({ carer }) =>
-				sendNotificationAndLog({
-					bot,
-					messageText: message,
-					user: carer,
-					petID: payload.petID
-				})
-			),
-			{ concurrency: 'unbounded' }
-		);
-	}).pipe(
-		Effect.scoped,
-		Effect.withSpan('petFoodNotificationJob.handler'),
-		runtime.runPromise
+	const pet = yield* Effect.tryPromise(() =>
+		getPetByID(payload.petID, { withOwner: true })
+	).pipe(
+		Effect.withSpan('getPetByID'),
+		Effect.andThen(Option.fromNullable),
+		Effect.catchTag('NoSuchElementException', () =>
+			Effect.fail(new MissingPetId())
+		)
 	);
+
+	const dayStart = yield* config.getConfig('pet', 'dayStart', payload.petID);
+
+	const { from, to } = getDailyFromTo(now, dayStart);
+
+	const dailyConsumption = yield* petFoodRepository.getDailyFoodConsumption({
+		petID: payload.petID,
+		from,
+		to
+	});
+
+	const carers = yield* Effect.tryPromise(() =>
+		getPetCarers(payload.petID)
+	).pipe(
+		Effect.withSpan('getPetCarers'),
+		Effect.catchAll(() =>
+			Effect.zipRight(
+				Console.warn('Error getting pet carers'),
+				Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>)
+			)
+		),
+		Effect.andThen(A.filter((carer) => carer.status === 'accepted'))
+	);
+
+	const bot = new Bot<Context>(Redacted.value(Env.BOT_TOKEN));
+
+	const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
+
+	const message = [
+		`🚨 Hora de dar comida para o pet ${pet.name}.`,
+		Option.match(quantity, {
+			onSome: (q) => `Já foram ${q} hoje.`,
+			onNone: () => 'Ainda não foi dado comida hoje.'
+		})
+	].join(' ');
+
+	yield* Effect.forEach(
+		[{ carer: pet.owner }, ...carers],
+		({ carer }) =>
+			sendNotificationAndLog({
+				bot,
+				messageText: message,
+				user: carer,
+				petID: payload.petID
+			}),
+		{ concurrency: 'unbounded' }
+	);
+}, Effect.scoped);
 
 export const petFoodNotificationJob = {
 	QUEUE_NAME,
 	queue,
+	handler,
 	createWorker: () => {
-		const worker = new Worker<Data>(QUEUE_NAME, handler, {
-			connection: redis
-		});
+		const worker = new Worker<Data>(
+			QUEUE_NAME,
+			async (job) => {
+				const now = pipe(
+					job.processedOn,
+					Option.fromNullable,
+					Option.andThen(DateTime.make),
+					Option.getOrElse(() => DateTime.unsafeNow())
+				);
+
+				await handler(job.data, now).pipe(runtime.runPromise);
+			},
+			{
+				connection: redis
+			}
+		);
 		worker.on('error', (err) => console.error('Error in job', err));
 		worker.on('active', (job) => console.log('Job started', job.id));
 		worker.on('completed', (job) => console.log('Job completed', job.id));

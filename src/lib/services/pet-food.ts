@@ -47,24 +47,38 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 					petID
 				);
 
+				const now = yield* DateTime.now;
+
 				const delay = time.pipe(
 					DateTime.addDuration(notificationDelay),
-					DateTime.distanceDuration(DateTime.unsafeNow()),
+					DateTime.distanceDuration(now),
 					Duration.toMillis
 				);
 
-				yield* Effect.tryPromise(() =>
-					petFoodNotificationJob.queue.add(
-						`pet-${petID}}`,
-						{
-							petID
-						},
-						{
-							jobId: petFoodID,
-							delay: Math.max(delay, 0)
-						}
-					)
-				).pipe(Effect.ignoreLogged);
+				const shouldSendNow = DateTime.greaterThan(
+					now,
+					DateTime.addDuration(time, notificationDelay)
+				);
+
+				if (shouldSendNow) {
+					yield* petFoodNotificationJob.handler({ petID }, now);
+				} else {
+					yield* Effect.tryPromise(() =>
+						petFoodNotificationJob.queue.add(
+							`pet-${petID}}`,
+							{
+								petID
+							},
+							{
+								jobId: petFoodID,
+								delay: Math.max(delay, 0)
+							}
+						)
+					).pipe(
+						Effect.withSpan('petFoodNotificationJob.queue.add'),
+						Effect.ignoreLogged
+					);
+				}
 			});
 
 			const cancelPetFoodNotification = (petFoodID: PetFoodID) =>
