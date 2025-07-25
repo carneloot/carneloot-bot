@@ -18,7 +18,7 @@ import {
 } from '../../lib/entities/pet-food.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
 export const correctFoodConversation = (async (cvs, ctx) => {
@@ -134,13 +134,17 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {
 		await cvs.external(() =>
-			petFoodService
-				.schedulePetFoodNotification(
-					currentPet.id,
-					petFood.id,
-					DateTime.unsafeMake(time)
-				)
-				.pipe(Effect.scoped, runtime.runPromise)
+			PetFoodService.pipe(
+				Effect.andThen((service) =>
+					service.schedulePetFoodNotification(
+						currentPet.id,
+						petFood.id,
+						DateTime.unsafeMake(time)
+					)
+				),
+				Effect.scoped,
+				runtime.runPromise
+			)
 		);
 	}
 

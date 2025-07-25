@@ -10,7 +10,7 @@ import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-wei
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
@@ -83,20 +83,25 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
 
 	const addPetFoodResult = await cvs.external(() =>
-		petFoodService
-			.addPetFoodAndScheduleNotification({
-				pet: currentPet,
-				// biome-ignore lint/style/noNonNullAssertion: <explanation>
-				messageID: foodResponse.message!.message_id,
-				userID: user.id,
+		PetFoodService.pipe(
+			Effect.andThen((service) =>
+				service.addPetFoodAndScheduleNotification({
+					pet: currentPet,
+					// biome-ignore lint/style/noNonNullAssertion: <explanation>
+					messageID: foodResponse.message!.message_id,
+					userID: user.id,
 
-				time: DateTime.unsafeMake(time),
-				quantity,
-				timeChanged,
+					time: DateTime.unsafeMake(time),
+					quantity,
+					timeChanged,
 
-				dayStart
-			})
-			.pipe(Effect.scoped, Effect.either, runtime.runPromise)
+					dayStart
+				})
+			),
+			Effect.scoped,
+			Effect.either,
+			runtime.runPromise
+		)
 	);
 
 	if (Either.isLeft(addPetFoodResult)) {

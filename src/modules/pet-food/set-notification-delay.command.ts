@@ -9,7 +9,7 @@ import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.
 import { ConfigService, setConfig } from '../../lib/entities/config.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 
 const ExternalDurationSchema = Schema.OptionFromUndefinedOr(
@@ -108,6 +108,8 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		await cvs.external(() =>
 			Effect.gen(function* () {
 				const petFoodRepository = yield* PetFoodRepository;
+				const petFoodService = yield* PetFoodService;
+
 				const lastPetFood = yield* petFoodRepository.getLastPetFood({
 					petID: pet.id
 				});
@@ -137,9 +139,11 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	await cvs.external(() =>
 		Effect.gen(function* () {
 			const config = yield* ConfigService;
+			const petFoodService = yield* PetFoodService;
+			const petFoodRepository = yield* PetFoodRepository;
+
 			yield* config.deleteConfig('pet', 'notificationDelay', pet.id);
 
-			const petFoodRepository = yield* PetFoodRepository;
 			const lastPetFood = yield* petFoodRepository.getLastPetFood({
 				petID: pet.id
 			});

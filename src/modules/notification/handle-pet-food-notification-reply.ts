@@ -10,7 +10,7 @@ import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { ConfigService } from '../../lib/entities/config.js';
 import { getPetByID } from '../../lib/entities/pet.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
 
 export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
@@ -19,6 +19,7 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 		invariant(ctx.user, 'User is not defined.');
 
 		const config = yield* ConfigService;
+		const petFoodService = yield* PetFoodService;
 
 		const pet = yield* Effect.tryPromise(() => getPetByID(petID)).pipe(
 			Effect.withSpan('getPetByID')

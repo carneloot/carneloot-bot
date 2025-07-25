@@ -1,5 +1,5 @@
 import { utcToZonedTime } from 'date-fns-tz';
-import { Array as Arr, DateTime } from 'effect';
+import { Array as Arr, DateTime, Effect } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import Qty from 'js-quantities';
@@ -16,7 +16,7 @@ import {
 	getPetFoodByRange
 } from '../../lib/entities/pet-food.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 
 import { runtime } from '../../runtime.js';
 
@@ -85,9 +85,12 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	await cvs.external(async () => {
 		await deletePetFood(selectedFood.id);
 
-		await petFoodService
-			.cancelPetFoodNotification(selectedFood.id)
-			.pipe(runtime.runPromise);
+		await PetFoodService.pipe(
+			Effect.andThen((service) =>
+				service.cancelPetFoodNotification(selectedFood.id)
+			),
+			runtime.runPromise
+		);
 	});
 
 	await ctx.reply('Ração deletada com sucesso!');

@@ -5,7 +5,7 @@ import { Array, Data, DateTime, Effect, Option } from 'effect';
 
 import { ConfigService } from '../../lib/entities/config.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-import { petFoodService } from '../../lib/services/pet-food.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
@@ -57,40 +57,40 @@ export const AddFoodAllCommand = (ctx: Context) =>
 			timezone: 'UTC'
 		});
 
-		yield* Effect.all(
-			allPets.map((pet) =>
-				Effect.gen(function* () {
-					const config = yield* ConfigService;
+		const config = yield* ConfigService;
+		const petFoodService = yield* PetFoodService;
 
-					const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
+		yield* Effect.forEach(
+			allPets,
+			Effect.fn('AddFoodAllCommand.sendSinglePet')(function* (pet) {
+				const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
 
-					const { timeChanged, time } = yield* parsePetFoodWeightAndTime({
-						messageTime,
-						messageMatch,
-						timezone: dayStart.timezone
-					});
+				const { timeChanged, time } = yield* parsePetFoodWeightAndTime({
+					messageTime,
+					messageMatch,
+					timezone: dayStart.timezone
+				});
 
-					yield* petFoodService.addPetFoodAndScheduleNotification({
-						pet,
+				yield* petFoodService.addPetFoodAndScheduleNotification({
+					pet,
 
-						messageID,
-						userID: user.id,
+					messageID,
+					userID: user.id,
 
-						time: DateTime.unsafeMake(time),
-						quantity,
-						timeChanged,
+					time: DateTime.unsafeMake(time),
+					quantity,
+					timeChanged,
 
-						dayStart
-					});
+					dayStart
+				});
 
-					yield* sendAddedFoodNotification({
-						id: pet.id,
-						quantity,
-						user,
-						time: timeChanged ? time : undefined
-					})(ctx);
-				}).pipe(Effect.withSpan('AddFoodAllCommand.sendSinglePet'))
-			),
+				yield* sendAddedFoodNotification({
+					id: pet.id,
+					quantity,
+					user,
+					time: timeChanged ? time : undefined
+				})(ctx);
+			}),
 			{ concurrency: 'unbounded' }
 		);
 
