@@ -67,7 +67,7 @@ export const createBot = () => {
 		bot,
 		setWebhook: (url: string) => bot.api.setWebhook(url),
 		setCommands: async () => {
-			await bot.api.setMyCommands([
+			const commands = [
 				{
 					command: getCommandForHelp(PingCommand),
 					description: getDescriptionForHelp(PingCommand)
@@ -85,7 +85,9 @@ export const createBot = () => {
 					description: 'Cancela a operação atual'
 				},
 				...Module.getCommandList()
-			]);
+			];
+
+			await bot.api.setMyCommands(commands, { language_code: 'br' });
 		}
 	};
 };
