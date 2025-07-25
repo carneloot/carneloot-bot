@@ -5,11 +5,9 @@ import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
-
-import { createBot } from './bot.js';
-
 import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
+import { createBot } from './bot.js';
 import { Env } from './common/env.js';
 import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
 import { runtime } from './runtime.js';
@@ -71,7 +69,7 @@ if (Env.RUN_MODE === 'webhook') {
 	api.post('/webhook/:secret', webhookCallback(bot, 'hono'));
 }
 
-const worker = petFoodNotificationJob.createWorker();
+const _worker = petFoodNotificationJob.createWorker();
 
 app.route('/api', api);
 app.use('*', serveStatic({ root: '../public/' }));

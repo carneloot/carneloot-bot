@@ -1,18 +1,14 @@
 import { Reactions } from '@grammyjs/emoji';
 
-// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import { Array, Data, DateTime, Effect, Option } from 'effect';
-
-import { ConfigService } from '../../lib/entities/config.js';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-import { PetFoodService } from '../../lib/services/pet-food.js';
 
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-
-import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
-
+import { ConfigService } from '../../lib/entities/config.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
+import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
+import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
 
 class MissingUserError extends Data.TaggedError('MissingUserError') {}
 class MissingRequiredFieldError extends Data.TaggedError(

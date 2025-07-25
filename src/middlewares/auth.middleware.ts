@@ -1,11 +1,8 @@
 import type { MiddlewareFn } from 'grammy';
-
+import { Env } from '../common/env.js';
 import type { UserResponse } from '../common/response/response.js';
 import { sendRandomResponse } from '../common/response/send-random-response.js';
-
 import type { Username } from '../common/types/username.js';
-
-import { Env } from '../common/env.js';
 import { isUsernameOnList } from '../common/utils/is-username-on-list.js';
 import { publicAsset } from '../common/utils/public-asset.js';
 

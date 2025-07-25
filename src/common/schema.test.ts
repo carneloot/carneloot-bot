@@ -1,4 +1,4 @@
-import { Array as A, Duration, Either, Schema, pipe } from 'effect';
+import { Array as A, Duration, Either, pipe, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { DurationFromParts } from './schema.js';

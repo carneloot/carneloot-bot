@@ -1,9 +1,7 @@
 import type { MiddlewareFn } from 'grammy';
 import invariant from 'tiny-invariant';
-
-import { createPet } from '../../lib/entities/pet.js';
-
 import type { Context, ConversationFn } from '../../common/types/context.js';
+import { createPet } from '../../lib/entities/pet.js';
 
 export const addPetConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);

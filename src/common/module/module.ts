@@ -1,5 +1,4 @@
-// biome-ignore lint/suspicious/noShadowRestrictedNames: effect is cool
-import { Array, Function, String, pipe } from 'effect';
+import { Array, Function, pipe, String } from 'effect';
 import { Composer, type Context, type Middleware } from 'grammy';
 
 import type { Command } from '../types/command.js';
@@ -9,10 +8,7 @@ export class Module<C extends Context> extends Composer<C> {
 	private static readonly MODULE_SEPARATOR = '_';
 	private static COMMANDS: Omit<Command<string>, 'middleware'>[] = [];
 
-	constructor(
-		private name: string,
-		private description: string
-	) {
+	constructor(private name: string) {
 		super();
 	}
 

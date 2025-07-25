@@ -4,7 +4,9 @@ import { RedisAdapter } from '@grammyjs/storage-redis';
 
 import { Redacted } from 'effect';
 import { Bot } from 'grammy';
-
+import { CafeCommand } from './commands/cafe-command.js';
+import { PingCommand } from './commands/ping.command.js';
+import { WhatsCommand } from './commands/whats-command.js';
 import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
 import {
@@ -12,19 +14,12 @@ import {
 	getDescriptionForHelp
 } from './common/types/command.js';
 import type { Context } from './common/types/context.js';
-
+import { redis } from './lib/redis/redis.js';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
-
 import { AuthModule } from './modules/auth/auth-module.js';
 import { NotificationModule } from './modules/notification/notification.module.js';
-import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 import { PetModule } from './modules/pet/pet.module.js';
-
-import { redis } from './lib/redis/redis.js';
-
-import { CafeCommand } from './commands/cafe-command.js';
-import { PingCommand } from './commands/ping.command.js';
-import { WhatsCommand } from './commands/whats-command.js';
+import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));

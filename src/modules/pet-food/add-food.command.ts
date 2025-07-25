@@ -1,6 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { Array as Arr, DateTime, Effect, Either, Exit, Scope } from 'effect';
+import { Array as Arr, DateTime, Effect, Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
@@ -66,12 +66,14 @@ export const addFoodConversation = (async (cvs, ctx) => {
 		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada') }
 	);
 
-	invariant(foodResponse.message, 'Message is not defined');
+	const foodResponseMessage = foodResponse.message;
+
+	invariant(foodResponseMessage, 'Message is not defined');
 	invariant(ctx.message, 'Invalid message');
 
 	const parsePetFoodWeightAndTimeResult = await parsePetFoodWeightAndTime({
-		messageMatch: foodResponse.message.text,
-		messageTime: foodResponse.message.date,
+		messageMatch: foodResponseMessage.text,
+		messageTime: foodResponseMessage.date,
 		timezone: dayStart.timezone
 	}).pipe(Effect.either, runtime.runPromise);
 
@@ -87,8 +89,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			Effect.andThen((service) =>
 				service.addPetFoodAndScheduleNotification({
 					pet: currentPet,
-					// biome-ignore lint/style/noNonNullAssertion: <explanation>
-					messageID: foodResponse.message!.message_id,
+					messageID: foodResponseMessage.message_id,
 					userID: user.id,
 
 					time: DateTime.unsafeMake(time),

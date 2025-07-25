@@ -1,14 +1,14 @@
 import {
+	createClient,
 	type Client as LibSQLClient,
-	LibsqlError,
-	createClient
+	LibsqlError
 } from '@libsql/client';
 
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import {
+	drizzle,
 	type LibSQLDatabase,
-	type LibSQLTransaction,
-	drizzle
+	type LibSQLTransaction
 } from 'drizzle-orm/libsql';
 import {
 	Cause,
@@ -24,7 +24,6 @@ import {
 
 import { Env } from '../../common/env.js';
 
-import { runtime } from '../../runtime.js';
 import * as DbSchema from './schema.js';
 
 type Client = LibSQLDatabase<typeof DbSchema> & {

@@ -1,6 +1,4 @@
 import { fromUnixTime } from 'date-fns';
-
-// biome-ignore lint/suspicious/noShadowRestrictedNames: Effect is cool
 import { Array, DateTime, Effect, Option, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
@@ -13,9 +11,9 @@ import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getRelativeTime } from '../../common/utils/get-relative-time.js';
 import { ConfigService } from '../../lib/entities/config.js';
 import {
-	type Pet,
 	getUserCaredPets,
-	getUserOwnedPets
+	getUserOwnedPets,
+	type Pet
 } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { runtime } from '../../runtime.js';

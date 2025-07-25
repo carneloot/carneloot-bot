@@ -1,13 +1,9 @@
-import { Layer, ManagedRuntime, Redacted } from 'effect';
-
 import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
-
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-
-import * as Database from './lib/database/db.js';
-
+import { Layer, ManagedRuntime, Redacted } from 'effect';
 import { Env } from './common/env.js';
+import * as Database from './lib/database/db.js';
 import { ConfigService } from './lib/entities/config.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
 import { PetFoodService } from './lib/services/pet-food.js';

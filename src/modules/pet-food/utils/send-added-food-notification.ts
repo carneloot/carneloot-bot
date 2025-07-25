@@ -1,5 +1,5 @@
 import { utcToZonedTime } from 'date-fns-tz';
-import { Array as A, Console, Data, Effect, Option, flow } from 'effect';
+import { Array as A, Console, Data, Effect, flow, Option } from 'effect';
 
 import type Qty from 'js-quantities';
 

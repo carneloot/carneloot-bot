@@ -1,4 +1,4 @@
-import { Array as A, Duration, Option, Record, Schema, pipe } from 'effect';
+import { Array as A, Duration, Option, pipe, Record, Schema } from 'effect';
 
 export const DurationParts = Schema.Struct({
 	years: Schema.optional(Schema.Number),

@@ -1,9 +1,7 @@
 import { Array as A, Order, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
-
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-
 import type { Context } from '../../common/types/context.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 
 export const ListPetsCommand = (async (ctx) => {
 	if (!ctx.user) {

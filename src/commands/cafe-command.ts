@@ -1,7 +1,6 @@
 import type { Context } from 'grammy';
-import { table } from 'table';
-
 import Qty from 'js-quantities';
+import { table } from 'table';
 
 import type { Command } from '../common/types/command.js';
 

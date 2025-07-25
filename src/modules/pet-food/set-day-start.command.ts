@@ -3,12 +3,10 @@ import { getTimeZones } from '@vvo/tzdb';
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
-
-import { getConfig, setConfig } from '../../lib/entities/config.js';
-
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
+import { getConfig, setConfig } from '../../lib/entities/config.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
 
 const hoursOptions = Array.from({ length: 12 }, (_, i) => ({

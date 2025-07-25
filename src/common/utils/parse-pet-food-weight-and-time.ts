@@ -1,4 +1,5 @@
 import { Data, DateTime, Duration, Effect, Schema } from 'effect';
+import Qty from 'js-quantities';
 import {
 	anyOf,
 	caseInsensitive,
@@ -8,8 +9,6 @@ import {
 	oneOrMore,
 	whitespace
 } from 'magic-regexp';
-
-import Qty from 'js-quantities';
 
 const MESSAGE_REGEX = createRegExp(
 	oneOrMore(digit)

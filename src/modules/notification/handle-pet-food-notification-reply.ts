@@ -1,13 +1,11 @@
 import { Reactions } from '@grammyjs/emoji';
 
-import { DateTime, Effect, Either } from 'effect';
+import { DateTime, Effect } from 'effect';
 
 import invariant from 'tiny-invariant';
-
-import type { PetID } from '../../lib/database/schema.js';
-
 import type { Context } from '../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
+import type { PetID } from '../../lib/database/schema.js';
 import { ConfigService } from '../../lib/entities/config.js';
 import { getPetByID } from '../../lib/entities/pet.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';

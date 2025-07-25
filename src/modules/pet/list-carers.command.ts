@@ -1,12 +1,10 @@
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
-
-import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet.js';
-
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
+import { getPetCarers, getUserOwnedPets } from '../../lib/entities/pet.js';
 
 export const listCarersConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);

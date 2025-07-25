@@ -3,11 +3,11 @@ import {
 	Console,
 	Data,
 	Effect,
+	flow,
 	Iterable,
 	Predicate,
-	String as Str,
-	flow,
-	pipe
+	pipe,
+	String as Str
 } from 'effect';
 import type { Bot } from 'grammy';
 
@@ -18,7 +18,7 @@ import {
 	createNotificationHistory,
 	getNotificationByOwnerAndKeyword
 } from '../../lib/entities/notification.js';
-import { type User, getUserFromApiKey } from '../../lib/entities/user.js';
+import { getUserFromApiKey, type User } from '../../lib/entities/user.js';
 import type { NotifyParams } from '../types/notify-params.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{

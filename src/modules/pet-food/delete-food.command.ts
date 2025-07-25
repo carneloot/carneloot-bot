@@ -11,11 +11,11 @@ import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 import { getConfig } from '../../lib/entities/config.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import {
 	deletePetFood,
 	getPetFoodByRange
 } from '../../lib/entities/pet-food.js';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 
 import { runtime } from '../../runtime.js';

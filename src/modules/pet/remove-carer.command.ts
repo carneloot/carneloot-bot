@@ -1,16 +1,14 @@
 import type { MiddlewareFn } from 'grammy';
 
 import invariant from 'tiny-invariant';
-
+import type { Context, ConversationFn } from '../../common/types/context.js';
+import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import {
 	getPetCarers,
 	getUserOwnedPets,
 	removeCarer
 } from '../../lib/entities/pet.js';
-
-import type { Context, ConversationFn } from '../../common/types/context.js';
-import { getUserDisplay } from '../../common/utils/get-user-display.js';
-import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 
 export const removeCarerConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);

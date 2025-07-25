@@ -1,22 +1,20 @@
-import invariant from 'tiny-invariant';
-
 import { getUnixTime, parseISO } from 'date-fns';
-import { Array as Arr, DateTime, Effect, Either, Option, pipe } from 'effect';
-import type { MiddlewareFn } from 'grammy';
-
 import { utcToZonedTime } from 'date-fns-tz';
+import { Array as Arr, DateTime, Effect, Option } from 'effect';
+import type { MiddlewareFn } from 'grammy';
 import Qty from 'js-quantities';
+import invariant from 'tiny-invariant';
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import {
 	getPetFoodByRange,
 	updatePetFood
 } from '../../lib/entities/pet-food.js';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';

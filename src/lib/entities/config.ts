@@ -2,17 +2,15 @@ import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
 import { Cache, Data, Duration, Effect, Predicate, Schema } from 'effect';
-
+import * as CustomSchema from '../../common/schema.js';
 import { runtime } from '../../runtime.js';
+import * as Database from '../database/db.js';
 import {
 	type ConfigID,
+	configsTable,
 	type PetID,
-	type UserID,
-	configsTable
+	type UserID
 } from '../database/schema.js';
-
-import * as CustomSchema from '../../common/schema.js';
-import * as Database from '../database/db.js';
 
 const Configs = {
 	user: {
@@ -72,7 +70,11 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 					context,
 					key,
 					id
-				}: { context: string; key: string; id: string }) =>
+				}: {
+					context: string;
+					key: string;
+					id: string;
+				}) =>
 					db
 						.execute((db) =>
 							db

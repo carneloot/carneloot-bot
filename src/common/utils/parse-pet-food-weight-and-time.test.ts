@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from '@effect/vitest';
 
 import { getUnixTime, set } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { Effect, Either, Equal, Exit } from 'effect';
+import { Effect, Equal, Exit } from 'effect';
 
 import Qty from 'js-quantities';
 
