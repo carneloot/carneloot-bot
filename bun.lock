@@ -35,6 +35,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "2.1.2",
+        "@effect/language-service": "^0.30.0",
         "@effect/vitest": "^0.25.0",
         "@total-typescript/ts-reset": "^0.6.1",
         "@types/bun": "1.2.19",
@@ -69,6 +70,8 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.1.2", "", { "os": "win32", "cpu": "x64" }, "sha512-9zajnk59PMpjBkty3bK2IrjUsUHvqe9HWwyAWQBjGLE7MIBjbX2vwv1XPEhmO2RRuGoTkVx3WCanHrjAytICLA=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
+
+    "@effect/language-service": ["@effect/language-service@0.30.0", "", { "bin": { "effect-language-service": "cli.js" } }, "sha512-6nA9DxsepIUjYeZqmkM+wNrSgzv2/9tYyg2XD8rv9cDydMMIlKHzVbGRba67nCKGqeJ1jHsn6RBN3a4qCIgqKQ=="],
 
     "@effect/opentelemetry": ["@effect/opentelemetry@0.56.0", "", { "peerDependencies": { "@effect/platform": "^0.90.0", "@opentelemetry/api": "^1.9", "@opentelemetry/resources": "^2.0.0", "@opentelemetry/sdk-logs": "^0.203.0", "@opentelemetry/sdk-metrics": "^2.0.0", "@opentelemetry/sdk-trace-base": "^2.0.0", "@opentelemetry/sdk-trace-node": "^2.0.0", "@opentelemetry/sdk-trace-web": "^2.0.0", "@opentelemetry/semantic-conventions": "^1.33.0", "effect": "^3.17.0" }, "optionalPeers": ["@opentelemetry/api", "@opentelemetry/resources", "@opentelemetry/sdk-logs", "@opentelemetry/sdk-metrics", "@opentelemetry/sdk-trace-base", "@opentelemetry/sdk-trace-node", "@opentelemetry/sdk-trace-web"] }, "sha512-WRqSnhF5bTMXlyC7q7fH7k+J2cbh7JRD+o2Vpj/H7AtAhdKmPilYMj9eudTyPcM14tgw555mnNRgTS7v6TCp3Q=="],
 

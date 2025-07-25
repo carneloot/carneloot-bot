@@ -12,6 +12,11 @@
 		"noUncheckedIndexedAccess": true,
 		"module": "NodeNext",
 		"noEmit": true,
-		"lib": ["es2022"]
+		"lib": ["es2022"],
+		"plugins": [
+			{
+				"name": "@effect/language-service"
+			}
+		]
 	}
 }
