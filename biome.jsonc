@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+	"$schema": "node_modules/@biomejs/biome/configuration_schema.json",
 	"formatter": {
 		"indentStyle": "tab"
 	},
@@ -15,8 +15,12 @@
 			"trailingCommas": "none"
 		}
 	},
-	"organizeImports": {
-		"enabled": true
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
 	},
 	"linter": {
 		"enabled": true,
