@@ -35,7 +35,6 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 				Effect.andThen((config) =>
 					config.getConfig('pet', 'notificationDelay', pet.id)
 				),
-				Effect.scoped,
 				Effect.asSome,
 				Effect.catchTag('MissingConfigError', () => Effect.succeedNone),
 				runtime.runPromise
@@ -122,7 +121,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 						DateTime.unsafeMake(lastPetFood.value.time)
 					);
 				}
-			}).pipe(Effect.scoped, runtime.runPromise)
+			}).pipe(runtime.runPromise)
 		);
 
 		return;

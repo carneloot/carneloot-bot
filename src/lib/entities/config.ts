@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 
 import { and, eq } from 'drizzle-orm';
-import { Cache, Data, Duration, Effect, Predicate, Schema } from 'effect';
+import { Data, Effect, Predicate, Schema } from 'effect';
 import * as CustomSchema from '../../common/schema.js';
 import { runtime } from '../../runtime.js';
 import * as Database from '../database/db.js';
@@ -63,34 +63,6 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 		effect: Effect.gen(function* () {
 			const db = yield* Database.Database;
 
-			const getConfigCache = yield* Cache.make({
-				capacity: Number.POSITIVE_INFINITY,
-				timeToLive: Duration.infinity,
-				lookup: ({
-					context,
-					key,
-					id
-				}: {
-					context: string;
-					key: string;
-					id: string;
-				}) =>
-					db
-						.execute((db) =>
-							db
-								.select({ value: configsTable.value })
-								.from(configsTable)
-								.where(
-									and(
-										eq(configsTable.context, `${context}:${id}`),
-										eq(configsTable.key, key as string)
-									)
-								)
-								.get()
-						)
-						.pipe(Effect.withSpan('getConfigLookup'))
-			});
-
 			const getConfig = <
 				Context extends ConfigContext,
 				Key extends ConfigKey<Context>,
@@ -107,11 +79,18 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 						config_id: id
 					});
 
-					const cacheKey = { context, key: key.toString(), id };
-
-					const queryResult = yield* getConfigCache.get(cacheKey);
-
-					yield* Effect.addFinalizer(() => getConfigCache.invalidate(cacheKey));
+					const queryResult = yield* db.execute((db) =>
+						db
+							.select({ value: configsTable.value })
+							.from(configsTable)
+							.where(
+								and(
+									eq(configsTable.context, `${context}:${id}`),
+									eq(configsTable.key, key as string)
+								)
+							)
+							.get()
+					);
 
 					if (Predicate.isUndefined(queryResult)) {
 						return yield* new MissingConfigError({
@@ -225,7 +204,6 @@ export const getConfig = <
 				.getConfig(context, key, id)
 				.pipe(Effect.catchTag('MissingConfigError', () => Effect.succeed(null)))
 		),
-		Effect.scoped,
 		runtime.runPromise
 	);
 

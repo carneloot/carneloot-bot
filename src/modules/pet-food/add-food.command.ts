@@ -99,7 +99,6 @@ export const addFoodConversation = (async (cvs, ctx) => {
 					dayStart
 				})
 			),
-			Effect.scoped,
 			Effect.either,
 			runtime.runPromise
 		)
@@ -123,7 +122,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			quantity,
 			user,
 			time: timeChanged ? time : undefined
-		})(ctx).pipe(Effect.scoped, runtime.runPromise)
+		})(ctx).pipe(runtime.runPromise)
 	);
 }) satisfies ConversationFn;
 

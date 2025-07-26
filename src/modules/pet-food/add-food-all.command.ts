@@ -131,7 +131,6 @@ export const AddFoodAllCommand = (ctx: Context) =>
 					)
 				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
 		}),
-		Effect.scoped,
 		Effect.withSpan('AddFoodAllCommand'),
 		runtime.runPromise
 	);

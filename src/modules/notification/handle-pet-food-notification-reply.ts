@@ -86,6 +86,5 @@ export const handlePetFoodNotificationReply = (ctx: Context, petID: PetID) =>
 			DatabaseError: Effect.die,
 			UnknownException: Effect.die
 		}),
-		Effect.scoped,
 		Effect.withSpan('handlePetFoodNotificationReply')
 	);

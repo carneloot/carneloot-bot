@@ -140,7 +140,6 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 						DateTime.unsafeMake(time)
 					)
 				),
-				Effect.scoped,
 				runtime.runPromise
 			)
 		);

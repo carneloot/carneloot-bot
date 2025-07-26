@@ -111,7 +111,7 @@ const handler = Effect.fn('petFoodNotificationJob.handler')(function* (
 			}),
 		{ concurrency: 'unbounded' }
 	);
-}, Effect.scoped);
+});
 
 export const petFoodNotificationJob = {
 	QUEUE_NAME,
