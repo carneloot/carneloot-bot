@@ -1,11 +1,16 @@
 import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+
 import { Layer, ManagedRuntime, Redacted } from 'effect';
+
 import { Env } from './common/env.js';
 import * as Database from './lib/database/db.js';
 import { ConfigService } from './lib/entities/config.js';
+import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
+import { NotificationRepository } from './lib/repositories/notification.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
+import { NotificationService } from './lib/services/notification.js';
 import { PetFoodService } from './lib/services/pet-food.js';
 
 const traceExporter = new OTLPTraceExporter({
@@ -33,9 +38,12 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 const appLayer = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
-	ConfigService.Default,
+	PetFoodNotificationQueue.Default,
+	NotificationService.Default,
+	NotificationRepository.Default,
 	PetFoodRepository.Default,
-	PetFoodService.Default
+	PetFoodService.Default,
+	ConfigService.Default
 );
 
 export const runtime = ManagedRuntime.make(appLayer);

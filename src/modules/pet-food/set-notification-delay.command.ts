@@ -8,6 +8,7 @@ import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import { ConfigService, setConfig } from '../../lib/entities/config.js';
 import { getUserOwnedPets } from '../../lib/entities/pet.js';
+import { PetFoodNotificationQueue } from '../../lib/queues/pet-food-notification.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
@@ -108,13 +109,14 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 			Effect.gen(function* () {
 				const petFoodRepository = yield* PetFoodRepository;
 				const petFoodService = yield* PetFoodService;
+				const queue = yield* PetFoodNotificationQueue;
 
 				const lastPetFood = yield* petFoodRepository.getLastPetFood({
 					petID: pet.id
 				});
 
 				if (Option.isSome(lastPetFood)) {
-					yield* petFoodService.cancelPetFoodNotification(lastPetFood.value.id);
+					yield* queue.removeFromQueue(lastPetFood.value.id);
 					yield* petFoodService.schedulePetFoodNotification(
 						pet.id,
 						lastPetFood.value.id,
@@ -138,8 +140,8 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	await cvs.external(() =>
 		Effect.gen(function* () {
 			const config = yield* ConfigService;
-			const petFoodService = yield* PetFoodService;
 			const petFoodRepository = yield* PetFoodRepository;
+			const queue = yield* PetFoodNotificationQueue;
 
 			yield* config.deleteConfig('pet', 'notificationDelay', pet.id);
 
@@ -148,7 +150,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 			});
 
 			if (Option.isSome(lastPetFood)) {
-				yield* petFoodService.cancelPetFoodNotification(lastPetFood.value.id);
+				yield* queue.removeFromQueue(lastPetFood.value.id);
 			}
 		}).pipe(runtime.runPromise)
 	);

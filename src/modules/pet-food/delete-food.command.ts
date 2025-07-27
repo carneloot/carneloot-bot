@@ -16,8 +16,7 @@ import {
 	deletePetFood,
 	getPetFoodByRange
 } from '../../lib/entities/pet-food.js';
-import { PetFoodService } from '../../lib/services/pet-food.js';
-
+import { PetFoodNotificationQueue } from '../../lib/queues/pet-food-notification.js';
 import { runtime } from '../../runtime.js';
 
 export const deleteFoodConversation = (async (cvs, ctx) => {
@@ -85,10 +84,8 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	await cvs.external(async () => {
 		await deletePetFood(selectedFood.id);
 
-		await PetFoodService.pipe(
-			Effect.andThen((service) =>
-				service.cancelPetFoodNotification(selectedFood.id)
-			),
+		await PetFoodNotificationQueue.pipe(
+			Effect.andThen((queue) => queue.removeFromQueue(selectedFood.id)),
 			runtime.runPromise
 		);
 	});

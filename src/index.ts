@@ -5,11 +5,11 @@ import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
-import { sendNotification } from './api/actions/send-notification.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { createBot } from './bot.js';
 import { Env } from './common/env.js';
-import { petFoodNotificationJob } from './lib/queues/pet-food-notification.js';
+import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
+import { NotificationService } from './lib/services/notification.js';
 import { runtime } from './runtime.js';
 
 const { bot, setCommands, setWebhook } = createBot();
@@ -26,7 +26,9 @@ api.post('notify', sValidator('json', NotifyParams), (c) =>
 	Effect.gen(function* () {
 		const body = c.req.valid('json');
 
-		return yield* sendNotification(bot, body).pipe(
+		const notificationService = yield* NotificationService;
+
+		return yield* notificationService.sendNotification(bot, body).pipe(
 			Effect.map(() => c.json({ message: 'Notification sent successfully!' })),
 			Effect.catchTags({
 				UserNotFoundError: () =>
@@ -69,7 +71,8 @@ if (Env.RUN_MODE === 'webhook') {
 	api.post('/webhook/:secret', webhookCallback(bot, 'hono'));
 }
 
-const _worker = petFoodNotificationJob.createWorker();
+// Manually start the queue since the bot is not dependent on effect
+await PetFoodNotificationQueue.pipe(runtime.runPromise);
 
 app.route('/api', api);
 app.use('*', serveStatic({ root: '../public/' }));

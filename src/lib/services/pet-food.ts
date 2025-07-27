@@ -5,7 +5,7 @@ import type Qty from 'js-quantities';
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
 import { ConfigService, type ConfigValue } from '../entities/config.js';
 import type { Pet } from '../entities/pet.js';
-import { petFoodNotificationJob } from '../queues/pet-food-notification.js';
+import { PetFoodNotificationQueue } from '../queues/pet-food-notification.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
 
 const LIMIT_DURATION = Duration.decode('1 minutes');
@@ -29,13 +29,18 @@ export class DuplicatedEntryError extends Data.TaggedError(
 export class PetFoodService extends Effect.Service<PetFoodService>()(
 	'app/PetFoodService',
 	{
-		dependencies: [ConfigService.Default, PetFoodRepository.Default],
+		dependencies: [
+			ConfigService.Default,
+			PetFoodRepository.Default,
+			PetFoodNotificationQueue.Default
+		],
 		effect: Effect.gen(function* () {
 			const petFoodRepository = yield* PetFoodRepository;
 			const config = yield* ConfigService;
+			const queue = yield* PetFoodNotificationQueue;
 
 			const schedulePetFoodNotification = Effect.fn(
-				'schedulePetFoodNotification'
+				'PetFoodService.schedulePetFoodNotification'
 			)(function* (
 				petID: PetID,
 				petFoodID: PetFoodID,
@@ -47,50 +52,15 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 					petID
 				);
 
-				const now = yield* DateTime.now;
-
-				const delay = time.pipe(
-					DateTime.addDuration(notificationDelay),
-					DateTime.distanceDuration(now),
-					Duration.toMillis
-				);
-
-				const shouldSendNow = DateTime.greaterThan(
-					now,
+				yield* queue.scheduleJob(
+					petFoodID,
+					{ petID },
 					DateTime.addDuration(time, notificationDelay)
 				);
-
-				if (shouldSendNow) {
-					yield* petFoodNotificationJob.handler({ petID }, now);
-				} else {
-					yield* Effect.tryPromise(() =>
-						petFoodNotificationJob.queue.add(
-							`pet-${petID}}`,
-							{
-								petID
-							},
-							{
-								jobId: petFoodID,
-								delay: Math.max(delay, 0)
-							}
-						)
-					).pipe(
-						Effect.withSpan('petFoodNotificationJob.queue.add'),
-						Effect.ignoreLogged
-					);
-				}
 			});
 
-			const cancelPetFoodNotification = (petFoodID: PetFoodID) =>
-				Effect.tryPromise(() =>
-					petFoodNotificationJob.queue.remove(petFoodID)
-				).pipe(
-					Effect.withSpan('cancelPetFoodNotification'),
-					Effect.ignoreLogged
-				);
-
 			const addPetFoodAndScheduleNotification = Effect.fn(
-				'addPetFoodAndScheduleNotification'
+				'PetFoodService.addPetFoodAndScheduleNotification'
 			)(function* ({
 				pet,
 				messageID,
@@ -153,7 +123,7 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 					DateTime.greaterThan(time, lastPetFoodTime.value)
 				) {
 					if (Option.isSome(lastPetFood)) {
-						yield* cancelPetFoodNotification(lastPetFood.value.id);
+						yield* queue.removeFromQueue(lastPetFood.value.id);
 					}
 
 					yield* schedulePetFoodNotification(pet.id, petFood.id, time);
@@ -164,8 +134,7 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 
 			return {
 				addPetFoodAndScheduleNotification,
-				schedulePetFoodNotification,
-				cancelPetFoodNotification
+				schedulePetFoodNotification
 			} as const;
 		})
 	}

@@ -3,7 +3,7 @@ import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
-import { getNotificationFromHistory } from '../../lib/entities/notification.js';
+import { NotificationRepository } from '../../lib/repositories/notification.js';
 import { runtime } from '../../runtime.js';
 import { handlePetFoodNotificationReply } from './handle-pet-food-notification-reply.js';
 
@@ -19,20 +19,15 @@ export const handleNotificationReply = ((ctx, next) =>
 			return;
 		}
 
+		const notificationRepository = yield* NotificationRepository;
+
 		const { reply_to_message: notificationMessage } = ctx.message;
 
-		const notification = yield* Effect.tryPromise(() =>
-			getNotificationFromHistory(notificationMessage.message_id, user.id)
-		).pipe(Effect.withSpan('getNotificationFromHistory'));
-
-		if (!notification) {
-			yield* Effect.tryPromise(() =>
-				ctx.reply(
-					'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
-				)
-			).pipe(Effect.withSpan('ctx.reply'));
-			return;
-		}
+		const notification =
+			yield* notificationRepository.getNotificationFromHistory(
+				notificationMessage.message_id,
+				user.id
+			);
 
 		if (notification.petID) {
 			return yield* handlePetFoodNotificationReply(ctx, notification.petID);
@@ -61,6 +56,13 @@ export const handleNotificationReply = ((ctx, next) =>
 		).pipe(Effect.withSpan('bot.api.sendMessage'));
 	}).pipe(
 		Effect.withSpan('handleNotificationReply'),
+		Effect.catchTag('NotificationNotFoundError', () =>
+			Effect.tryPromise(() =>
+				ctx.reply(
+					'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
+				)
+			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
+		),
 		Effect.catchIf(
 			(err) => err._tag === 'MissingConfigError' && err.key === 'dayStart',
 			() =>
