@@ -11,12 +11,12 @@ import {
 	Redacted
 } from 'effect';
 import { Bot } from 'grammy';
-
 import Qty from 'js-quantities';
 
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { runtime } from '../../runtime.js';
 import type { PetFoodID, PetID } from '../database/schema.js';
 import { ConfigService } from '../entities/config.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
@@ -180,7 +180,7 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 					() =>
 						new Worker<Data>(
 							queue.name,
-							(job) => {
+							async (job) => {
 								const now = pipe(
 									job.processedOn,
 									Option.fromNullable,
@@ -188,7 +188,7 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 									Option.getOrElse(() => DateTime.unsafeNow())
 								);
 
-								return Effect.runPromise(handler(job.data, now));
+								await runtime.runPromise(handler(job.data, now));
 							},
 							{
 								connection: redis
