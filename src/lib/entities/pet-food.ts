@@ -8,19 +8,6 @@ import {
 	usersTable
 } from '../database/schema.js';
 
-export const updatePetFood = async (
-	petFoodID: PetFoodID,
-	values: Pick<
-		typeof petFoodTable.$inferInsert,
-		'time' | 'messageID' | 'quantity'
-	>
-) => {
-	await db
-		.update(petFoodTable)
-		.set(values)
-		.where(eq(petFoodTable.id, petFoodID));
-};
-
 export const deletePetFood = async (petFoodID: PetFoodID) => {
 	await db.delete(petFoodTable).where(eq(petFoodTable.id, petFoodID));
 };

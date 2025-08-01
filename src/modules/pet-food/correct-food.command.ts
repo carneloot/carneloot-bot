@@ -1,4 +1,4 @@
-import { getUnixTime, parseISO } from 'date-fns';
+import { getUnixTime } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
 import { Array as Arr, DateTime, Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
@@ -11,10 +11,7 @@ import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-wei
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
-import {
-	getPetFoodByRange,
-	updatePetFood
-} from '../../lib/entities/pet-food.js';
+import { getPetFoodByRange } from '../../lib/entities/pet-food.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
@@ -88,9 +85,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 
 	await ctx.reply('Qual será a nova quantidade de ração (e/ou horário)?');
 
-	const messageTime = getUnixTime(
-		typeof petFood.time === 'string' ? parseISO(petFood.time) : petFood.time
-	);
+	const messageTime = getUnixTime(petFood.time);
 
 	const replyResponse = await cvs.waitUntil(
 		(ctx) =>
@@ -111,10 +106,18 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	const { quantity, time, timeChanged } = result;
 
 	await cvs.external(() =>
-		updatePetFood(petFood.id, {
-			quantity: quantity.scalar,
-			time
-		})
+		PetFoodRepository.pipe(
+			Effect.flatMap((repo) =>
+				repo.updatePetFood({
+					petFoodID: petFood.id,
+					values: {
+						quantity: quantity.scalar,
+						time
+					}
+				})
+			),
+			runtime.runPromise
+		)
 	);
 
 	const lastFood = await cvs.external(() =>

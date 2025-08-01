@@ -63,7 +63,9 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 								id: petFoodTable.id
 							})
 							.get()
-					).pipe(Effect.withSpan('addPetFood'))
+					).pipe(
+						Effect.withSpan('addPetFood', { attributes: { input: values } })
+					)
 			);
 			const getLastPetFood = db.makeQuery((execute, input: { petID: PetID }) =>
 				execute((db) =>
@@ -78,10 +80,47 @@ export class PetFoodRepository extends Effect.Service<PetFoodRepository>()(
 				).pipe(Effect.withSpan('getLastPetFood'))
 			);
 
+			const getPetFoodsFromMessage = db.makeQuery(
+				(execute, input: { messageId: number }) =>
+					execute((db) =>
+						db
+							.select({
+								id: petFoodTable.id,
+								time: petFoodTable.time,
+								petID: petFoodTable.petID
+							})
+							.from(petFoodTable)
+							.where(eq(petFoodTable.messageID, input.messageId))
+					).pipe(
+						Effect.withSpan('getPetFoodsFromMessage', { attributes: { input } })
+					)
+			);
+
+			const updatePetFood = db.makeQuery(
+				(
+					execute,
+					input: {
+						petFoodID: PetFoodID;
+						values: Pick<
+							typeof petFoodTable.$inferInsert,
+							'time' | 'messageID' | 'quantity'
+						>;
+					}
+				) =>
+					execute((db) =>
+						db
+							.update(petFoodTable)
+							.set(input.values)
+							.where(eq(petFoodTable.id, input.petFoodID))
+					).pipe(Effect.withSpan('updatePetFood'))
+			);
+
 			return {
 				getDailyFoodConsumption,
 				getLastPetFood,
-				addPetFood
+				addPetFood,
+				getPetFoodsFromMessage,
+				updatePetFood
 			} as const;
 		})
 	}

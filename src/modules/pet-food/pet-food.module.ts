@@ -13,6 +13,7 @@ import {
 	deleteFoodConversation
 } from './delete-food.command.js';
 import { FoodStatusCommand } from './food-status.command.js';
+import { handlePetFoodReply } from './handle-pet-food-reply.js';
 import {
 	SetDayStartCommand,
 	setDayStartConversation
@@ -89,3 +90,5 @@ PetFoodModule.setCommand(
 	UserMiddleware,
 	CorrectFoodCommand
 );
+
+PetFoodModule.on('message', UserMiddleware, handlePetFoodReply);
