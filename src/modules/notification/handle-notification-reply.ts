@@ -1,36 +1,18 @@
 import { Effect } from 'effect';
-import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
-import { NotificationRepository } from '../../lib/repositories/notification.js';
-import { runtime } from '../../runtime.js';
-import { handlePetFoodNotificationReply } from './handle-pet-food-notification-reply.js';
+import type { NotificationRepository } from '../../lib/repositories/notification.js';
 
-export const handleNotificationReply = ((ctx, next) =>
-	Effect.gen(function* () {
-		if (!ctx.message?.reply_to_message) {
-			yield* Effect.promise(() => next());
-			return;
-		}
+type Notification = Effect.Effect.Success<
+	ReturnType<NotificationRepository['getNotificationFromHistory']>
+>;
 
+export const handleNotificationReply = Effect.fn('handleNotificationReply')(
+	function* (ctx: Context, notification: Notification) {
 		const user = ctx.user;
-		if (!user) {
+		if (!user || !ctx.message) {
 			return;
-		}
-
-		const notificationRepository = yield* NotificationRepository;
-
-		const { reply_to_message: notificationMessage } = ctx.message;
-
-		const notification =
-			yield* notificationRepository.getNotificationFromHistory(
-				notificationMessage.message_id,
-				user.id
-			);
-
-		if (notification.petID) {
-			return yield* handlePetFoodNotificationReply(ctx, notification.petID);
 		}
 
 		const { messageToReply, ownerTelegramId } = notification;
@@ -42,7 +24,7 @@ export const handleNotificationReply = ((ctx, next) =>
 		if (user.telegramID === ownerTelegramId) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply('Você não pode responder a sua própria notificação.')
-			).pipe(Effect.withSpan('ctx.reply'));
+			).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged);
 			return;
 		}
 
@@ -53,32 +35,6 @@ export const handleNotificationReply = ((ctx, next) =>
 			ctx.api.sendMessage(ownerTelegramId, message, {
 				reply_to_message_id: messageToReply
 			})
-		).pipe(Effect.withSpan('bot.api.sendMessage'));
-	}).pipe(
-		Effect.withSpan('handleNotificationReply'),
-		Effect.catchTag('NotificationNotFoundError', () =>
-			Effect.tryPromise(() =>
-				ctx.reply(
-					'Não foi possível encontrar a notificação original no histórico. Por favor, responda a notificação mais recente.'
-				)
-			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
-		),
-		Effect.catchIf(
-			(err) => err._tag === 'MissingConfigError' && err.key === 'dayStart',
-			() =>
-				Effect.tryPromise(() =>
-					ctx.reply('Por favor, configure o inicio do dia para o seu pet')
-				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
-		),
-		Effect.catchIf(
-			(err) =>
-				err._tag === 'MissingConfigError' && err.key === 'notificationDelay',
-			() =>
-				Effect.tryPromise(() =>
-					ctx.reply(
-						'Por favor, configure o tempo de notificação para o seu pet'
-					)
-				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
-		),
-		runtime.runPromise
-	)) satisfies MiddlewareFn<Context>;
+		).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.ignoreLogged);
+	}
+);

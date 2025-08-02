@@ -16,8 +16,9 @@ import {
 import type { Context } from './common/types/context.js';
 import { redis } from './lib/redis/redis.js';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
+import { replyMiddleware } from './middlewares/reply.middleware.js';
+import { UserMiddleware } from './middlewares/user.middleware.js';
 import { AuthModule } from './modules/auth/auth-module.js';
-import { NotificationModule } from './modules/notification/notification.module.js';
 import { PetModule } from './modules/pet/pet.module.js';
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 
@@ -45,6 +46,7 @@ export const createBot = () => {
 	bot.use(GenericErrorMiddleware);
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
+	bot.on('message', UserMiddleware, replyMiddleware);
 
 	bot.command(PingCommand.command, PingCommand);
 	bot.command(WhatsCommand.command, WhatsCommand);
@@ -53,7 +55,6 @@ export const createBot = () => {
 	bot.use(AuthModule);
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
-	bot.use(NotificationModule);
 
 	bot
 		.on(':text')
