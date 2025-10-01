@@ -47,6 +47,13 @@ export const AddFoodAllCommand = (ctx: Context) =>
 			{ concurrency: 'unbounded' }
 		).pipe(Effect.map(Array.flatten));
 
+		if (Array.isEmptyArray(allPets)) {
+			yield* Effect.tryPromise(() =>
+				ctx.reply('Você não possui nenhum pet')
+			).pipe(Effect.withSpan('ctx.reply'));
+			return;
+		}
+
 		const { quantity } = yield* parsePetFoodWeightAndTime({
 			messageTime,
 			messageMatch,
