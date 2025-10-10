@@ -29,7 +29,7 @@ export const createBot = () => {
 	bot.use(
 		conversations({
 			storage: new RedisAdapter({
-				instance: redis.duplicate({ keyPrefix: 'session: ' })
+				instance: redis.duplicate({ keyPrefix: 'session:' })
 			}),
 			plugins: [myEmojiParser]
 		})
