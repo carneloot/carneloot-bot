@@ -18,7 +18,7 @@ import {
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { runtime } from '../../runtime.js';
 
-const getPetMessage = Effect.fn('getPetMessage')(function* (
+export const getPetMessage = Effect.fn('getPetMessage')(function* (
 	pet: Pick<Pet, 'id' | 'name'>,
 	now: DateTime.DateTime
 ) {

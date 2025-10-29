@@ -15,7 +15,8 @@ import {
 const Configs = {
 	user: {
 		identifier: '' as UserID,
-		showNotifications: Schema.Boolean
+		showNotifications: Schema.Boolean,
+		sendStatusAfterAddFoodAll: Schema.Boolean
 	},
 	pet: {
 		identifier: '' as PetID,

@@ -9,11 +9,12 @@ import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
 import { sendAddedFoodNotification } from './utils/send-added-food-notification.js';
+import { getPetMessage } from './food-status.command.js';
 
-class MissingUserError extends Data.TaggedError('MissingUserError') {}
+class MissingUserError extends Data.TaggedError('MissingUserError') { }
 class MissingRequiredFieldError extends Data.TaggedError(
 	'MissingRequiredFieldError'
-) {}
+) { }
 
 export const AddFoodAllCommand = (ctx: Context) =>
 	Effect.gen(function* () {
@@ -49,7 +50,7 @@ export const AddFoodAllCommand = (ctx: Context) =>
 
 		if (Array.isEmptyArray(allPets)) {
 			yield* Effect.tryPromise(() =>
-				ctx.reply('Você não possui nenhum pet')
+				ctx.reply('Você não possui nenhum pet')
 			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
@@ -97,12 +98,30 @@ export const AddFoodAllCommand = (ctx: Context) =>
 			{ concurrency: 'unbounded' }
 		);
 
+		const messages = [
+			`Foram adicionados ${quantity} de ração para todos os seus pets`
+		]
+
+		const shouldSendStatus = yield* config.getConfig(
+			'user',
+			'sendStatusAfterAddFoodAll',
+			user.id
+		).pipe(Effect.catchTag('MissingConfigError', () => Effect.succeed(false)));
+
+		if (shouldSendStatus) {
+			const dailyFoodTillNow = yield* Effect.forEach(
+				allPets,
+				(pet) => getPetMessage(pet, DateTime.unsafeMake(messageTime * 1000)),
+				{ concurrency: 'unbounded' }
+			);
+
+			messages.push(...dailyFoodTillNow);
+		}
+
 		yield* Effect.all(
 			[
 				Effect.tryPromise(() =>
-					ctx.reply(
-						`Foram adicionados ${quantity} de ração para todos os seus pets`
-					)
+					ctx.reply(Array.join(messages, '\n'))
 				).pipe(Effect.withSpan('ctx.reply')),
 				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
 					Effect.withSpan('ctx.react')
