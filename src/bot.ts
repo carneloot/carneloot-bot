@@ -5,6 +5,7 @@ import { RedisAdapter } from '@grammyjs/storage-redis';
 import { Redacted } from 'effect';
 import { Bot } from 'grammy';
 import { CafeCommand } from './commands/cafe-command.js';
+import { CafeInvCommand } from './commands/cafe-inv-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
 import { Env } from './common/env.js';
@@ -51,6 +52,7 @@ export const createBot = () => {
 	bot.command(PingCommand.command, PingCommand);
 	bot.command(WhatsCommand.command, WhatsCommand);
 	bot.command(CafeCommand.command, CafeCommand);
+	bot.command(CafeInvCommand.command, CafeInvCommand);
 
 	bot.use(AuthModule);
 	bot.use(PetModule);
@@ -80,6 +82,10 @@ export const createBot = () => {
 				{
 					command: getCommandForHelp(CafeCommand),
 					description: getDescriptionForHelp(CafeCommand)
+				},
+				{
+					command: getCommandForHelp(CafeInvCommand),
+					description: getDescriptionForHelp(CafeInvCommand)
 				},
 				{
 					command: 'cancelar',
