@@ -1,4 +1,5 @@
 import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
+import { DiagConsoleLogger, DiagLogLevel, diag } from '@opentelemetry/api';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 
@@ -12,6 +13,8 @@ import { NotificationRepository } from './lib/repositories/notification.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
 import { NotificationService } from './lib/services/notification.js';
 import { PetFoodService } from './lib/services/pet-food.js';
+
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
 const traceExporter = new OTLPTraceExporter({
 	url: Env.OTLP_URL,
