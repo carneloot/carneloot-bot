@@ -20,6 +20,6 @@ ENV TZ=UTC
 
 EXPOSE 3000
 
-USER bun
+# USER bun
 
 ENTRYPOINT [ "bun", "run", "start" ]
