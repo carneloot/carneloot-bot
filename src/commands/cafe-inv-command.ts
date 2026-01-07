@@ -55,7 +55,12 @@ export const CafeInvCommand: Command<'cafe_inv'> = {
 		const waterAmountInVolume = coffeeAmountInWeight.div(coffeeWaterRatio);
 		const waterAmountInWeight = Qty(waterAmountInVolume.to('ml').scalar, 'g');
 
-		await ctx.reply(`Quantidade de água: ${waterAmountInVolume.toPrec('ml')}`);
+		const waterAmountToDisplay =
+			waterAmountInVolume.scalar < 1
+				? waterAmountInVolume.to('ml').toPrec('ml')
+				: waterAmountInVolume.to('l').toPrec(0.01);
+
+		await ctx.reply(`Quantidade de água: ${waterAmountToDisplay}`);
 
 		const firstWaterPourMinInWeight = coffeeAmountInWeight.mul(2);
 		const firstWaterPourMaxInWeight = coffeeAmountInWeight.mul(3);
