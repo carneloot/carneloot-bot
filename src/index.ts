@@ -6,9 +6,9 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 import { NotifyParams } from './api/types/notify-params.js';
-import { BotService } from './bot.js';
 import { Env } from './common/env.js';
 import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
+import { BotService } from './lib/services/bot.js';
 import { NotificationService } from './lib/services/notification.js';
 import { runtime } from './runtime.js';
 
