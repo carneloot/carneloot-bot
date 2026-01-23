@@ -269,3 +269,5 @@ local.db
 
 # opensrc - source code for packages
 opensrc/
+
+.lalph
