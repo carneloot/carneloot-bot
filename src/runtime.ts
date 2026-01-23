@@ -10,6 +10,7 @@ import { ConfigService } from './lib/entities/config.js';
 import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
 import { NotificationRepository } from './lib/repositories/notification.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
+import { BotService } from './lib/services/bot.js';
 import { NotificationService } from './lib/services/notification.js';
 import { PetFoodService } from './lib/services/pet-food.js';
 
@@ -38,6 +39,7 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 const appLayer = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
+	BotService.Default,
 	PetFoodNotificationQueue.Default,
 	NotificationService.Default,
 	NotificationRepository.Default,

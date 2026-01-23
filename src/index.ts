@@ -6,13 +6,15 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 import { NotifyParams } from './api/types/notify-params.js';
-import { createBot } from './bot.js';
+import { BotService } from './bot.js';
 import { Env } from './common/env.js';
 import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
 import { NotificationService } from './lib/services/notification.js';
 import { runtime } from './runtime.js';
 
-const { bot, setCommands, setWebhook } = createBot();
+const { bot, setCommands, setWebhook } = await BotService.pipe(
+	runtime.runPromise
+);
 
 bot.catch(console.error);
 
