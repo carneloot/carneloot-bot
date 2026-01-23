@@ -266,3 +266,6 @@ service-key.json
 local.db
 
 .envrc
+
+# opensrc - source code for packages
+opensrc/
