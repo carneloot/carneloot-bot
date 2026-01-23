@@ -1,6 +1,8 @@
 import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { WorkflowEngine } from '@effect/workflow';
+import { FetchHttpClient } from '@effect/platform';
 
 import { Layer, ManagedRuntime, Redacted } from 'effect';
 
@@ -12,6 +14,9 @@ import { NotificationRepository } from './lib/repositories/notification.js';
 import { PetFoodRepository } from './lib/repositories/pet-food.js';
 import { NotificationService } from './lib/services/notification.js';
 import { PetFoodService } from './lib/services/pet-food.js';
+import { Bot } from './lib/services/bot.js';
+import { StartServerWorkflowLayer } from './modules/minecraft/workflows/start-server.workflow.js';
+import { DokployService } from './lib/services/dokploy/dokploy.service.js';
 
 const traceExporter = new OTLPTraceExporter({
 	url: Env.OTLP_URL,
@@ -35,15 +40,23 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 	)
 }));
 
+const WorkflowEngineLayer = WorkflowEngine.layerMemory;
+
 const appLayer = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
+	StartServerWorkflowLayer,
 	PetFoodNotificationQueue.Default,
 	NotificationService.Default,
 	NotificationRepository.Default,
 	PetFoodRepository.Default,
 	PetFoodService.Default,
 	ConfigService.Default
+).pipe(
+	Layer.provideMerge(Bot.Default),
+	Layer.provideMerge(WorkflowEngineLayer),
+	Layer.provideMerge(DokployService.Default),
+	Layer.provide(FetchHttpClient.layer)
 );
 
 export const runtime = ManagedRuntime.make(appLayer);

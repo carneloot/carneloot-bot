@@ -1,4 +1,5 @@
 import { Either, Schema } from 'effect';
+import { DokploySchema } from '../lib/services/dokploy/dokploy.schema.js';
 
 const envSchema = Schema.Struct({
 	BOT_TOKEN: Schema.Redacted(Schema.String),
@@ -18,6 +19,13 @@ const envSchema = Schema.Struct({
 	REDIS_URL: Schema.String,
 
 	SOURCE_COMMIT: Schema.optional(Schema.String),
+
+	OWNER_TELEGRAM_ID: Schema.String,
+
+	// Dokploy
+	DOKPLOY_URL: Schema.String,
+	DOKPLOY_API_KEY: Schema.Redacted(Schema.String),
+	DOKPLOY_COMPOSE_ID: DokploySchema.Id,
 
 	// Tracer
 	OTLP_URL: Schema.optional(Schema.String),

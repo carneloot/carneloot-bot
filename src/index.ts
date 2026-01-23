@@ -12,7 +12,7 @@ import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js'
 import { NotificationService } from './lib/services/notification.js';
 import { runtime } from './runtime.js';
 
-const { bot, setCommands, setWebhook } = createBot();
+const { bot, setCommands, setWebhook } = await createBot();
 
 bot.catch(console.error);
 
@@ -72,7 +72,7 @@ if (Env.RUN_MODE === 'webhook') {
 }
 
 // Manually start the queue since the bot is not dependent on effect
-await PetFoodNotificationQueue.pipe(runtime.runPromise);
+// await PetFoodNotificationQueue.pipe(runtime.runPromise);
 
 app.route('/api', api);
 app.use('*', serveStatic({ root: '../public/' }));
@@ -88,3 +88,11 @@ if (Env.RUN_MODE === 'polling') {
 		drop_pending_updates: true
 	});
 }
+
+const handler = async () => {
+	await runtime.dispose();
+};
+
+process.on('SIGINT', handler);
+process.on('SIGTERM', handler);
+process.on('SIGUSR2', handler);

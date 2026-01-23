@@ -2,20 +2,16 @@ import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 
-import { Redacted } from 'effect';
-import { Bot } from 'grammy';
 import { CafeCommand } from './commands/cafe-command.js';
 import { CafeInvCommand } from './commands/cafe-inv-command.js';
 import { PingCommand } from './commands/ping.command.js';
 import { WhatsCommand } from './commands/whats-command.js';
-import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
 import {
 	getCommandForHelp,
 	getDescriptionForHelp
 } from './common/types/command.js';
 import type { Context } from './common/types/context.js';
-import { redis } from './lib/redis/redis.js';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
 import { replyMiddleware } from './middlewares/reply.middleware.js';
 import { UserMiddleware } from './middlewares/user.middleware.js';
@@ -23,8 +19,14 @@ import { AuthModule } from './modules/auth/auth-module.js';
 import { PetModule } from './modules/pet/pet.module.js';
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 
-export const createBot = () => {
-	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
+import { runtime } from './runtime.js';
+
+import { redis } from './lib/redis/redis.js';
+import { Bot } from './lib/services/bot.js';
+import { MinecraftModule } from './modules/minecraft/minecraft.module.js';
+
+export const createBot = async () => {
+	const bot = await runtime.runPromise(Bot);
 	const myEmojiParser = emojiParser();
 
 	bot.use(
@@ -57,6 +59,7 @@ export const createBot = () => {
 	bot.use(AuthModule);
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
+	bot.use(MinecraftModule);
 
 	bot
 		.on(':text')
