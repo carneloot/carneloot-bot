@@ -36,6 +36,11 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		]).then(Arr.flatten)
 	);
 
+	if (allPets.length === 0) {
+		await ctx.reply('Você não possui nenhum pet');
+		return;
+	}
+
 	const currentPet = await showOptionsKeyboard({
 		values: allPets,
 		labelFn: (pet) => pet.name,
@@ -63,6 +68,11 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	const petFoods = await cvs.external(() =>
 		getPetFoodByRange(currentPet.id, DateTime.toDate(from), DateTime.toDate(to))
 	);
+
+	if (petFoods.length === 0) {
+		await ctx.reply('Ainda não foi colocado ração hoje');
+		return;
+	}
 
 	const selectedFood = await showOptionsKeyboard({
 		values: petFoods,
@@ -94,5 +104,5 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 }) satisfies ConversationFn;
 
 export const DeleteFoodCommand = (async (ctx) => {
-	await ctx.conversation.enter('deleteFood');
+	await ctx.conversation.enter('deleteFood', { overwrite: true });
 }) satisfies MiddlewareFn<Context>;
