@@ -1,5 +1,4 @@
 import { Reactions } from '@grammyjs/emoji';
-
 import { Array, Data, DateTime, Effect, Option } from 'effect';
 
 import type { Context } from '../../common/types/context.js';
@@ -12,44 +11,44 @@ import { sendAddedFoodNotification } from './utils/send-added-food-notification.
 
 class MissingUserError extends Data.TaggedError('MissingUserError') {}
 class MissingRequiredFieldError extends Data.TaggedError(
-	'MissingRequiredFieldError'
+	'MissingRequiredFieldError',
 ) {}
 
 export const AddFoodAllCommand = (ctx: Context) =>
 	Effect.gen(function* () {
 		const user = yield* Option.fromNullable(ctx.user).pipe(
 			Effect.catchTag('NoSuchElementException', () =>
-				Effect.fail(new MissingUserError())
-			)
+				Effect.fail(new MissingUserError()),
+			),
 		);
 
 		const messageTime = yield* Option.fromNullable(ctx.message?.date).pipe(
 			Effect.catchTag('NoSuchElementException', () =>
-				Effect.fail(new MissingRequiredFieldError())
-			)
+				Effect.fail(new MissingRequiredFieldError()),
+			),
 		);
 		const messageID = yield* Option.fromNullable(ctx.message?.message_id).pipe(
 			Effect.catchTag('NoSuchElementException', () =>
-				Effect.fail(new MissingRequiredFieldError())
-			)
+				Effect.fail(new MissingRequiredFieldError()),
+			),
 		);
 		const messageMatch = ctx.message?.text;
 
 		const allPets = yield* Effect.all(
 			[
 				Effect.tryPromise(() => getUserOwnedPets(user.id)).pipe(
-					Effect.withSpan('getUserOwnedPets')
+					Effect.withSpan('getUserOwnedPets'),
 				),
 				Effect.tryPromise(() => getUserCaredPets(user.id)).pipe(
-					Effect.withSpan('getUserCaredPets')
-				)
+					Effect.withSpan('getUserCaredPets'),
+				),
 			],
-			{ concurrency: 'unbounded' }
+			{ concurrency: 'unbounded' },
 		).pipe(Effect.map(Array.flatten));
 
 		if (Array.isEmptyArray(allPets)) {
 			yield* Effect.tryPromise(() =>
-				ctx.reply('Você não possui nenhum pet')
+				ctx.reply('Você não possui nenhum pet'),
 			).pipe(Effect.withSpan('ctx.reply'));
 			return;
 		}
@@ -57,7 +56,7 @@ export const AddFoodAllCommand = (ctx: Context) =>
 		const { quantity } = yield* parsePetFoodWeightAndTime({
 			messageTime,
 			messageMatch,
-			timezone: 'UTC'
+			timezone: 'UTC',
 		});
 
 		const config = yield* ConfigService;
@@ -71,7 +70,7 @@ export const AddFoodAllCommand = (ctx: Context) =>
 				const { timeChanged, time } = yield* parsePetFoodWeightAndTime({
 					messageTime,
 					messageMatch,
-					timezone: dayStart.timezone
+					timezone: dayStart.timezone,
 				});
 
 				yield* petFoodService.addPetFoodAndScheduleNotification({
@@ -84,31 +83,31 @@ export const AddFoodAllCommand = (ctx: Context) =>
 					quantity,
 					timeChanged,
 
-					dayStart
+					dayStart,
 				});
 
 				yield* sendAddedFoodNotification({
 					id: pet.id,
 					quantity,
 					user,
-					time: timeChanged ? time : undefined
+					time: timeChanged ? time : undefined,
 				})(ctx);
 			}),
-			{ concurrency: 'unbounded' }
+			{ concurrency: 'unbounded' },
 		);
 
 		yield* Effect.all(
 			[
 				Effect.tryPromise(() =>
 					ctx.reply(
-						`Foram adicionados ${quantity} de ração para todos os seus pets`
-					)
+						`Foram adicionados ${quantity} de ração para todos os seus pets`,
+					),
 				).pipe(Effect.withSpan('ctx.reply')),
 				Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
-					Effect.withSpan('ctx.react')
-				)
+					Effect.withSpan('ctx.react'),
+				),
 			],
-			{ concurrency: 'unbounded', mode: 'either' }
+			{ concurrency: 'unbounded', mode: 'either' },
 		);
 	}).pipe(
 		Effect.catchTags({
@@ -117,27 +116,27 @@ export const AddFoodAllCommand = (ctx: Context) =>
 			MissingRequiredFieldError: Effect.die,
 			MissingUserError: () =>
 				Effect.tryPromise(() =>
-					ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar')
+					ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar'),
 				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore),
 			ParsePetFoodError: (err) =>
 				Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 					Effect.withSpan('ctx.reply'),
-					Effect.ignore
+					Effect.ignore,
 				),
 			DuplicatedEntryError: (err) =>
 				Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 					Effect.withSpan('ctx.reply'),
-					Effect.ignore
+					Effect.ignore,
 				),
 			MissingConfigError: (err) =>
 				Effect.tryPromise(() =>
 					ctx.reply(
 						err.key === 'dayStart'
 							? 'Por favor, configure o horário de início do dia para o pet.'
-							: 'Por favor, configure o tempo de notificação para o seu pet'
-					)
-				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
+							: 'Por favor, configure o tempo de notificação para o seu pet',
+					),
+				).pipe(Effect.withSpan('ctx.reply'), Effect.ignore),
 		}),
 		Effect.withSpan('AddFoodAllCommand'),
-		runtime.runPromise
+		runtime.runPromise,
 	);

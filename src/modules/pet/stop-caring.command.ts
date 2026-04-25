@@ -1,6 +1,6 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
@@ -23,11 +23,11 @@ export const stopCaringConversation = (async (cvs, ctx) => {
 	const pet = await showOptionsKeyboard({
 		values: caringPets,
 		labelFn: (pet) => pet.name,
-		message: 'Escolha um pet para parar de cuidar:'
+		message: 'Escolha um pet para parar de cuidar:',
 	})(cvs, ctx);
 
 	const answer = await showYesOrNoQuestion(
-		'Tem certeza que deseja parar de cuidar deste pet?'
+		'Tem certeza que deseja parar de cuidar deste pet?',
 	)(cvs, ctx);
 
 	if (answer) {
@@ -40,7 +40,7 @@ export const stopCaringConversation = (async (cvs, ctx) => {
 
 			await ctx.api.sendMessage(
 				petOwner.telegramID,
-				`O cuidador ${carerDisplay} parou de cuidar do pet ${pet.name}`
+				`O cuidador ${carerDisplay} parou de cuidar do pet ${pet.name}`,
 			);
 		}
 	}

@@ -6,7 +6,7 @@ import type { UserResponse } from './response.js';
 export const sendResponse = async (ctx: Context, response: UserResponse) => {
 	if (response.type === 'gif') {
 		return await ctx.replyWithAnimation(flattenMaybeFunction(response.input), {
-			caption: flattenMaybeFunction(response.caption)
+			caption: flattenMaybeFunction(response.caption),
 		});
 	}
 
@@ -14,8 +14,8 @@ export const sendResponse = async (ctx: Context, response: UserResponse) => {
 		return await ctx.replyWithPhoto(
 			flattenMaybeFunction(response.input, ctx, 'oi'),
 			{
-				caption: flattenMaybeFunction(response.caption)
-			}
+				caption: flattenMaybeFunction(response.caption),
+			},
 		);
 	}
 

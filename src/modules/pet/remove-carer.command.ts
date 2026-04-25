@@ -1,13 +1,13 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import {
 	getPetCarers,
 	getUserOwnedPets,
-	removeCarer
+	removeCarer,
 } from '../../lib/entities/pet.js';
 
 export const removeCarerConversation = (async (cvs, ctx) => {
@@ -20,7 +20,7 @@ export const removeCarerConversation = (async (cvs, ctx) => {
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
-		message: 'Escolha um pet para remover um cuidador:'
+		message: 'Escolha um pet para remover um cuidador:',
 	})(cvs, ctx);
 
 	const invites = await cvs.external(() => getPetCarers(pet.id));
@@ -43,7 +43,7 @@ export const removeCarerConversation = (async (cvs, ctx) => {
 
 			return `${userDisplay} (${status})`;
 		},
-		message: 'Escolha um cuidador para remover:'
+		message: 'Escolha um cuidador para remover:',
 	})(cvs, ctx);
 
 	await cvs.external(() => removeCarer(pet.id, invite.carer.id));
@@ -52,7 +52,7 @@ export const removeCarerConversation = (async (cvs, ctx) => {
 
 	await ctx.api.sendMessage(
 		invite.carer.telegramID,
-		`Você foi removido como cuidador do pet ${pet.name}`
+		`Você foi removido como cuidador do pet ${pet.name}`,
 	);
 }) satisfies ConversationFn;
 

@@ -1,5 +1,4 @@
 import { createId } from '@paralleldrive/cuid2';
-
 import { and, eq } from 'drizzle-orm';
 
 import type { Prettify } from '../../common/types/prettify.js';
@@ -8,7 +7,7 @@ import {
 	type PetCarerStatus,
 	petCarersTable,
 	petsTable,
-	usersTable
+	usersTable,
 } from '../database/schema.js';
 import type { User } from './user.js';
 
@@ -19,7 +18,7 @@ export const createPet = async (name: Pet['name'], ownerID: Pet['ownerID']) => {
 	await db.insert(petsTable).values({
 		id: createId() as Pet['id'],
 		name,
-		ownerID
+		ownerID,
 	});
 };
 
@@ -37,7 +36,7 @@ type GetPetByIDResult<WithOwner extends boolean> = WithOwner extends true
 
 export const getPetByID = <WithOwner extends boolean = false>(
 	petID: Pet['id'],
-	options?: GetPetByIDOptions<WithOwner>
+	options?: GetPetByIDOptions<WithOwner>,
 ): Promise<Prettify<GetPetByIDResult<WithOwner>> | null> => {
 	const withOwner = options?.withOwner ?? false;
 
@@ -45,7 +44,7 @@ export const getPetByID = <WithOwner extends boolean = false>(
 		.select({
 			id: petsTable.id,
 			name: petsTable.name,
-			...(withOwner ? { owner: usersTable } : {})
+			...(withOwner ? { owner: usersTable } : {}),
 		})
 		.from(petsTable)
 		.where(eq(petsTable.id, petID));
@@ -61,7 +60,7 @@ export const getUserOwnedPets = (userID: Pet['ownerID']) => {
 	return db
 		.select({
 			id: petsTable.id,
-			name: petsTable.name
+			name: petsTable.name,
 		})
 		.from(petsTable)
 		.where(eq(petsTable.ownerID, userID))
@@ -73,15 +72,15 @@ export const getUserCaredPets = (userID: PetCarer['carerID']) => {
 		.select({
 			id: petsTable.id,
 			name: petsTable.name,
-			ownerID: petsTable.ownerID
+			ownerID: petsTable.ownerID,
 		})
 		.from(petCarersTable)
 		.innerJoin(petsTable, eq(petCarersTable.petID, petsTable.id))
 		.where(
 			and(
 				eq(petCarersTable.carerID, userID),
-				eq(petCarersTable.status, 'accepted')
-			)
+				eq(petCarersTable.status, 'accepted'),
+			),
 		)
 		.all();
 };
@@ -91,7 +90,7 @@ export const getPetCarers = (petID: PetCarer['petID']) => {
 		.select({
 			id: petCarersTable.id,
 			status: petCarersTable.status,
-			carer: usersTable
+			carer: usersTable,
 		})
 		.from(petCarersTable)
 		.innerJoin(usersTable, eq(petCarersTable.carerID, usersTable.id))
@@ -101,36 +100,36 @@ export const getPetCarers = (petID: PetCarer['petID']) => {
 
 export const isUserCarer = (
 	petID: PetCarer['petID'],
-	carerID: PetCarer['carerID']
+	carerID: PetCarer['carerID'],
 ) => {
 	return db
 		.select()
 		.from(petCarersTable)
 		.where(
-			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID))
+			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID)),
 		)
 		.get();
 };
 
 export const addCarer = async (
 	petID: PetCarer['petID'],
-	carerID: PetCarer['carerID']
+	carerID: PetCarer['carerID'],
 ) => {
 	await db.insert(petCarersTable).values({
 		id: createId() as PetCarer['id'],
 		carerID,
-		petID
+		petID,
 	});
 };
 
 export const removeCarer = async (
 	petID: PetCarer['petID'],
-	carerID: PetCarer['carerID']
+	carerID: PetCarer['carerID'],
 ) => {
 	await db
 		.delete(petCarersTable)
 		.where(
-			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID))
+			and(eq(petCarersTable.carerID, carerID), eq(petCarersTable.petID, petID)),
 		);
 };
 
@@ -139,7 +138,7 @@ export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
 		.select({
 			id: petCarersTable.id,
 			petName: petsTable.name,
-			petOwner: usersTable
+			petOwner: usersTable,
 		})
 		.from(petCarersTable)
 		.innerJoin(petsTable, eq(petCarersTable.petID, petsTable.id))
@@ -147,15 +146,15 @@ export const getPendingPetInvites = async (carerID: PetCarer['carerID']) => {
 		.where(
 			and(
 				eq(petCarersTable.carerID, carerID),
-				eq(petCarersTable.status, 'pending')
-			)
+				eq(petCarersTable.status, 'pending'),
+			),
 		)
 		.all();
 };
 
 export const answerPendingPetInvite = async (
 	inviteID: PetCarer['id'],
-	answer: Exclude<PetCarerStatus, 'pending'>
+	answer: Exclude<PetCarerStatus, 'pending'>,
 ) => {
 	await db
 		.update(petCarersTable)

@@ -6,7 +6,6 @@ node_modules
 tsconfig.json
 nodemon.json
 dos2git.sh
-biome.jsonc
 lefthook.yml
 
 .idea

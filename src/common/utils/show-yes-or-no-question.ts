@@ -7,9 +7,9 @@ export const showYesOrNoQuestion = (message: string) =>
 			message,
 			values: [
 				{ label: 'Sim', value: true },
-				{ label: 'Não', value: false }
+				{ label: 'Não', value: false },
 			],
-			labelFn: ({ label }) => label
+			labelFn: ({ label }) => label,
 		})(cvs, ctx);
 		return result.value;
 	}) satisfies ConversationFn;

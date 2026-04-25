@@ -10,8 +10,8 @@ describe('getDailyFromTo', () => {
 		DateTime.toUtc(
 			DateTime.unsafeMakeZoned(input, {
 				timeZone: timezone,
-				adjustForTimeZone: true
-			})
+				adjustForTimeZone: true,
+			}),
 		);
 
 	it('returns from and to dates when now is before dayStart', () => {

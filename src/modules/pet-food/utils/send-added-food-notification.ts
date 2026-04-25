@@ -1,6 +1,5 @@
 import { utcToZonedTime } from 'date-fns-tz';
 import { Array as A, Console, Data, Effect, flow, Option } from 'effect';
-
 import type Qty from 'js-quantities';
 
 import type { Context } from '../../../common/types/context.js';
@@ -17,7 +16,7 @@ export const sendAddedFoodNotification =
 		id,
 		quantity,
 		user,
-		time
+		time,
 	}: {
 		id: PetID;
 		quantity: Qty;
@@ -27,13 +26,13 @@ export const sendAddedFoodNotification =
 	(ctx: Context) =>
 		Effect.gen(function* () {
 			const pet = yield* Effect.tryPromise(() =>
-				getPetByID(id, { withOwner: true })
+				getPetByID(id, { withOwner: true }),
 			).pipe(
 				Effect.withSpan('getPetByID'),
 				Effect.andThen(Option.fromNullable),
 				Effect.catchTag('NoSuchElementException', () =>
-					Effect.fail(new MissingPetError())
-				)
+					Effect.fail(new MissingPetError()),
+				),
 			);
 
 			const config = yield* ConfigService;
@@ -45,19 +44,19 @@ export const sendAddedFoodNotification =
 				Effect.catchAll(() =>
 					Effect.zipRight(
 						Console.warn('Error getting pet carers'),
-						Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>)
-					)
+						Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>),
+					),
 				),
 				Effect.andThen(
 					flow(
 						A.filter((carer) => carer.status === 'accepted'),
-						A.map((v) => v.carer)
-					)
-				)
+						A.map((v) => v.carer),
+					),
+				),
 			);
 
 			const usersToNotify = [...carers, pet.owner].filter(
-				(carer) => carer.id !== user.id
+				(carer) => carer.id !== user.id,
 			);
 
 			const username = getUserDisplay(user);
@@ -67,8 +66,8 @@ export const sendAddedFoodNotification =
 				time &&
 					`A ração foi adicionada às ${utcToZonedTime(
 						time,
-						dayStart.timezone
-					).toLocaleString('pt-BR')}`
+						dayStart.timezone,
+					).toLocaleString('pt-BR')}`,
 			]
 				.filter(Boolean)
 				.join(' ');
@@ -78,18 +77,18 @@ export const sendAddedFoodNotification =
 					Effect.tryPromise({
 						try: () =>
 							ctx.api.sendMessage(userToNotify.telegramID, message, {
-								disable_notification: true
+								disable_notification: true,
 							}),
 						catch: (err) =>
 							console.error(
 								`Error sending notification to ${getUserDisplay(userToNotify)}`,
-								err
-							)
-					}).pipe(Effect.withSpan('bot.api.sendMessage'))
+								err,
+							),
+					}).pipe(Effect.withSpan('bot.api.sendMessage')),
 				),
 				{
 					concurrency: 'unbounded',
-					mode: 'either'
-				}
+					mode: 'either',
+				},
 			);
 		}).pipe(Effect.withSpan('sendAddedFoodNotification'));

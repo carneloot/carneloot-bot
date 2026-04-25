@@ -1,9 +1,9 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
-
 import { Redacted } from 'effect';
 import { Bot } from 'grammy';
+
 import { CafeCommand } from './commands/cafe-command.js';
 import { CafeInvCommand } from './commands/cafe-inv-command.js';
 import { PingCommand } from './commands/ping.command.js';
@@ -12,7 +12,7 @@ import { Env } from './common/env.js';
 import { Module } from './common/module/module.js';
 import {
 	getCommandForHelp,
-	getDescriptionForHelp
+	getDescriptionForHelp,
 } from './common/types/command.js';
 import type { Context } from './common/types/context.js';
 import { redis } from './lib/redis/redis.js';
@@ -20,8 +20,8 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.j
 import { replyMiddleware } from './middlewares/reply.middleware.js';
 import { UserMiddleware } from './middlewares/user.middleware.js';
 import { AuthModule } from './modules/auth/auth-module.js';
-import { PetModule } from './modules/pet/pet.module.js';
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
+import { PetModule } from './modules/pet/pet.module.js';
 
 export const createBot = () => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
@@ -30,16 +30,16 @@ export const createBot = () => {
 	bot.use(
 		conversations({
 			storage: new RedisAdapter({
-				instance: redis.duplicate({ keyPrefix: 'session:' })
+				instance: redis.duplicate({ keyPrefix: 'session:' }),
 			}),
-			plugins: [myEmojiParser]
-		})
+			plugins: [myEmojiParser],
+		}),
 	);
 
 	bot.command('cancelar', async (ctx) => {
 		await ctx.conversation.exitAll();
 		await ctx.reply('Operação cancelada', {
-			reply_markup: { remove_keyboard: true }
+			reply_markup: { remove_keyboard: true },
 		});
 	});
 
@@ -63,8 +63,8 @@ export const createBot = () => {
 		.on(':text')
 		.hears(/hello/i, (ctx) =>
 			ctx.replyWithPhoto(
-				'https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg'
-			)
+				'https://i.kym-cdn.com/photos/images/original/001/475/422/473.jpg',
+			),
 		);
 
 	return {
@@ -74,28 +74,28 @@ export const createBot = () => {
 			const commands = [
 				{
 					command: getCommandForHelp(PingCommand),
-					description: getDescriptionForHelp(PingCommand)
+					description: getDescriptionForHelp(PingCommand),
 				},
 				{
 					command: getCommandForHelp(WhatsCommand),
-					description: getDescriptionForHelp(WhatsCommand)
+					description: getDescriptionForHelp(WhatsCommand),
 				},
 				{
 					command: getCommandForHelp(CafeCommand),
-					description: getDescriptionForHelp(CafeCommand)
+					description: getDescriptionForHelp(CafeCommand),
 				},
 				{
 					command: getCommandForHelp(CafeInvCommand),
-					description: getDescriptionForHelp(CafeInvCommand)
+					description: getDescriptionForHelp(CafeInvCommand),
 				},
 				{
 					command: 'cancelar',
-					description: 'Cancela a operação atual'
+					description: 'Cancela a operação atual',
 				},
-				...Module.getCommandList()
+				...Module.getCommandList(),
 			];
 
 			await bot.api.setMyCommands(commands, { language_code: 'pt' });
-		}
+		},
 	};
 };

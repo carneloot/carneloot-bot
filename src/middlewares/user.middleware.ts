@@ -1,4 +1,5 @@
 import type { MiddlewareFn } from 'grammy';
+
 import type { Context } from '../common/types/context.js';
 import { getUserByTelegramID } from '../lib/entities/user.js';
 

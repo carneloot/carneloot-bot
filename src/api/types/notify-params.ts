@@ -6,9 +6,9 @@ export const NotifyParamsSchema = Schema.Struct({
 	variables: Schema.UndefinedOr(
 		Schema.Record({
 			key: Schema.String,
-			value: Schema.Union(Schema.String, Schema.Number)
-		})
-	)
+			value: Schema.Union(Schema.String, Schema.Number),
+		}),
+	),
 });
 
 export type NotifyParams = Schema.Schema.Type<typeof NotifyParamsSchema>;

@@ -12,7 +12,7 @@ describe('DurationFromParts', () => {
 			days: 6,
 			hours: 7,
 			minutes: 16,
-			seconds: 14
+			seconds: 14,
 		};
 
 		const decoded = Schema.decodeEither(DurationFromParts)(input);
@@ -43,7 +43,7 @@ describe('DurationFromParts', () => {
 
 		it('should correctly decode from simple object', () => {
 			const input = {
-				minutes: 15
+				minutes: 15,
 			};
 
 			const output = Schema.decodeEither(DurationFromParts)(input);
@@ -57,7 +57,7 @@ describe('DurationFromParts', () => {
 
 		it('should correctly decode years', () => {
 			const input = {
-				years: 2
+				years: 2,
 			};
 
 			const output = Schema.decodeEither(DurationFromParts)(input);
@@ -71,7 +71,7 @@ describe('DurationFromParts', () => {
 
 		it('should correctly decode months', () => {
 			const input = {
-				months: 16
+				months: 16,
 			};
 
 			const output = Schema.decodeEither(DurationFromParts)(input);
@@ -85,7 +85,7 @@ describe('DurationFromParts', () => {
 
 		it('should correctly decode weeks', () => {
 			const input = {
-				weeks: 16
+				weeks: 16,
 			};
 
 			const output = Schema.decodeEither(DurationFromParts)(input);
@@ -105,7 +105,7 @@ describe('DurationFromParts', () => {
 				days: 56,
 				hours: 12,
 				minutes: 23,
-				seconds: 58
+				seconds: 58,
 			};
 
 			const output = Schema.decodeEither(DurationFromParts)(input);
@@ -132,7 +132,7 @@ describe('DurationFromParts', () => {
 
 		it('should correctly encode a simple duration', () => {
 			const output = Schema.encodeEither(DurationFromParts)(
-				Duration.decode('7 minute')
+				Duration.decode('7 minute'),
 			);
 
 			expect(output._tag).toEqual('Right');
@@ -140,7 +140,7 @@ describe('DurationFromParts', () => {
 			const result = Either.getOrThrow(output);
 
 			expect(result).toEqual({
-				minutes: 7
+				minutes: 7,
 			});
 		});
 
@@ -150,9 +150,9 @@ describe('DurationFromParts', () => {
 					Duration.seconds(879),
 					Duration.days(22),
 					Duration.weeks(72),
-					Duration.hours(427)
+					Duration.hours(427),
 				],
-				A.reduce(Duration.zero, Duration.sum)
+				A.reduce(Duration.zero, Duration.sum),
 			);
 
 			const output = Schema.encodeEither(DurationFromParts)(input);
@@ -167,7 +167,7 @@ describe('DurationFromParts', () => {
 				weeks: 4,
 				hours: 19,
 				minutes: 14,
-				seconds: 39
+				seconds: 39,
 			});
 		});
 	});

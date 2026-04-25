@@ -1,8 +1,6 @@
 import { Reactions } from '@grammyjs/emoji';
-
 import { Array as Arr, DateTime, Effect, Either } from 'effect';
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
 
 import type { Context, ConversationFn } from '../../common/types/context.js';
@@ -23,30 +21,30 @@ export const addFoodConversation = (async (cvs, ctx) => {
 
 	const allPets = await cvs.external(() =>
 		Promise.all([getUserOwnedPets(user.id), getUserCaredPets(user.id)]).then(
-			Arr.flatten
-		)
+			Arr.flatten,
+		),
 	);
 
 	const currentPet = await showOptionsKeyboard({
 		values: allPets,
 		labelFn: (pet) => pet.name,
 		message: 'Selecione o pet para adicionar a comida:',
-		rowNum: 2
+		rowNum: 2,
 	})(cvs, ctx);
 
 	const dayStart = await cvs.external(() =>
-		getConfig('pet', 'dayStart', currentPet.id)
+		getConfig('pet', 'dayStart', currentPet.id),
 	);
 
 	if (!dayStart) {
 		await ctx.reply(
-			'Por favor, configure o horário de início do dia para o pet.'
+			'Por favor, configure o horário de início do dia para o pet.',
 		);
 		return;
 	}
 
 	ctx.reply(
-		`Certo, voce colocou ração para o pet ${currentPet.name}. Envie a quantidade. Caso não foi colocado agora, informe também o horário.`
+		`Certo, voce colocou ração para o pet ${currentPet.name}. Envie a quantidade. Caso não foi colocado agora, informe também o horário.`,
 	);
 
 	const foodResponse = await cvs.waitUntil(
@@ -58,12 +56,12 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			const result = await parsePetFoodWeightAndTime({
 				messageMatch: ctx.message.text,
 				messageTime: ctx.message.date,
-				timezone: dayStart.timezone
+				timezone: dayStart.timezone,
 			}).pipe(Effect.either, runtime.runPromise);
 
 			return Either.isRight(result);
 		},
-		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada') }
+		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada') },
 	);
 
 	const foodResponseMessage = foodResponse.message;
@@ -74,7 +72,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 	const parsePetFoodWeightAndTimeResult = await parsePetFoodWeightAndTime({
 		messageMatch: foodResponseMessage.text,
 		messageTime: foodResponseMessage.date,
-		timezone: dayStart.timezone
+		timezone: dayStart.timezone,
 	}).pipe(Effect.either, runtime.runPromise);
 
 	if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
@@ -96,12 +94,12 @@ export const addFoodConversation = (async (cvs, ctx) => {
 					quantity,
 					timeChanged,
 
-					dayStart
-				})
+					dayStart,
+				}),
 			),
 			Effect.either,
-			runtime.runPromise
-		)
+			runtime.runPromise,
+		),
 	);
 
 	if (Either.isLeft(addPetFoodResult)) {
@@ -121,8 +119,8 @@ export const addFoodConversation = (async (cvs, ctx) => {
 			id: currentPet.id,
 			quantity,
 			user,
-			time: timeChanged ? time : undefined
-		})(ctx).pipe(runtime.runPromise)
+			time: timeChanged ? time : undefined,
+		})(ctx).pipe(runtime.runPromise),
 	);
 }) satisfies ConversationFn;
 

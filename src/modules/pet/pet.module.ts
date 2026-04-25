@@ -2,36 +2,34 @@ import { createConversation } from '@grammyjs/conversations';
 
 import { Module } from '../../common/module/module.js';
 import type { Context } from '../../common/types/context.js';
-
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
-
 import { AddCarerCommand, addCarerConversation } from './add-carer.command.js';
 import { AddPetCommand, addPetConversation } from './add-pet.command.js';
 import {
 	DeletePetCommand,
-	deletePetConversation
+	deletePetConversation,
 } from './delete-pet.command.js';
 import {
 	ListCarersCommand,
-	listCarersConversation
+	listCarersConversation,
 } from './list-carers.command.js';
 import { ListPetsCommand } from './list-pets.command.js';
 import {
 	PetInvitesCommand,
-	petInvitesConversation
+	petInvitesConversation,
 } from './pet-invites.command.js';
 import {
 	RemoveCarerCommand,
-	removeCarerConversation
+	removeCarerConversation,
 } from './remove-carer.command.js';
 import {
 	StopCaringCommand,
-	stopCaringConversation
+	stopCaringConversation,
 } from './stop-caring.command.js';
 
 export const PetModule = new Module<Context>(
 	'',
-	'Opções de gerenciamento de pet'
+	'Opções de gerenciamento de pet',
 );
 
 // Add pet
@@ -40,7 +38,7 @@ PetModule.setCommand(
 	'adicionar_pet',
 	'Adiciona um pet ao seu usuário',
 	UserMiddleware,
-	AddPetCommand
+	AddPetCommand,
 );
 
 // Delete pet
@@ -49,7 +47,7 @@ PetModule.setCommand(
 	'deletar_pet',
 	'Deleta um pet do seu usuário',
 	UserMiddleware,
-	DeletePetCommand
+	DeletePetCommand,
 );
 
 // List pets
@@ -57,7 +55,7 @@ PetModule.setCommand(
 	'listar_pets',
 	'Lista os seus pets',
 	UserMiddleware,
-	ListPetsCommand
+	ListPetsCommand,
 );
 
 // Add carer
@@ -66,7 +64,7 @@ PetModule.setCommand(
 	'adicionar_cuidador',
 	'Adiciona um cuidador para um pet',
 	UserMiddleware,
-	AddCarerCommand
+	AddCarerCommand,
 );
 
 // Remove carer
@@ -75,7 +73,7 @@ PetModule.setCommand(
 	'remover_cuidador',
 	'Remove um cuidador de um pet',
 	UserMiddleware,
-	RemoveCarerCommand
+	RemoveCarerCommand,
 );
 
 // List carers
@@ -84,7 +82,7 @@ PetModule.setCommand(
 	'listar_cuidadores',
 	'Lista os cuidadores de um pet',
 	UserMiddleware,
-	ListCarersCommand
+	ListCarersCommand,
 );
 
 // Invites
@@ -93,7 +91,7 @@ PetModule.setCommand(
 	'convites_pet',
 	'Lista os convites para cuidar de um pet',
 	UserMiddleware,
-	PetInvitesCommand
+	PetInvitesCommand,
 );
 
 // Stop caring
@@ -102,5 +100,5 @@ PetModule.setCommand(
 	'parar_de_cuidar_pet',
 	'Para de cuidar de um pet',
 	UserMiddleware,
-	StopCaringCommand
+	StopCaringCommand,
 );

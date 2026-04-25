@@ -1,7 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
-
 import { and, eq } from 'drizzle-orm';
 import { Data, Effect, Predicate, Schema } from 'effect';
+
 import * as CustomSchema from '../../common/schema.js';
 import { runtime } from '../../runtime.js';
 import * as Database from '../database/db.js';
@@ -9,13 +9,13 @@ import {
 	type ConfigID,
 	configsTable,
 	type PetID,
-	type UserID
+	type UserID,
 } from '../database/schema.js';
 
 const Configs = {
 	user: {
 		identifier: '' as UserID,
-		showNotifications: Schema.Boolean
+		showNotifications: Schema.Boolean,
 	},
 	pet: {
 		identifier: '' as PetID,
@@ -23,11 +23,11 @@ const Configs = {
 		dayStart: Schema.Struct({
 			hour: Schema.Number.pipe(
 				Schema.greaterThan(0),
-				Schema.lessThanOrEqualTo(12)
+				Schema.lessThanOrEqualTo(12),
 			),
-			timezone: Schema.String
-		})
-	}
+			timezone: Schema.String,
+		}),
+	},
 };
 type Configs = typeof Configs;
 
@@ -43,14 +43,14 @@ type ContextIdentifier<Context extends ConfigContext> =
 
 export type ConfigValue<
 	Context extends ConfigContext,
-	Key extends ConfigKey<Context>
+	Key extends ConfigKey<Context>,
 > = Configs[Context][Key] extends Schema.Schema.Any
 	? Schema.Schema.Type<Configs[Context][Key]>
 	: never;
 
 class MissingConfigError<
 	TContext extends ConfigContext,
-	TKey extends ConfigKey<TContext>
+	TKey extends ConfigKey<TContext>,
 > extends Data.TaggedError('MissingConfigError')<{
 	context: TContext;
 	key: TKey;
@@ -66,17 +66,17 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 			const getConfig = <
 				Context extends ConfigContext,
 				Key extends ConfigKey<Context>,
-				Identifier extends ContextIdentifier<Context>
+				Identifier extends ContextIdentifier<Context>,
 			>(
 				context: Context,
 				key: Key,
-				id: Identifier
+				id: Identifier,
 			) =>
 				Effect.gen(function* () {
 					yield* Effect.annotateCurrentSpan({
 						config_context: context,
 						config_key: key,
-						config_id: id
+						config_id: id,
 					});
 
 					const queryResult = yield* db.execute((db) =>
@@ -86,16 +86,16 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 							.where(
 								and(
 									eq(configsTable.context, `${context}:${id}`),
-									eq(configsTable.key, key as string)
-								)
+									eq(configsTable.key, key as string),
+								),
 							)
-							.get()
+							.get(),
 					);
 
 					if (Predicate.isUndefined(queryResult)) {
 						return yield* new MissingConfigError({
 							context,
-							key
+							key,
 						});
 					}
 
@@ -105,9 +105,9 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 						Effect.orDieWith(
 							(err) =>
 								new Error(
-									`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`
-								)
-						)
+									`Saved config (${context}:${key.toString()}:${id}) is invalid: ${err.message}`,
+								),
+						),
 					);
 
 					return result as ConfigValue<Context, Key>;
@@ -116,12 +116,12 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 			const setConfig = <
 				Context extends ConfigContext,
 				Key extends ConfigKey<Context>,
-				Identifier extends ContextIdentifier<Context>
+				Identifier extends ContextIdentifier<Context>,
 			>(
 				context: Context,
 				key: Key,
 				id: Identifier,
-				value: ConfigValue<Context, Key>
+				value: ConfigValue<Context, Key>,
 			) =>
 				Effect.gen(function* () {
 					const schema = Configs[context][key] as Schema.Schema.AnyNoContext;
@@ -129,7 +129,7 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 					yield* Effect.annotateCurrentSpan({
 						config_context: context,
 						config_key: key,
-						config_id: id
+						config_id: id,
 					});
 
 					const result = yield* Schema.encode(schema)(value);
@@ -141,31 +141,31 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 								id: createId() as ConfigID,
 								context: `${context}:${id}`,
 								key: key as string,
-								value: result
+								value: result,
 							})
 							.onConflictDoUpdate({
 								target: [configsTable.context, configsTable.key],
 								set: {
-									value: result
-								}
-							})
+									value: result,
+								},
+							}),
 					);
 				}).pipe(Effect.withSpan('setConfig'));
 
 			const deleteConfig = <
 				Context extends ConfigContext,
 				Key extends ConfigKey<Context>,
-				Identifier extends ContextIdentifier<Context>
+				Identifier extends ContextIdentifier<Context>,
 			>(
 				context: Context,
 				key: Key,
-				id: Identifier
+				id: Identifier,
 			) =>
 				Effect.gen(function* () {
 					yield* Effect.annotateCurrentSpan({
 						config_context: context,
 						config_key: key,
-						config_id: id
+						config_id: id,
 					});
 
 					yield* db.execute((client) =>
@@ -174,64 +174,66 @@ export class ConfigService extends Effect.Service<ConfigService>()(
 							.where(
 								and(
 									eq(configsTable.context, `${context}:${id}`),
-									eq(configsTable.key, key as string)
-								)
-							)
+									eq(configsTable.key, key as string),
+								),
+							),
 					);
 				}).pipe(Effect.withSpan('deleteConfig'));
 
 			return {
 				getConfig,
 				setConfig,
-				deleteConfig
+				deleteConfig,
 			} as const;
-		})
-	}
+		}),
+	},
 ) {}
 
 export const getConfig = <
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
+	Identifier extends ContextIdentifier<Context>,
 >(
 	context: Context,
 	key: Key,
-	id: Identifier
+	id: Identifier,
 ) =>
 	ConfigService.pipe(
 		Effect.andThen((config) =>
 			config
 				.getConfig(context, key, id)
-				.pipe(Effect.catchTag('MissingConfigError', () => Effect.succeed(null)))
+				.pipe(
+					Effect.catchTag('MissingConfigError', () => Effect.succeed(null)),
+				),
 		),
-		runtime.runPromise
+		runtime.runPromise,
 	);
 
 export const setConfig = <
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
+	Identifier extends ContextIdentifier<Context>,
 >(
 	context: Context,
 	key: Key,
 	id: Identifier,
-	value: ConfigValue<Context, Key>
+	value: ConfigValue<Context, Key>,
 ) =>
 	ConfigService.pipe(
 		Effect.andThen((config) => config.setConfig(context, key, id, value)),
-		runtime.runPromise
+		runtime.runPromise,
 	);
 
 export const deleteConfig = <
 	Context extends ConfigContext,
 	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>
+	Identifier extends ContextIdentifier<Context>,
 >(
 	context: Context,
 	key: Key,
-	id: Identifier
+	id: Identifier,
 ) =>
 	ConfigService.pipe(
 		Effect.andThen((config) => config.deleteConfig(context, key, id)),
-		runtime.runPromise
+		runtime.runPromise,
 	);

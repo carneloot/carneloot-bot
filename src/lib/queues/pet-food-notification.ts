@@ -1,4 +1,4 @@
-import { Queue, Worker } from 'bullmq';
+import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import {
 	Array as A,
 	Console,
@@ -8,7 +8,7 @@ import {
 	Effect,
 	Option,
 	pipe,
-	Redacted
+	Redacted,
 } from 'effect';
 import { Bot } from 'grammy';
 import Qty from 'js-quantities';
@@ -26,6 +26,16 @@ import { NotificationService } from '../services/notification.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 
+const queueConnection: ConnectionOptions = {
+	host: redis.options.host,
+	port: redis.options.port,
+	username: redis.options.username,
+	password: redis.options.password,
+	maxRetriesPerRequest: null,
+};
+
+const getJobName = (petID: PetID): string => `pet-${petID}`;
+
 type Data = {
 	petID: PetID;
 };
@@ -40,7 +50,7 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 		dependencies: [
 			ConfigService.Default,
 			PetFoodRepository.Default,
-			NotificationService.Default
+			NotificationService.Default,
 		],
 		scoped: Effect.gen(function* () {
 			const petFoodRepository = yield* PetFoodRepository;
@@ -50,47 +60,47 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 			const queue = yield* Effect.acquireRelease(
 				Effect.sync(
 					() =>
-						new Queue<Data>(QUEUE_NAME, {
-							connection: redis,
+						new Queue<Data, void, string>(QUEUE_NAME, {
+							connection: queueConnection,
 							defaultJobOptions: {
 								attempts: 3,
 								backoff: {
 									type: 'exponential',
-									delay: Duration.toMillis('10 second')
-								}
-							}
-						})
+									delay: Duration.toMillis('10 second'),
+								},
+							},
+						}),
 				).pipe(
-					Effect.tap(() => Effect.log('PetFoodNotificationQueue created'))
+					Effect.tap(() => Effect.log('PetFoodNotificationQueue created')),
 				),
 				(queue) =>
 					Effect.promise(() => queue.close()).pipe(
-						Effect.tap(() => Effect.log('PetFoodNotificationQueue closed'))
-					)
+						Effect.tap(() => Effect.log('PetFoodNotificationQueue closed')),
+					),
 			);
 
 			const handler = Effect.fn('PetFoodNotificationQueue.handler')(function* (
 				payload: Data,
-				now: DateTime.DateTime
+				now: DateTime.DateTime,
 			) {
 				yield* Effect.annotateCurrentSpan({
-					pet: payload.petID
+					pet: payload.petID,
 				});
 
 				const pet = yield* Effect.tryPromise(() =>
-					getPetByID(payload.petID, { withOwner: true })
+					getPetByID(payload.petID, { withOwner: true }),
 				).pipe(
 					Effect.withSpan('getPetByID'),
 					Effect.andThen(Option.fromNullable),
 					Effect.catchTag('NoSuchElementException', () =>
-						Effect.fail(new MissingPetId())
-					)
+						Effect.fail(new MissingPetId()),
+					),
 				);
 
 				const dayStart = yield* config.getConfig(
 					'pet',
 					'dayStart',
-					payload.petID
+					payload.petID,
 				);
 
 				const { from, to } = getDailyFromTo(now, dayStart);
@@ -99,20 +109,20 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 					yield* petFoodRepository.getDailyFoodConsumption({
 						petID: payload.petID,
 						from,
-						to
+						to,
 					});
 
 				const carers = yield* Effect.tryPromise(() =>
-					getPetCarers(payload.petID)
+					getPetCarers(payload.petID),
 				).pipe(
 					Effect.withSpan('getPetCarers'),
 					Effect.catchAll(() =>
 						Effect.zipRight(
 							Console.warn('Error getting pet carers'),
-							Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>)
-						)
+							Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>),
+						),
 					),
-					Effect.andThen(A.filter((carer) => carer.status === 'accepted'))
+					Effect.andThen(A.filter((carer) => carer.status === 'accepted')),
 				);
 
 				const bot = new Bot<Context>(Redacted.value(Env.BOT_TOKEN));
@@ -123,8 +133,8 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 					`🚨 Hora de dar comida para o pet ${pet.name}.`,
 					Option.match(quantity, {
 						onSome: (q) => `Já foram ${q} hoje.`,
-						onNone: () => 'Ainda não foi dado comida hoje.'
-					})
+						onNone: () => 'Ainda não foi dado comida hoje.',
+					}),
 				].join(' ');
 
 				yield* Effect.forEach(
@@ -134,9 +144,9 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 							bot,
 							messageText: message,
 							user: carer,
-							petID: payload.petID
+							petID: payload.petID,
 						}),
-					{ concurrency: 'unbounded' }
+					{ concurrency: 'unbounded' },
 				);
 			});
 
@@ -154,63 +164,63 @@ export class PetFoodNotificationQueue extends Effect.Service<PetFoodNotification
 					const delay = timeToRun.pipe(
 						DateTime.distanceDuration(now),
 						Duration.toMillis,
-						(d) => Math.max(d, 0)
+						(d) => Math.max(d, 0),
 					);
 
 					yield* Effect.tryPromise({
 						try: () =>
-							queue.add(`pet-${data.petID}`, data, {
+							queue.add(getJobName(data.petID), data, {
 								jobId,
-								delay
+								delay,
 							}),
-						catch: () => new QueueError({ message: 'Failed to add to queue' })
+						catch: () => new QueueError({ message: 'Failed to add to queue' }),
 					});
-				}
+				},
 			);
 
 			const removeFromQueue = (petFoodID: PetFoodID) =>
 				Effect.tryPromise({
 					try: () => queue.remove(petFoodID),
 					catch: () =>
-						new QueueError({ message: 'Failed to remove from queue' })
+						new QueueError({ message: 'Failed to remove from queue' }),
 				}).pipe(Effect.withSpan('PetFoodNotificationQueue.removeFromQueue'));
 
 			yield* Effect.acquireRelease(
 				Effect.sync(
 					() =>
-						new Worker<Data>(
+						new Worker<Data, void, string>(
 							queue.name,
 							async (job) => {
 								const now = pipe(
 									job.processedOn,
 									Option.fromNullable,
 									Option.andThen(DateTime.make),
-									Option.getOrElse(() => DateTime.unsafeNow())
+									Option.getOrElse(() => DateTime.unsafeNow()),
 								);
 
 								await runtime.runPromise(handler(job.data, now));
 							},
 							{
-								connection: redis
-							}
-						)
+								connection: queueConnection,
+							},
+						),
 				).pipe(
 					Effect.tap(() =>
-						Effect.log('PetFoodNotificationQueue worker created')
-					)
+						Effect.log('PetFoodNotificationQueue worker created'),
+					),
 				),
 				(worker) =>
 					Effect.promise(() => worker.close()).pipe(
 						Effect.tap(() =>
-							Effect.log('PetFoodNotificationQueue worker closed')
-						)
-					)
+							Effect.log('PetFoodNotificationQueue worker closed'),
+						),
+					),
 			);
 
 			return {
 				scheduleJob,
-				removeFromQueue
+				removeFromQueue,
 			} as const;
-		})
-	}
+		}),
+	},
 ) {}

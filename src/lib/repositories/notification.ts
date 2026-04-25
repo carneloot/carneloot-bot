@@ -2,19 +2,20 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import { Array, Data, Effect, Option, Struct } from 'effect';
+
 import * as Database from '../database/db.js';
 import {
 	notificationHistoryTable,
 	notificationsTable,
 	usersTable,
-	usersToNotifyTable
+	usersToNotifyTable,
 } from '../database/schema.js';
 
 type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
 class NotificationNotFoundError extends Data.TaggedError(
-	'NotificationNotFoundError'
+	'NotificationNotFoundError',
 ) {}
 
 type CreateNotificationHistory = {
@@ -32,59 +33,59 @@ export class NotificationRepository extends Effect.Service<NotificationRepositor
 			const db = yield* Database.Database;
 
 			const getNotificationByOwnerAndKeyword = Effect.fn(
-				'NotificationRepository.getNotificationByOwnerAndKeyword'
+				'NotificationRepository.getNotificationByOwnerAndKeyword',
 			)(function* (
 				ownerId: Notification['ownerID'],
-				keyword: Notification['keyword']
+				keyword: Notification['keyword'],
 			) {
 				const result = yield* db.execute((client) =>
 					client
 						.select({
 							notification: notificationsTable,
-							usersToNotify: usersTable
+							usersToNotify: usersTable,
 						})
 						.from(notificationsTable)
 						.leftJoin(
 							usersToNotifyTable,
-							eq(notificationsTable.id, usersToNotifyTable.notificationID)
+							eq(notificationsTable.id, usersToNotifyTable.notificationID),
 						)
 						.leftJoin(usersTable, eq(usersToNotifyTable.userID, usersTable.id))
 						.where(
 							and(
 								eq(notificationsTable.ownerID, ownerId),
-								eq(notificationsTable.keyword, keyword)
-							)
+								eq(notificationsTable.keyword, keyword),
+							),
 						)
-						.all()
+						.all(),
 				);
 
 				const notification = yield* Array.head(result).pipe(
 					Option.andThen(Struct.get('notification')),
 					Option.match({
 						onSome: Effect.succeed,
-						onNone: () => Effect.fail(new NotificationNotFoundError())
-					})
+						onNone: () => Effect.fail(new NotificationNotFoundError()),
+					}),
 				);
 
 				const usersToNotify = Array.filterMap(result, (v) =>
-					Option.fromNullable(v.usersToNotify)
+					Option.fromNullable(v.usersToNotify),
 				);
 
 				return { notification, usersToNotify };
 			});
 
 			const createNotificationHistory = Effect.fn(
-				'NotificationRepository.createNotificationHistory'
+				'NotificationRepository.createNotificationHistory',
 			)(function* ({
 				messageID,
 				notificationID,
 				petID,
-				userID
+				userID,
 			}: CreateNotificationHistory) {
 				const target = [
 					notificationHistoryTable.userID,
 					...(notificationID ? [notificationHistoryTable.notificationID] : []),
-					...(petID ? [notificationHistoryTable.petID] : [])
+					...(petID ? [notificationHistoryTable.petID] : []),
 				];
 
 				yield* db.execute((client) =>
@@ -96,24 +97,24 @@ export class NotificationRepository extends Effect.Service<NotificationRepositor
 							notificationID,
 							petID,
 							userID,
-							sentAt: new Date()
+							sentAt: new Date(),
 						})
 						.onConflictDoUpdate({
 							target,
 							set: {
 								messageID,
-								sentAt: new Date()
-							}
+								sentAt: new Date(),
+							},
 						})
-						.run()
+						.run(),
 				);
 			});
 
 			const getNotificationFromHistory = Effect.fn(
-				'NotificationRepository.getNotificationFromHistory'
+				'NotificationRepository.getNotificationFromHistory',
 			)(function* (
 				messageID: NotificationHistory['messageID'],
-				userID: NotificationHistory['userID']
+				userID: NotificationHistory['userID'],
 			) {
 				const ownerHistory = alias(notificationHistoryTable, 'ownerHistory');
 
@@ -124,25 +125,28 @@ export class NotificationRepository extends Effect.Service<NotificationRepositor
 							ownerTelegramId: usersTable.telegramID,
 							ownerID: usersTable.id,
 							keyword: notificationsTable.keyword,
-							petID: notificationHistoryTable.petID
+							petID: notificationHistoryTable.petID,
 						})
 						.from(notificationHistoryTable)
 						.leftJoin(
 							notificationsTable,
-							eq(notificationHistoryTable.notificationID, notificationsTable.id)
+							eq(
+								notificationHistoryTable.notificationID,
+								notificationsTable.id,
+							),
 						)
 						.leftJoin(
 							ownerHistory,
-							eq(notificationsTable.ownerID, ownerHistory.userID)
+							eq(notificationsTable.ownerID, ownerHistory.userID),
 						)
 						.leftJoin(usersTable, eq(notificationsTable.ownerID, usersTable.id))
 						.where(
 							and(
 								eq(notificationHistoryTable.messageID, messageID),
-								eq(notificationHistoryTable.userID, userID)
-							)
+								eq(notificationHistoryTable.userID, userID),
+							),
 						)
-						.get()
+						.get(),
 				);
 
 				if (!result) {
@@ -155,8 +159,8 @@ export class NotificationRepository extends Effect.Service<NotificationRepositor
 			return {
 				getNotificationByOwnerAndKeyword,
 				getNotificationFromHistory,
-				createNotificationHistory
+				createNotificationHistory,
 			} as const;
-		})
-	}
+		}),
+	},
 ) {}

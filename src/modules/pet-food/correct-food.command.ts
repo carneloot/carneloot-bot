@@ -4,14 +4,15 @@ import { Array as Arr, DateTime, Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 import Qty from 'js-quantities';
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { getPetFoodByRange } from '../../lib/entities/pet-food.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { PetFoodService } from '../../lib/services/pet-food.js';
 import { runtime } from '../../runtime.js';
@@ -28,25 +29,25 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		Promise.all([
 			getUserOwnedPets(user.id),
 			getUserCaredPets(user.id).then(
-				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` }))
-			)
-		]).then(Arr.flatten)
+				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` })),
+			),
+		]).then(Arr.flatten),
 	);
 
 	const currentPet = await showOptionsKeyboard({
 		values: allPets,
 		labelFn: (pet) => pet.name,
 		message: 'Selecione o pet para apagar a comida:',
-		rowNum: 2
+		rowNum: 2,
 	})(cvs, ctx);
 
 	const dayStart = await cvs.external(() =>
-		getConfig('pet', 'dayStart', currentPet.id)
+		getConfig('pet', 'dayStart', currentPet.id),
 	);
 
 	if (!dayStart) {
 		await ctx.reply(
-			'Por favor, configure o horário de início do dia para o pet.'
+			'Por favor, configure o horário de início do dia para o pet.',
 		);
 		return;
 	}
@@ -58,7 +59,11 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 	const { from, to } = getDailyFromTo(now, dayStart);
 
 	const petFoods = await cvs.external(() =>
-		getPetFoodByRange(currentPet.id, DateTime.toDate(from), DateTime.toDate(to))
+		getPetFoodByRange(
+			currentPet.id,
+			DateTime.toDate(from),
+			DateTime.toDate(to),
+		),
 	);
 
 	if (petFoods.length === 0) {
@@ -71,11 +76,11 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		labelFn: (v) =>
 			`${Qty(v.quantity, 'g')} | ${utcToZonedTime(
 				v.time,
-				dayStart.timezone
+				dayStart.timezone,
 			).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
 		message: 'Escolha a ração para deletar:',
 		rowNum: 1,
-		addCancel: true
+		addCancel: true,
 	})(cvs, ctx);
 
 	if (!petFood) {
@@ -92,15 +97,15 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 			parsePetFoodWeightAndTime({
 				messageMatch: ctx.message?.text,
 				messageTime,
-				timezone: dayStart.timezone
+				timezone: dayStart.timezone,
 			}).pipe(Effect.isSuccess, Effect.runPromise),
-		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada.') }
+		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada.') },
 	);
 
 	const result = await parsePetFoodWeightAndTime({
 		messageMatch: replyResponse.message?.text,
 		messageTime,
-		timezone: dayStart.timezone
+		timezone: dayStart.timezone,
 	}).pipe(Effect.orDie, runtime.runPromise);
 
 	const { quantity, time, timeChanged } = result;
@@ -112,24 +117,24 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 					petFoodID: petFood.id,
 					values: {
 						quantity: quantity.scalar,
-						time
-					}
-				})
+						time,
+					},
+				}),
 			),
-			runtime.runPromise
-		)
+			runtime.runPromise,
+		),
 	);
 
 	const lastFood = await cvs.external(() =>
 		PetFoodRepository.pipe(
 			Effect.flatMap((repo) => repo.getLastPetFood({ petID: currentPet.id })),
-			runtime.runPromise
-		)
+			runtime.runPromise,
+		),
 	);
 
 	const isLastFood = Option.match(lastFood, {
 		onSome: (lastFood) => lastFood.id === petFood.id,
-		onNone: () => false
+		onNone: () => false,
 	});
 
 	// If last food updated its time, reschedule notification
@@ -140,11 +145,11 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 					service.schedulePetFoodNotification(
 						currentPet.id,
 						petFood.id,
-						DateTime.unsafeMake(time)
-					)
+						DateTime.unsafeMake(time),
+					),
 				),
-				runtime.runPromise
-			)
+				runtime.runPromise,
+			),
 		);
 	}
 

@@ -1,5 +1,4 @@
 import { Data, DateTime, Duration, Effect, Option, Struct } from 'effect';
-
 import type Qty from 'js-quantities';
 
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
@@ -23,7 +22,7 @@ type AddPetFoodAndScheduleNotificationParams = {
 };
 
 export class DuplicatedEntryError extends Data.TaggedError(
-	'DuplicatedEntryError'
+	'DuplicatedEntryError',
 )<{ message: string }> {}
 
 export class PetFoodService extends Effect.Service<PetFoodService>()(
@@ -32,7 +31,7 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 		dependencies: [
 			ConfigService.Default,
 			PetFoodRepository.Default,
-			PetFoodNotificationQueue.Default
+			PetFoodNotificationQueue.Default,
 		],
 		effect: Effect.gen(function* () {
 			const petFoodRepository = yield* PetFoodRepository;
@@ -40,27 +39,27 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 			const queue = yield* PetFoodNotificationQueue;
 
 			const schedulePetFoodNotification = Effect.fn(
-				'PetFoodService.schedulePetFoodNotification'
+				'PetFoodService.schedulePetFoodNotification',
 			)(function* (
 				petID: PetID,
 				petFoodID: PetFoodID,
-				time: DateTime.DateTime
+				time: DateTime.DateTime,
 			) {
 				const notificationDelay = yield* config.getConfig(
 					'pet',
 					'notificationDelay',
-					petID
+					petID,
 				);
 
 				yield* queue.scheduleJob(
 					petFoodID,
 					{ petID },
-					DateTime.addDuration(time, notificationDelay)
+					DateTime.addDuration(time, notificationDelay),
 				);
 			});
 
 			const addPetFoodAndScheduleNotification = Effect.fn(
-				'PetFoodService.addPetFoodAndScheduleNotification'
+				'PetFoodService.addPetFoodAndScheduleNotification',
 			)(function* ({
 				pet,
 				messageID,
@@ -70,26 +69,26 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 				time,
 				quantity,
 
-				dayStart
+				dayStart,
 			}: AddPetFoodAndScheduleNotificationParams) {
 				const lastPetFood = yield* petFoodRepository.getLastPetFood({
-					petID: pet.id
+					petID: pet.id,
 				});
 
 				const lastPetFoodTime = lastPetFood.pipe(
 					Option.map(Struct.get('time')),
-					Option.andThen(DateTime.make)
+					Option.andThen(DateTime.make),
 				);
 
 				const shouldIgnoreEntry = lastPetFoodTime.pipe(
 					Option.andThen(DateTime.distanceDuration(time)),
 					Option.andThen(Duration.lessThanOrEqualTo(LIMIT_DURATION)),
-					Option.getOrElse(() => false)
+					Option.getOrElse(() => false),
 				);
 
 				if (shouldIgnoreEntry) {
 					return yield* new DuplicatedEntryError({
-						message: `Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`
+						message: `Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`,
 					});
 				}
 
@@ -99,7 +98,7 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 					userID,
 
 					quantity: quantity.scalar,
-					time: DateTime.toDate(time)
+					time: DateTime.toDate(time),
 				});
 
 				const formattedDate = time.pipe(
@@ -107,13 +106,13 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 					DateTime.format({
 						locale: 'pt-BR',
 						timeStyle: 'short',
-						dateStyle: 'short'
-					})
+						dateStyle: 'short',
+					}),
 				);
 
 				const message = [
 					`Foram adicionados ${quantity} de ração para o pet ${pet.name}.`,
-					timeChanged && `A ração foi adicionada para ${formattedDate}`
+					timeChanged && `A ração foi adicionada para ${formattedDate}`,
 				]
 					.filter(Boolean)
 					.join(' ');
@@ -134,8 +133,8 @@ export class PetFoodService extends Effect.Service<PetFoodService>()(
 
 			return {
 				addPetFoodAndScheduleNotification,
-				schedulePetFoodNotification
+				schedulePetFoodNotification,
 			} as const;
-		})
-	}
+		}),
+	},
 ) {}

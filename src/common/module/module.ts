@@ -11,14 +11,14 @@ export class Module<C extends Context> extends Composer<C> {
 
 	constructor(
 		private name: string,
-		description: string
+		description: string,
 	) {
 		super();
 
 		if (String.isNonEmpty(description)) {
 			Module.COMMANDS.push({
 				command: '_'.repeat(Module.commandIndex),
-				description
+				description,
 			});
 			Module.commandIndex++;
 		}
@@ -37,11 +37,11 @@ export class Module<C extends Context> extends Composer<C> {
 			Array.isArray(command) ? command : [command],
 			String.isNonEmpty(this.name)
 				? Array.map((v) => `${this.name}${Module.MODULE_SEPARATOR}${v}`)
-				: Function.identity
+				: Function.identity,
 		);
 
 		Module.COMMANDS.push(
-			...commands.map((command) => ({ command, description }))
+			...commands.map((command) => ({ command, description })),
 		);
 
 		return this.command(commands, ...middleware);

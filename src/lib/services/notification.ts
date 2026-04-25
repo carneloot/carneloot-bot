@@ -7,7 +7,7 @@ import {
 	Iterable,
 	Predicate,
 	pipe,
-	String
+	String,
 } from 'effect';
 import type { Bot } from 'grammy';
 
@@ -28,9 +28,9 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 			message.matchAll(/\{\{\w+\}\}/g),
 			Iterable.map((v) => v[0]),
 			Iterable.map(
-				flow(String.replaceAll('{', ''), String.replaceAll('}', ''))
+				flow(String.replaceAll('{', ''), String.replaceAll('}', '')),
 			),
-			Array.fromIterable
+			Array.fromIterable,
 		);
 
 		if (
@@ -42,7 +42,7 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 
 		const missingVariables = Array.filter(
 			usedVariables,
-			(variableName) => !Predicate.hasProperty(variables, variableName)
+			(variableName) => !Predicate.hasProperty(variables, variableName),
 		);
 		if (Array.isNonEmptyArray(missingVariables)) {
 			return yield* new MissingVariablesError({ variables: missingVariables });
@@ -72,13 +72,13 @@ export class NotificationService extends Effect.Service<NotificationService>()(
 			const notificationRepository = yield* NotificationRepository;
 
 			const sendNotificationAndLog = Effect.fn(
-				'NotificationService.sendNotificationAndLog'
+				'NotificationService.sendNotificationAndLog',
 			)(function* ({
 				bot,
 				user,
 				messageText,
 				notificationID,
-				petID
+				petID,
 			}: SendNotificationAndLog) {
 				const message = yield* Effect.tryPromise({
 					try: () => bot.api.sendMessage(user.telegramID, messageText),
@@ -86,31 +86,31 @@ export class NotificationService extends Effect.Service<NotificationService>()(
 						const error = matchBotError(cause);
 						if (error) return error;
 						throw cause;
-					}
+					},
 				}).pipe(Effect.withSpan('bot.api.sendMessage'));
 
 				yield* notificationRepository.createNotificationHistory({
 					notificationID: notificationID ?? null,
 					petID: petID ?? null,
 					userID: user.id,
-					messageID: message.message_id
+					messageID: message.message_id,
 				});
 			});
 
 			const sendNotification = Effect.fn(
-				'NotificationService.sendNotification'
+				'NotificationService.sendNotification',
 			)(function* (bot: Bot<Context>, params: NotifyParams) {
 				const user = yield* getUserFromApiKey(params.apiKey);
 
 				const { notification, usersToNotify } =
 					yield* notificationRepository.getNotificationByOwnerAndKeyword(
 						user.id,
-						params.keyword
+						params.keyword,
 					);
 
 				const messageText = yield* parseMessage(
 					notification.message,
-					params.variables
+					params.variables,
 				);
 
 				yield* Effect.forEach(
@@ -119,33 +119,33 @@ export class NotificationService extends Effect.Service<NotificationService>()(
 							bot,
 							user,
 							notificationID: notification.id,
-							messageText
+							messageText,
 						}),
 						...usersToNotify.map((user) =>
 							sendNotificationAndLog({
 								bot,
 								user,
 								notificationID: notification.id,
-								messageText
-							})
-						)
+								messageText,
+							}),
+						),
 					],
 					(v) =>
 						Effect.either(
 							v.pipe(
 								Effect.catchAll(() =>
-									Console.error('Error when sending notification to user')
-								)
-							)
+									Console.error('Error when sending notification to user'),
+								),
+							),
 						),
-					{ concurrency: 'unbounded' }
+					{ concurrency: 'unbounded' },
 				);
 			});
 
 			return {
 				sendNotificationAndLog,
-				sendNotification
+				sendNotification,
 			} as const;
-		})
-	}
+		}),
+	},
 ) {}

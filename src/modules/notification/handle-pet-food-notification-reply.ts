@@ -1,7 +1,5 @@
 import { Reactions } from '@grammyjs/emoji';
-
 import { DateTime, Effect } from 'effect';
-
 import invariant from 'tiny-invariant';
 
 import type { Context } from '../../common/types/context.js';
@@ -13,7 +11,7 @@ import { PetFoodService } from '../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
 
 export const handlePetFoodNotificationReply = Effect.fn(
-	'handlePetFoodNotificationReply'
+	'handlePetFoodNotificationReply',
 )(function* (ctx: Context, petID: PetID) {
 	invariant(ctx.message, 'Message object not found.');
 	invariant(ctx.user, 'User is not defined.');
@@ -22,14 +20,14 @@ export const handlePetFoodNotificationReply = Effect.fn(
 	const petFoodService = yield* PetFoodService;
 
 	const pet = yield* Effect.tryPromise(() => getPetByID(petID)).pipe(
-		Effect.withSpan('getPetByID')
+		Effect.withSpan('getPetByID'),
 	);
 
 	if (!pet) {
 		yield* Effect.tryPromise(() =>
 			ctx.reply(
-				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.'
-			)
+				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.',
+			),
 		).pipe(Effect.withSpan('ctx.reply'));
 		return;
 	}
@@ -39,7 +37,7 @@ export const handlePetFoodNotificationReply = Effect.fn(
 	const { quantity, time, timeChanged } = yield* parsePetFoodWeightAndTime({
 		messageMatch: ctx.message.text,
 		messageTime: ctx.message.date,
-		timezone: dayStart.timezone
+		timezone: dayStart.timezone,
 	});
 
 	const { message } = yield* petFoodService.addPetFoodAndScheduleNotification({
@@ -51,24 +49,24 @@ export const handlePetFoodNotificationReply = Effect.fn(
 		quantity,
 		timeChanged,
 
-		dayStart
+		dayStart,
 	});
 
 	yield* Effect.all(
 		[
 			Effect.tryPromise(() => ctx.reply(message)).pipe(
-				Effect.withSpan('ctx.reply')
+				Effect.withSpan('ctx.reply'),
 			),
 			Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
-				Effect.withSpan('ctx.react')
+				Effect.withSpan('ctx.react'),
 			),
 			sendAddedFoodNotification({
 				id: petID,
 				quantity,
 				user: ctx.user,
-				time: timeChanged ? time : undefined
-			})(ctx)
+				time: timeChanged ? time : undefined,
+			})(ctx),
 		],
-		{ concurrency: 'unbounded', mode: 'either' }
+		{ concurrency: 'unbounded', mode: 'either' },
 	);
 });

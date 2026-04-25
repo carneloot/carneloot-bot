@@ -41,17 +41,17 @@ export const WhatsCommand: Command<'whats'> = {
 			}
 
 			yield* Effect.tryPromise(() => ctx.reply(whatsUrl.join(''))).pipe(
-				Effect.withSpan('ctx.reply')
+				Effect.withSpan('ctx.reply'),
 			);
 		}).pipe(
 			Effect.catchTag('ParsePhoneNumberError', () =>
 				Effect.tryPromise(() =>
 					ctx.reply(
-						'Envie uma mensagem no formato (00) 0 0000-0000 [mensagem]. A mensagem, os espaços e os algarismos não numéricos são opcionais'
-					)
-				).pipe(Effect.withSpan('ctx.reply'))
+						'Envie uma mensagem no formato (00) 0 0000-0000 [mensagem]. A mensagem, os espaços e os algarismos não numéricos são opcionais',
+					),
+				).pipe(Effect.withSpan('ctx.reply')),
 			),
 			Effect.withSpan('WhatsCommand'),
-			runtime.runPromise
-		)
+			runtime.runPromise,
+		),
 };

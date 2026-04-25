@@ -23,7 +23,7 @@ export const handleNotificationReply = Effect.fn('handleNotificationReply')(
 
 		if (user.telegramID === ownerTelegramId) {
 			yield* Effect.tryPromise(() =>
-				ctx.reply('Você não pode responder a sua própria notificação.')
+				ctx.reply('Você não pode responder a sua própria notificação.'),
 			).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged);
 			return;
 		}
@@ -33,8 +33,8 @@ export const handleNotificationReply = Effect.fn('handleNotificationReply')(
 		const message = `${userDisplayInformation}: ${ctx.message.text}`;
 		yield* Effect.tryPromise(() =>
 			ctx.api.sendMessage(ownerTelegramId, message, {
-				reply_to_message_id: messageToReply
-			})
+				reply_to_message_id: messageToReply,
+			}),
 		).pipe(Effect.withSpan('bot.api.sendMessage'), Effect.ignoreLogged);
-	}
+	},
 );

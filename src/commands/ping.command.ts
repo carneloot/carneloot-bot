@@ -1,9 +1,7 @@
 import { Duration, Effect, Option, Predicate, Schema } from 'effect';
-
 import invariant from 'tiny-invariant';
 
 import type { Command } from '../common/types/command.js';
-
 import { runtime } from '../runtime.js';
 
 const MAX_DURATION = Duration.decode('10 seconds');
@@ -21,7 +19,7 @@ export const PingCommand: Command<'ping'> = {
 				Option.filter(Predicate.isString),
 				Option.andThen(Schema.decodeOption(Schema.NumberFromString)),
 				Option.andThen(Duration.millis),
-				Option.filter(Duration.lessThanOrEqualTo(MAX_DURATION))
+				Option.filter(Duration.lessThanOrEqualTo(MAX_DURATION)),
 			);
 
 			if (Option.isSome(duration)) {
@@ -30,15 +28,15 @@ export const PingCommand: Command<'ping'> = {
 
 			const replyMessage = Option.match(duration, {
 				onNone: () => 'pong',
-				onSome: (v) => `pong ${Duration.format(v)}`
+				onSome: (v) => `pong ${Duration.format(v)}`,
 			});
 
 			yield* Effect.tryPromise(() =>
 				ctx.reply(replyMessage, {
 					reply_parameters: {
-						message_id: message.message_id
-					}
-				})
+						message_id: message.message_id,
+					},
+				}),
 			).pipe(Effect.withSpan('ctx.reply'));
-		}).pipe(Effect.withSpan('PingCommand'), runtime.runPromise)
+		}).pipe(Effect.withSpan('PingCommand'), runtime.runPromise),
 };

@@ -1,7 +1,6 @@
 import { utcToZonedTime } from 'date-fns-tz';
 import { Array as Arr, DateTime, Effect } from 'effect';
 import type { MiddlewareFn } from 'grammy';
-
 import Qty from 'js-quantities';
 import invariant from 'tiny-invariant';
 
@@ -9,13 +8,12 @@ import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
-
 import { getConfig } from '../../lib/entities/config.js';
-import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import {
 	deletePetFood,
-	getPetFoodByRange
+	getPetFoodByRange,
 } from '../../lib/entities/pet-food.js';
+import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 import { PetFoodNotificationQueue } from '../../lib/queues/pet-food-notification.js';
 import { runtime } from '../../runtime.js';
 
@@ -31,9 +29,9 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		Promise.all([
 			getUserOwnedPets(user.id),
 			getUserCaredPets(user.id).then(
-				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` }))
-			)
-		]).then(Arr.flatten)
+				Arr.map((v) => ({ id: v.id, name: `${v.name} (cuidando)` })),
+			),
+		]).then(Arr.flatten),
 	);
 
 	if (allPets.length === 0) {
@@ -45,16 +43,16 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		values: allPets,
 		labelFn: (pet) => pet.name,
 		message: 'Selecione o pet para apagar a comida:',
-		rowNum: 2
+		rowNum: 2,
 	})(cvs, ctx);
 
 	const dayStart = await cvs.external(() =>
-		getConfig('pet', 'dayStart', currentPet.id)
+		getConfig('pet', 'dayStart', currentPet.id),
 	);
 
 	if (!dayStart) {
 		await ctx.reply(
-			'Por favor, configure o horário de início do dia para o pet.'
+			'Por favor, configure o horário de início do dia para o pet.',
 		);
 		return;
 	}
@@ -66,7 +64,11 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 	const { from, to } = getDailyFromTo(now, dayStart);
 
 	const petFoods = await cvs.external(() =>
-		getPetFoodByRange(currentPet.id, DateTime.toDate(from), DateTime.toDate(to))
+		getPetFoodByRange(
+			currentPet.id,
+			DateTime.toDate(from),
+			DateTime.toDate(to),
+		),
 	);
 
 	if (petFoods.length === 0) {
@@ -79,11 +81,11 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 		labelFn: (v) =>
 			`${Qty(v.quantity, 'g')} | ${utcToZonedTime(
 				v.time,
-				dayStart.timezone
+				dayStart.timezone,
 			).toLocaleString('pt-BR')} | ${getUserDisplay(v.user)}`,
 		message: 'Escolha a ração para deletar:',
 		rowNum: 1,
-		addCancel: true
+		addCancel: true,
 	})(cvs, ctx);
 
 	if (!selectedFood) {
@@ -96,7 +98,7 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 
 		await PetFoodNotificationQueue.pipe(
 			Effect.andThen((queue) => queue.removeFromQueue(selectedFood.id)),
-			runtime.runPromise
+			runtime.runPromise,
 		);
 	});
 

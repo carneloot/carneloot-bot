@@ -9,7 +9,7 @@ conventions below when making changes.
 - Runtime: Bun, ESM modules (`"type": "module"`).
 - TypeScript: `strict`, `noEmit`, `isolatedModules`, `noUncheckedIndexedAccess`.
 - Effects: prefer `Effect.gen`/`Effect.fn` and tagged errors.
-- Formatting/linting: Biome (tabs, single quotes, no trailing commas).
+- Formatting/linting: oxfmt + oxlint (tabs, single quotes, trailing commas).
 - Tests: Vitest (some tests use `@effect/vitest`).
 
 ## Build, lint, test commands
@@ -28,9 +28,10 @@ conventions below when making changes.
 
 ## Linting and formatting
 
-- CI runs Biome: `biome ci .`.
-- Local check: `bunx biome check .`.
-- Local fix: `bunx biome check --write .`.
+- Lint check: `bun run lint`.
+- Lint fix: `bun run lint:fix`.
+- Format check: `bun run format`.
+- Format fix: `bun run format:fix`.
 
 ## Cursor/Copilot rules
 
@@ -61,11 +62,11 @@ import type { Context } from '../common/types/context.js';
 import { runtime } from '../runtime.js';
 ```
 
-## Formatting conventions (Biome)
+## Formatting conventions (oxfmt)
 
 - Tabs for indentation.
 - Single quotes for JS/TS strings.
-- No trailing commas.
+- Trailing commas are enabled.
 - Keep lines readable; wrap long expressions thoughtfully.
 
 ## TypeScript conventions
@@ -134,7 +135,7 @@ import { runtime } from '../runtime.js';
 ## Safe changes checklist
 
 - Keep `.js` extensions in imports for ESM compatibility.
-- Respect Biome formatting (tabs, quotes).
+- Respect oxfmt formatting (tabs, quotes, trailing commas).
 - Preserve Effect patterns and tagged errors.
 - Avoid side effects outside `Effect` boundaries.
 

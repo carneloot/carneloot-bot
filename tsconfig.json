@@ -18,5 +18,6 @@
 				"name": "@effect/language-service"
 			}
 		]
-	}
+	},
+	"exclude": ["opensrc"]
 }

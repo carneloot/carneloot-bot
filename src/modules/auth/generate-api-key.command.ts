@@ -1,13 +1,11 @@
 import { Menu } from '@grammyjs/menu';
-
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
 
 import type { Context } from '../../common/types/context.js';
 import {
 	generateApiKeyForUser,
-	userHasApiKey
+	userHasApiKey,
 } from '../../lib/entities/user.js';
 
 async function generateApiKeyAndSend(ctx: Context) {
@@ -44,6 +42,6 @@ export const GenerateApiKeyCommand = (async (ctx) => {
 
 	await ctx.reply(
 		'Você já possui uma API Key. Deseja gerar uma nova? A outra chave será invalidada.',
-		{ reply_markup: apiKeyConfirmationMenu }
+		{ reply_markup: apiKeyConfirmationMenu },
 	);
 }) satisfies MiddlewareFn<Context>;

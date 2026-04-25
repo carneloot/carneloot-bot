@@ -1,0 +1,48 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"semi": true,
+	"useTabs": true,
+	"tabWidth": 2,
+	"singleQuote": true,
+	"trailingComma": "all",
+	"arrowParens": "always",
+	"printWidth": 80,
+	"experimentalTailwindcss": {
+		"functions": ["cn", "clsx", "cva"],
+		"stylesheet": "src/styles.css"
+	},
+	"experimentalSortImports": {
+		"order": "asc",
+		"ignoreCase": true,
+		"newlinesBetween": true,
+		"internalPattern": ["@/"],
+		"customGroups": [
+			{
+				"groupName": "convex",
+				"elementNamePattern": ["convex/"]
+			}
+		],
+		"groups": [
+			["builtin", "external"],
+			"convex",
+			"internal",
+			["parent", "sibling", "index"],
+			"unknown"
+		]
+	},
+	"ignorePatterns": [
+		"node_modules/**",
+		"dist/**",
+		"build/**",
+		".react-router/**",
+		"convex/_generated/**",
+		"*.lock",
+		".env*",
+		"src/routeTree.gen.ts",
+		"convex.json",
+		".specs/**",
+		"project.inlang",
+		"AGENTS.md",
+		".lalph/**"
+	]
+}

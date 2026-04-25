@@ -5,7 +5,7 @@ import {
 	type PetFoodID,
 	type PetID,
 	petFoodTable,
-	usersTable
+	usersTable,
 } from '../database/schema.js';
 
 export const deletePetFood = async (petFoodID: PetFoodID) => {
@@ -17,7 +17,7 @@ export const getPetFoodByMessageId = (messageID: number) => {
 		.select({
 			id: petFoodTable.id,
 			time: petFoodTable.time,
-			petID: petFoodTable.petID
+			petID: petFoodTable.petID,
 		})
 		.from(petFoodTable)
 		.where(eq(petFoodTable.messageID, messageID))
@@ -30,15 +30,15 @@ export const getPetFoodByRange = (petID: PetID, from: Date, to: Date) => {
 			id: petFoodTable.id,
 			quantity: petFoodTable.quantity,
 			time: petFoodTable.time,
-			user: usersTable
+			user: usersTable,
 		})
 		.from(petFoodTable)
 		.where(
 			and(
 				gte(petFoodTable.time, from),
 				lte(petFoodTable.time, to),
-				eq(petFoodTable.petID, petID)
-			)
+				eq(petFoodTable.petID, petID),
+			),
 		)
 		.innerJoin(usersTable, eq(petFoodTable.userID, usersTable.id))
 		.orderBy(asc(petFoodTable.time))

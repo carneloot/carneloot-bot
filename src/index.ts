@@ -1,10 +1,10 @@
 import { sValidator } from '@hono/standard-validator';
-
 import { Effect } from 'effect';
 import { webhookCallback } from 'grammy';
 import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
+
 import { NotifyParams } from './api/types/notify-params.js';
 import { createBot } from './bot.js';
 import { Env } from './common/env.js';
@@ -37,21 +37,21 @@ api.post('notify', sValidator('json', NotifyParams), (c) =>
 					Effect.succeed(
 						c.json(
 							{ message: 'Missing used variables', variables: err.variables },
-							422
-						)
+							422,
+						),
 					),
 				NotificationNotFoundError: () =>
 					Effect.succeed(
 						c.json(
 							{ message: 'Notification not found for user and keyword' },
-							404
-						)
+							404,
+						),
 					),
 				DatabaseError: () =>
-					Effect.succeed(c.json({ message: 'Database error' }, 500))
-			})
+					Effect.succeed(c.json({ message: 'Database error' }, 500)),
+			}),
 		);
-	}).pipe(Effect.withSpan('/api/post/notify'), runtime.runPromise)
+	}).pipe(Effect.withSpan('/api/post/notify'), runtime.runPromise),
 );
 
 if (Env.RUN_MODE === 'webhook') {
@@ -79,12 +79,12 @@ app.use('*', serveStatic({ root: '../public/' }));
 
 Bun.serve({
 	fetch: app.fetch,
-	port: Env.PORT
+	port: Env.PORT,
 });
 
 if (Env.RUN_MODE === 'polling') {
 	await bot.start({
 		onStart: setCommands,
-		drop_pending_updates: true
+		drop_pending_updates: true,
 	});
 }

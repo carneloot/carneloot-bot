@@ -1,30 +1,31 @@
 import { createConversation } from '@grammyjs/conversations';
+
 import { Module } from '../../common/module/module.js';
 import type { Context } from '../../common/types/context.js';
 import { UserMiddleware } from '../../middlewares/user.middleware.js';
-import { AddFoodCommand, addFoodConversation } from './add-food.command.js';
 import { AddFoodAllCommand } from './add-food-all.command.js';
+import { AddFoodCommand, addFoodConversation } from './add-food.command.js';
 import {
 	CorrectFoodCommand,
-	correctFoodConversation
+	correctFoodConversation,
 } from './correct-food.command.js';
 import {
 	DeleteFoodCommand,
-	deleteFoodConversation
+	deleteFoodConversation,
 } from './delete-food.command.js';
 import { FoodStatusCommand } from './food-status.command.js';
 import {
 	SetDayStartCommand,
-	setDayStartConversation
+	setDayStartConversation,
 } from './set-day-start.command.js';
 import {
 	SetNotificationDelayCommand,
-	setNotificationDelayConversation
+	setNotificationDelayConversation,
 } from './set-notification-delay.command.js';
 
 export const PetFoodModule = new Module<Context>(
 	'',
-	'Operações de rastreamento de ração'
+	'Operações de rastreamento de ração',
 );
 
 // Set start of day to calculate daily food consumption
@@ -33,18 +34,18 @@ PetFoodModule.setCommand(
 	'configurar_inicio_dia',
 	'Configura o horário de início do dia para rastreamento de ração',
 	UserMiddleware,
-	SetDayStartCommand
+	SetDayStartCommand,
 );
 
 // Set notification delay
 PetFoodModule.use(
-	createConversation(setNotificationDelayConversation, 'setNotificationDelay')
+	createConversation(setNotificationDelayConversation, 'setNotificationDelay'),
 );
 PetFoodModule.setCommand(
 	'configurar_atraso_notificacao',
 	'Configura o atraso de notificação para rastreamento de ração',
 	UserMiddleware,
-	SetNotificationDelayCommand
+	SetNotificationDelayCommand,
 );
 
 // Food status
@@ -52,7 +53,7 @@ PetFoodModule.setCommand(
 	'status_racao',
 	'Exibe o status atual do rastreamento de ração',
 	UserMiddleware,
-	FoodStatusCommand
+	FoodStatusCommand,
 );
 
 // Add food
@@ -61,7 +62,7 @@ PetFoodModule.setCommand(
 	'colocar_racao',
 	'Adiciona ração ao rastreamento de ração',
 	UserMiddleware,
-	AddFoodCommand
+	AddFoodCommand,
 );
 
 // Add food to all
@@ -69,7 +70,7 @@ PetFoodModule.setCommand(
 	['colocar_racao_todos', 'todos'],
 	'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
 	UserMiddleware,
-	AddFoodAllCommand
+	AddFoodAllCommand,
 );
 
 // Delete food
@@ -78,7 +79,7 @@ PetFoodModule.setCommand(
 	'deletar_racao',
 	'Deleta ração do rastreamento de ração',
 	UserMiddleware,
-	DeleteFoodCommand
+	DeleteFoodCommand,
 );
 
 // Correct food
@@ -87,5 +88,5 @@ PetFoodModule.setCommand(
 	'corrigir_racao',
 	'Corrige o valor e tempo de um comando de ração mandado anteriormente',
 	UserMiddleware,
-	CorrectFoodCommand
+	CorrectFoodCommand,
 );

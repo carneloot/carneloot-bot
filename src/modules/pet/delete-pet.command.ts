@@ -1,6 +1,6 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
@@ -16,11 +16,11 @@ export const deletePetConversation = (async (cvs, ctx) => {
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
-		message: 'Escolha um pet para deletar:'
+		message: 'Escolha um pet para deletar:',
 	})(cvs, ctx);
 
 	const answer = await showYesOrNoQuestion(
-		`Você tem certeza que deseja deletar o pet ${pet.name}?`
+		`Você tem certeza que deseja deletar o pet ${pet.name}?`,
 	)(cvs, ctx);
 
 	if (answer) {

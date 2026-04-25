@@ -11,7 +11,7 @@ const envSchema = Schema.Struct({
 	DEBUG: Schema.optional(Schema.String),
 
 	RUN_MODE: Schema.optionalWith(Schema.Literal('polling', 'webhook'), {
-		default: () => 'polling'
+		default: () => 'polling',
 	}),
 	PORT: Schema.optionalWith(Schema.NumberFromString, { default: () => 3000 }),
 
@@ -22,12 +22,12 @@ const envSchema = Schema.Struct({
 	// Tracer
 	OTLP_URL: Schema.optional(Schema.String),
 	OTLP_API_TOKEN: Schema.optional(Schema.Redacted(Schema.String)),
-	OTLP_DATASET: Schema.optional(Schema.String)
+	OTLP_DATASET: Schema.optional(Schema.String),
 });
 
 // eslint-disable-next-line n/no-process-env
 const parsed = Schema.decodeUnknownEither(envSchema)(process.env, {
-	errors: 'all'
+	errors: 'all',
 });
 
 if (Either.isLeft(parsed)) {

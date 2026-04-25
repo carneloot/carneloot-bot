@@ -48,7 +48,7 @@ export const CafeCommand: Command<'cafe'> = {
 
 		if (!coffeeWaterRatio.isCompatible('g/L')) {
 			await ctx.reply(
-				'Proporção de café para quantidade água invalida. Por favor envie um valor na unidade g/L'
+				'Proporção de café para quantidade água invalida. Por favor envie um valor na unidade g/L',
 			);
 			return;
 		}
@@ -73,17 +73,17 @@ export const CafeCommand: Command<'cafe'> = {
 			['Qtde.', 'Tempo'],
 			[`${firstPourMin} a ${firstPourMax}`, 'Esperar 45 s'],
 			[`Até ${secondPour}`, 'Durante 30 s'],
-			[`Até ${lastPour}`, 'Durante 30 s']
+			[`Até ${lastPour}`, 'Durante 30 s'],
 		];
 
 		await ctx.reply(
 			`<pre>${table(quantityDurationTable, {
 				header: {
-					content: 'Água'
+					content: 'Água',
 				},
-				columns: [{ alignment: 'right' }, { alignment: 'right' }]
+				columns: [{ alignment: 'right' }, { alignment: 'right' }],
 			})}</pre>`,
-			{ parse_mode: 'HTML' }
+			{ parse_mode: 'HTML' },
 		);
-	}
+	},
 };

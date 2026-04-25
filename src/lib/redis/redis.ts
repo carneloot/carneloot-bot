@@ -6,8 +6,8 @@ const redisUrl = new URL(Env.REDIS_URL);
 
 export const redis = new Redis({
 	host: redisUrl.hostname,
-	port: Number.parseInt(redisUrl.port),
+	port: Number.parseInt(redisUrl.port, 10),
 	username: redisUrl.username,
 	password: redisUrl.password,
-	maxRetriesPerRequest: null
+	maxRetriesPerRequest: null,
 });

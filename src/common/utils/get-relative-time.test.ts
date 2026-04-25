@@ -7,7 +7,7 @@ describe('getRelativeTime', () => {
 		const baseDate = new Date(2022, 0, 1, 12, 0, 0);
 		const date = new Date(2022, 0, 1, 14, 30, 0);
 		const result = getRelativeTime(date, baseDate, {
-			units: ['hours', 'minutes']
+			units: ['hours', 'minutes'],
 		});
 		expect(result).toEqual('2 horas e 30 minutos');
 	});
@@ -16,7 +16,7 @@ describe('getRelativeTime', () => {
 		const baseDate = new Date(2022, 0, 1, 12, 0, 0);
 		const date = new Date(2022, 0, 3, 14, 30, 0);
 		const result = getRelativeTime(date, baseDate, {
-			units: ['days', 'hours', 'minutes']
+			units: ['days', 'hours', 'minutes'],
 		});
 		expect(result).toEqual('2 dias, 2 horas e 30 minutos');
 	});
@@ -32,7 +32,7 @@ describe('getRelativeTime', () => {
 		const baseDate = new Date(2022, 0, 1, 12, 0, 0);
 		const date = new Date(2022, 0, 1, 12, 0, 0);
 		const result = getRelativeTime(date, baseDate, {
-			units: ['hours', 'minutes']
+			units: ['hours', 'minutes'],
 		});
 		expect(result).toEqual('');
 	});

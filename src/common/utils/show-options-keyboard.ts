@@ -1,5 +1,4 @@
 import { InlineKeyboard, Keyboard } from 'grammy';
-
 import invariant from 'tiny-invariant';
 
 import type { ConversationFn } from '../types/context.js';
@@ -17,10 +16,10 @@ type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
 
 type ShowOptionsKeyboardResponse<
 	T,
-	AddCancel extends boolean
+	AddCancel extends boolean,
 > = AddCancel extends true ? T | undefined : T;
 export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
-	options: ShowOptionsKeyboardOpts<T, AddCancel>
+	options: ShowOptionsKeyboardOpts<T, AddCancel>,
 ) =>
 	(async (cvs, ctx): Promise<ShowOptionsKeyboardResponse<T, AddCancel>> => {
 		const keyboardType = options.keyboardType ?? 'inline';
@@ -34,7 +33,7 @@ export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
 				}
 				return keyboard;
 			},
-			keyboardType === 'inline' ? new InlineKeyboard() : new Keyboard()
+			keyboardType === 'inline' ? new InlineKeyboard() : new Keyboard(),
 		);
 
 		if (keyboard instanceof Keyboard) {
@@ -48,14 +47,14 @@ export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
 		}
 
 		const optionsMessage = await ctx.reply(options.message, {
-			reply_markup: keyboard
+			reply_markup: keyboard,
 		});
 
 		if (keyboard instanceof InlineKeyboard) {
 			const trigger = addCancel ? [/values-(\d+)/, 'Cancelar'] : /values-(\d+)/;
 
 			const response = await cvs.waitForCallbackQuery(trigger, {
-				otherwise: (ctx) => ctx.reply('Por favor, escolha uma opção')
+				otherwise: (ctx) => ctx.reply('Por favor, escolha uma opção'),
 			});
 			await response.answerCallbackQuery();
 
@@ -65,8 +64,8 @@ export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
 					optionsMessage.message_id,
 					`${parseMessageForMarkdown(options.message)}\n>>Cancelado`,
 					{
-						parse_mode: 'MarkdownV2'
-					}
+						parse_mode: 'MarkdownV2',
+					},
 				);
 
 				return undefined as ShowOptionsKeyboardResponse<T, AddCancel>;
@@ -85,22 +84,22 @@ export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
 				optionsMessage.message_id,
 				`${parseMessageForMarkdown(options.message)}\n>>${parseMessageForMarkdown(options.labelFn(resultValue))}`,
 				{
-					parse_mode: 'MarkdownV2'
-				}
+					parse_mode: 'MarkdownV2',
+				},
 			);
 
 			return resultValue;
 		}
 
 		const selectOptions = new Map<string, T | undefined>(
-			options.values.map((value) => [options.labelFn(value), value])
+			options.values.map((value) => [options.labelFn(value), value]),
 		);
 		if (addCancel) {
 			selectOptions.set('Cancelar', undefined);
 		}
 
 		const response = await cvs.form.select([...selectOptions.keys()], (ctx) =>
-			ctx.reply('Por favor, escolha uma opção')
+			ctx.reply('Por favor, escolha uma opção'),
 		);
 
 		if (response === 'Cancelar') {

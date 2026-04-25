@@ -1,13 +1,13 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import {
 	addCarer,
 	getUserOwnedPets,
-	isUserCarer
+	isUserCarer,
 } from '../../lib/entities/pet.js';
 import { getUserByUsername } from '../../lib/entities/user.js';
 
@@ -21,15 +21,15 @@ export const addCarerConversation = (async (cvs, ctx) => {
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
-		message: 'Escolha um pet para adicionar um cuidador'
+		message: 'Escolha um pet para adicionar um cuidador',
 	})(cvs, ctx);
 
 	await ctx.reply(
-		`Você escolheu o pet ${pet.name}. Agora, quem vai ser o cuidador?`
+		`Você escolheu o pet ${pet.name}. Agora, quem vai ser o cuidador?`,
 	);
 
 	const carerUsername = await cvs.form.text((ctx) =>
-		ctx.reply('Mande o usuário do cuidador para eu salvar.')
+		ctx.reply('Mande o usuário do cuidador para eu salvar.'),
 	);
 
 	if (carerUsername === ctx.from?.username) {
@@ -39,19 +39,19 @@ export const addCarerConversation = (async (cvs, ctx) => {
 	}
 
 	const carer = await cvs.external(() =>
-		getUserByUsername(carerUsername.replace(/^@/, ''))
+		getUserByUsername(carerUsername.replace(/^@/, '')),
 	);
 
 	if (!carer) {
 		await ctx.reply(
-			'Usuário não encontrado no banco de dados. Peça para o cuidador se cadastrar.'
+			'Usuário não encontrado no banco de dados. Peça para o cuidador se cadastrar.',
 		);
 		return;
 	}
 
 	// Check if carer is already a carer for the pet
 	const isCarerAlready = await cvs.external(() =>
-		isUserCarer(pet.id, carer.id)
+		isUserCarer(pet.id, carer.id),
 	);
 
 	if (isCarerAlready) {
@@ -78,7 +78,7 @@ export const addCarerConversation = (async (cvs, ctx) => {
 
 		await ctx.api.sendMessage(
 			carer.telegramID,
-			`${owner} te convidou para cuidar de ${pet.name}. Aceite o convite em /convites_pet.`
+			`${owner} te convidou para cuidar de ${pet.name}. Aceite o convite em /convites_pet.`,
 		);
 
 		await ctx.reply('O convite foi enviado para o cuidador.');

@@ -1,13 +1,13 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../common/utils/show-yes-or-no-question.js';
 import {
 	answerPendingPetInvite,
-	getPendingPetInvites
+	getPendingPetInvites,
 } from '../../lib/entities/pet.js';
 
 export const petInvitesConversation = (async (cvs, ctx) => {
@@ -16,7 +16,7 @@ export const petInvitesConversation = (async (cvs, ctx) => {
 	invariant(user, 'User is not defined');
 
 	const pendingInvites = await cvs.external(() =>
-		getPendingPetInvites(user.id)
+		getPendingPetInvites(user.id),
 	);
 
 	if (!pendingInvites.length) {
@@ -30,15 +30,15 @@ export const petInvitesConversation = (async (cvs, ctx) => {
 		labelFn: (invite) =>
 			`${invite.petName} (${getUserDisplay(invite.petOwner)})`,
 		message:
-			'Você tem convites pendentes para os seguintes pets. Escolha um para aceitar ou recusar:'
+			'Você tem convites pendentes para os seguintes pets. Escolha um para aceitar ou recusar:',
 	})(cvs, ctx);
 
 	const answer = await showYesOrNoQuestion(
-		`Você aceita cuidar do pet ${invite.petName}?`
+		`Você aceita cuidar do pet ${invite.petName}?`,
 	)(cvs, ctx);
 
 	await cvs.external(() =>
-		answerPendingPetInvite(invite.id, answer ? 'accepted' : 'rejected')
+		answerPendingPetInvite(invite.id, answer ? 'accepted' : 'rejected'),
 	);
 
 	await ctx.reply(`Você ${answer ? 'aceitou' : 'recusou'} o convite!`);
@@ -49,7 +49,7 @@ export const petInvitesConversation = (async (cvs, ctx) => {
 		invite.petOwner.telegramID,
 		`O cuidador ${carerDisplay} ${
 			answer ? 'aceitou' : 'recusou'
-		} o convite para cuidar do pet ${invite.petName}`
+		} o convite para cuidar do pet ${invite.petName}`,
 	);
 }) satisfies ConversationFn;
 

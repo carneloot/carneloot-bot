@@ -1,5 +1,6 @@
 import { Array as A, Order, pipe } from 'effect';
 import type { MiddlewareFn } from 'grammy';
+
 import type { Context } from '../../common/types/context.js';
 import { getUserCaredPets, getUserOwnedPets } from '../../lib/entities/pet.js';
 
@@ -14,7 +15,7 @@ export const ListPetsCommand = (async (ctx) => {
 
 	const pets = [
 		...ownedPets.map((pet) => pet.name),
-		...caredPets.map((pet) => `${pet.name} (cuidando)`)
+		...caredPets.map((pet) => `${pet.name} (cuidando)`),
 	];
 
 	if (pets.length === 0) {
@@ -27,10 +28,10 @@ export const ListPetsCommand = (async (ctx) => {
 			pets,
 			A.sort(Order.string),
 			A.map((name, index) => `${index + 1}. ${name}`),
-			A.join('\n')
+			A.join('\n'),
 		),
 		{
-			parse_mode: 'HTML'
-		}
+			parse_mode: 'HTML',
+		},
 	);
 }) satisfies MiddlewareFn<Context>;

@@ -1,6 +1,5 @@
 import type { User as TelegramUser } from '@grammyjs/types';
 import { createId } from '@paralleldrive/cuid2';
-
 import { eq } from 'drizzle-orm';
 import { Data, Effect, Predicate } from 'effect';
 
@@ -20,15 +19,15 @@ export async function createUser(user: TelegramUser) {
 			telegramID: user.id.toString(),
 			firstName: user.first_name,
 			lastName: user.last_name,
-			username: user.username
+			username: user.username,
 		})
 		.onConflictDoUpdate({
 			target: usersTable.telegramID,
 			set: {
 				firstName: user.first_name,
 				lastName: user.last_name,
-				username: user.username
-			}
+				username: user.username,
+			},
 		})
 		.run();
 }
@@ -46,7 +45,7 @@ export async function getUserByID(id: User['id']) {
 }
 
 export async function getUserByUsername(
-	username: NonNullable<User['username']>
+	username: NonNullable<User['username']>,
 ) {
 	return db
 		.select()
@@ -75,14 +74,14 @@ export async function generateApiKeyForUser(userID: User['id']) {
 			id: createId() as ApiKey['id'],
 			userID,
 			key: hashedApiKey,
-			createdAt: new Date()
+			createdAt: new Date(),
 		})
 		.onConflictDoUpdate({
 			target: apiKeysTable.userID,
 			set: {
 				key: hashedApiKey,
-				createdAt: new Date()
-			}
+				createdAt: new Date(),
+			},
 		})
 		.run();
 
@@ -102,7 +101,7 @@ export const getUserFromApiKey = (apiKey: string) =>
 				.from(usersTable)
 				.rightJoin(apiKeysTable, eq(apiKeysTable.userID, usersTable.id))
 				.where(eq(apiKeysTable.key, hashedApiKey))
-				.get()
+				.get(),
 		);
 
 		if (Predicate.isNullable(result?.user)) {

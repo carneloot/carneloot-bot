@@ -33,7 +33,7 @@ export const replyMiddleware = ((ctx, next) =>
 			if (notification.right.petID) {
 				return yield* handlePetFoodNotificationReply(
 					ctx,
-					notification.right.petID
+					notification.right.petID,
 				);
 			}
 
@@ -43,7 +43,7 @@ export const replyMiddleware = ((ctx, next) =>
 		// Check if the message is a reply to a food entry
 		const petFoodRepository = yield* PetFoodRepository;
 		const petFoods = yield* petFoodRepository.getPetFoodsFromMessage({
-			messageId: repliedMessage.message_id
+			messageId: repliedMessage.message_id,
 		});
 
 		if (petFoods.length > 0) {
@@ -58,32 +58,33 @@ export const replyMiddleware = ((ctx, next) =>
 						Match.when(
 							'dayStart',
 							() =>
-								'Por favor, configure o horário de início do dia para o pet.'
+								'Por favor, configure o horário de início do dia para o pet.',
 						),
 						Match.when(
 							'notificationDelay',
-							() => 'Por favor, configure o tempo de notificação para o seu pet'
+							() =>
+								'Por favor, configure o tempo de notificação para o seu pet',
 						),
-						Match.exhaustive
-					)
-				)
-			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore)
+						Match.exhaustive,
+					),
+				),
+			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore),
 		),
 		Effect.catchTag('ParsePetFoodError', (err) =>
 			Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 				Effect.withSpan('ctx.reply'),
-				Effect.ignoreLogged
-			)
+				Effect.ignoreLogged,
+			),
 		),
 		Effect.catchTag('QueueError', (err) =>
-			Effect.logError(err.message).pipe(Effect.ignoreLogged)
+			Effect.logError(err.message).pipe(Effect.ignoreLogged),
 		),
 		Effect.catchTag('DuplicatedEntryError', (err) =>
 			Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 				Effect.withSpan('ctx.reply'),
-				Effect.ignoreLogged
-			)
+				Effect.ignoreLogged,
+			),
 		),
 		Effect.withSpan('replyMiddleware'),
-		runtime.runPromise
+		runtime.runPromise,
 	)) satisfies MiddlewareFn<Context>;

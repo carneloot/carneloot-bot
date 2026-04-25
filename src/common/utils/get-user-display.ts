@@ -1,4 +1,5 @@
 import type { User as TelegramUser } from '@grammyjs/types';
+
 import type { User } from '../../lib/entities/user.js';
 
 export const getUserDisplay = (user: TelegramUser | User) => {

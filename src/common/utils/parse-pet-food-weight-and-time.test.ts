@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it } from '@effect/vitest';
-
 import { getUnixTime, set } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { Effect, Equal, Exit } from 'effect';
-
 import Qty from 'js-quantities';
 
 import {
 	ParsePetFoodError,
-	parsePetFoodWeightAndTime
+	parsePetFoodWeightAndTime,
 } from './parse-pet-food-weight-and-time.js';
 
 describe('parsePetFoodWeightAndTime', () => {
@@ -24,16 +22,16 @@ describe('parsePetFoodWeightAndTime', () => {
 			const result = yield* Effect.exit(
 				parsePetFoodWeightAndTime({
 					messageTime: getUnixTime(date),
-					timezone
-				})
+					timezone,
+				}),
 			);
 
 			const expected = Exit.fail(
-				new ParsePetFoodError({ message: 'Por favor, envie uma mensagem' })
+				new ParsePetFoodError({ message: 'Por favor, envie uma mensagem' }),
 			);
 
 			expect(Equal.equals(result, expected)).toBeTruthy();
-		})
+		}),
 	);
 
 	it.effect('returns an error when messageMatch does not match the regex', () =>
@@ -42,19 +40,19 @@ describe('parsePetFoodWeightAndTime', () => {
 				parsePetFoodWeightAndTime({
 					messageMatch: 'invalid message',
 					messageTime: getUnixTime(date),
-					timezone
-				})
+					timezone,
+				}),
 			);
 
 			const expected = Exit.fail(
 				new ParsePetFoodError({
 					message:
-						'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).'
-				})
+						'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).',
+				}),
 			);
 
 			expect(Equal.equals(result, expected)).toBeTruthy();
-		})
+		}),
 	);
 
 	it.effect(
@@ -64,16 +62,16 @@ describe('parsePetFoodWeightAndTime', () => {
 				const result = yield* parsePetFoodWeightAndTime({
 					messageMatch: '10',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 
 				expect(result).toEqual({
 					quantity: expect.any(Qty),
 					time: date,
-					timeChanged: false
+					timeChanged: false,
 				});
 				expect(result.quantity.scalar).toEqual(10);
-			})
+			}),
 	);
 
 	it.effect(
@@ -83,28 +81,28 @@ describe('parsePetFoodWeightAndTime', () => {
 				const resultKilo = yield* parsePetFoodWeightAndTime({
 					messageMatch: '1kg',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 				const resultMilli = yield* parsePetFoodWeightAndTime({
 					messageMatch: '100mg',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 
 				expect(resultKilo).toEqual({
 					quantity: expect.any(Qty),
 					time: date,
-					timeChanged: false
+					timeChanged: false,
 				});
 				expect(resultKilo.quantity.scalar).toEqual(1000);
 
 				expect(resultMilli).toEqual({
 					quantity: expect.any(Qty),
 					time: date,
-					timeChanged: false
+					timeChanged: false,
 				});
 				expect(resultMilli.quantity.scalar).toEqual(0.1);
-			})
+			}),
 	);
 
 	it.effect(
@@ -114,7 +112,7 @@ describe('parsePetFoodWeightAndTime', () => {
 				const result = yield* parsePetFoodWeightAndTime({
 					messageMatch: '5.2g 12:00',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 
 				const time = zonedTimeToUtc(
@@ -122,18 +120,18 @@ describe('parsePetFoodWeightAndTime', () => {
 						hours: 12,
 						minutes: 0,
 						seconds: 0,
-						milliseconds: 0
+						milliseconds: 0,
 					}),
-					timezone
+					timezone,
 				);
 
 				expect(result).toEqual({
 					quantity: expect.any(Qty),
 					time,
-					timeChanged: true
+					timeChanged: true,
 				});
 				expect(result.quantity.scalar).toEqual(5.2);
-			})
+			}),
 	);
 
 	it.effect(
@@ -143,7 +141,7 @@ describe('parsePetFoodWeightAndTime', () => {
 				const result = yield* parsePetFoodWeightAndTime({
 					messageMatch: '32g 01-03-2024 14:30',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 
 				const time = zonedTimeToUtc(
@@ -154,18 +152,18 @@ describe('parsePetFoodWeightAndTime', () => {
 						hours: 14,
 						minutes: 30,
 						seconds: 0,
-						milliseconds: 0
+						milliseconds: 0,
 					}),
-					timezone
+					timezone,
 				);
 
 				expect(result).toEqual({
 					quantity: expect.any(Qty),
 					time,
-					timeChanged: true
+					timeChanged: true,
 				});
 				expect(result.quantity.scalar).toEqual(32);
-			})
+			}),
 	);
 
 	it.effect(
@@ -176,20 +174,20 @@ describe('parsePetFoodWeightAndTime', () => {
 				const result = yield* parsePetFoodWeightAndTime({
 					messageMatch: '10g 20:15',
 					messageTime: getUnixTime(date),
-					timezone
+					timezone,
 				});
 
 				const expectedDate = zonedTimeToUtc(
 					new Date(2024, 6, 14, 20, 15, 0),
-					timezone
+					timezone,
 				);
 
 				expect(result).toEqual({
 					quantity: expect.any(Qty),
 					time: expectedDate,
-					timeChanged: true
+					timeChanged: true,
 				});
 				expect(result.quantity.scalar).toEqual(10);
-			})
+			}),
 	);
 });

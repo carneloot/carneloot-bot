@@ -7,7 +7,7 @@ export const DurationParts = Schema.Struct({
 	days: Schema.optional(Schema.Number),
 	hours: Schema.optional(Schema.Number),
 	minutes: Schema.optional(Schema.Number),
-	seconds: Schema.optional(Schema.Number)
+	seconds: Schema.optional(Schema.Number),
 });
 
 export const DurationFromParts = Schema.transform(
@@ -18,26 +18,26 @@ export const DurationFromParts = Schema.transform(
 			pipe(
 				[
 					Option.fromNullable(parts.years).pipe(
-						Option.map((v) => Duration.days(v * 365))
+						Option.map((v) => Duration.days(v * 365)),
 					),
 					Option.fromNullable(parts.months).pipe(
-						Option.map((v) => Duration.days(v * 30))
+						Option.map((v) => Duration.days(v * 30)),
 					),
 					Option.fromNullable(parts.weeks).pipe(Option.map(Duration.weeks)),
 					Option.fromNullable(parts.days).pipe(Option.map(Duration.days)),
 					Option.fromNullable(parts.hours).pipe(Option.map(Duration.hours)),
 					Option.fromNullable(parts.minutes).pipe(Option.map(Duration.minutes)),
-					Option.fromNullable(parts.seconds).pipe(Option.map(Duration.seconds))
+					Option.fromNullable(parts.seconds).pipe(Option.map(Duration.seconds)),
 				],
 				A.getSomes,
-				A.reduce(Duration.zero, Duration.sum)
+				A.reduce(Duration.zero, Duration.sum),
 			),
 		encode: (duration) => {
 			const durationParts = Duration.parts(duration);
 			const years = Math.floor(durationParts.days / 365);
 			const months = Math.floor((durationParts.days - years * 365) / 30);
 			const weeks = Math.floor(
-				(durationParts.days - years * 365 - months * 30) / 7
+				(durationParts.days - years * 365 - months * 30) / 7,
 			);
 			const days = durationParts.days - years * 365 - months * 30 - weeks * 7;
 
@@ -49,10 +49,10 @@ export const DurationFromParts = Schema.transform(
 					days,
 					hours: durationParts.hours,
 					minutes: durationParts.minutes,
-					seconds: durationParts.seconds
+					seconds: durationParts.seconds,
 				},
-				(v) => v > 0
+				(v) => v > 0,
 			);
-		}
-	}
+		},
+	},
 );

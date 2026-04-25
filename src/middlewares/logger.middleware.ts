@@ -9,7 +9,7 @@ export const LoggerMiddleware =
 		const usersToLog = userIds.filter((userId) => ctx.from?.id !== userId);
 
 		await Promise.all(
-			usersToLog.map((userId) => ctx.api.sendMessage(userId, message))
+			usersToLog.map((userId) => ctx.api.sendMessage(userId, message)),
 		);
 
 		await next();

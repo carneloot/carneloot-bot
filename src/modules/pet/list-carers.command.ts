@@ -1,6 +1,6 @@
 import type { MiddlewareFn } from 'grammy';
-
 import invariant from 'tiny-invariant';
+
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
@@ -16,7 +16,7 @@ export const listCarersConversation = (async (cvs, ctx) => {
 	const pet = await showOptionsKeyboard({
 		values: pets,
 		labelFn: (pet) => pet.name,
-		message: 'Escolha um pet:'
+		message: 'Escolha um pet:',
 	})(cvs, ctx);
 
 	const invites = await cvs.external(() => getPetCarers(pet.id));
@@ -40,7 +40,7 @@ export const listCarersConversation = (async (cvs, ctx) => {
 	});
 
 	await ctx.reply(`Cuidadores:\n${parsedInvites.join('\n')}`, {
-		parse_mode: 'HTML'
+		parse_mode: 'HTML',
 	});
 }) satisfies ConversationFn;
 

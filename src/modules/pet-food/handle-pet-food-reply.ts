@@ -12,7 +12,7 @@ type PetFoods = Effect.Effect.Success<
 
 export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 	ctx: Context,
-	petFoods: PetFoods
+	petFoods: PetFoods,
 ) {
 	if (!ctx.message) {
 		return;
@@ -26,7 +26,7 @@ export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 	const { quantity } = yield* parsePetFoodWeightAndTime({
 		messageTime: ctx.message.date,
 		messageMatch,
-		timezone: 'UTC'
+		timezone: 'UTC',
 	});
 
 	yield* Effect.forEach(
@@ -35,7 +35,7 @@ export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 			const dayStart = yield* config.getConfig(
 				'pet',
 				'dayStart',
-				petFood.petID
+				petFood.petID,
 			);
 
 			const messageTime = getUnixTime(petFood.time);
@@ -43,20 +43,20 @@ export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 			const { time } = yield* parsePetFoodWeightAndTime({
 				messageTime,
 				messageMatch,
-				timezone: dayStart.timezone
+				timezone: dayStart.timezone,
 			});
 
 			yield* petFoodRepository.updatePetFood({
 				petFoodID: petFood.id,
 				values: {
 					quantity: quantity.scalar,
-					time
-				}
+					time,
+				},
 			});
-		})
+		}),
 	);
 
 	yield* Effect.tryPromise(() =>
-		ctx.reply('Rações atualizadas com sucesso!')
+		ctx.reply('Rações atualizadas com sucesso!'),
 	).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged);
 });

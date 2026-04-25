@@ -1,4 +1,5 @@
 import type { MiddlewareFn } from 'grammy';
+
 import { createUser } from '../../lib/entities/user.js';
 
 export const SignupCommand: MiddlewareFn = async (ctx) => {
