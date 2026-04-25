@@ -37,6 +37,7 @@ export const createBot = () => {
 	);
 
 	bot.command('cancelar', async (ctx) => {
+		await ctx.conversation.exitAll();
 		await ctx.reply('Operação cancelada', {
 			reply_markup: { remove_keyboard: true }
 		});
