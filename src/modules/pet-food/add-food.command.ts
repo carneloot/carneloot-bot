@@ -97,19 +97,29 @@ export const addFoodConversation = (async (cvs, ctx) => {
 					dayStart,
 				}),
 			),
-			Effect.either,
+			Effect.match({
+				onFailure: (error) => ({
+					ok: false as const,
+					duplicateMessage:
+						error._tag === 'DuplicatedEntryError' ? error.message : null,
+				}),
+				onSuccess: ({ message }) => ({
+					ok: true as const,
+					message,
+				}),
+			}),
 			runtime.runPromise,
 		),
 	);
 
-	if (Either.isLeft(addPetFoodResult)) {
-		if (addPetFoodResult.left._tag === 'DuplicatedEntryError') {
-			await ctx.reply(addPetFoodResult.left.message);
+	if (!addPetFoodResult.ok) {
+		if (addPetFoodResult.duplicateMessage) {
+			await ctx.reply(addPetFoodResult.duplicateMessage);
 		}
 		return;
 	}
 
-	const { message } = addPetFoodResult.right;
+	const { message } = addPetFoodResult;
 
 	await foodResponse.reply(message);
 	await foodResponse.react(Reactions.thumbs_up);

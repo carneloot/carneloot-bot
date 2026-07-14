@@ -131,17 +131,20 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 		),
 	);
 
-	const lastFood = await cvs.external(() =>
+	const lastFoodID = await cvs.external(() =>
 		PetFoodRepository.pipe(
 			Effect.flatMap((repo) => repo.getLastPetFood({ petID: currentPet.id })),
+			Effect.map(
+				Option.match({
+					onSome: (lastFood) => lastFood.id,
+					onNone: () => null,
+				}),
+			),
 			runtime.runPromise,
 		),
 	);
 
-	const isLastFood = Option.match(lastFood, {
-		onSome: (lastFood) => lastFood.id === petFood.id,
-		onNone: () => false,
-	});
+	const isLastFood = lastFoodID === petFood.id;
 
 	// If last food updated its time, reschedule notification
 	if (isLastFood && timeChanged) {

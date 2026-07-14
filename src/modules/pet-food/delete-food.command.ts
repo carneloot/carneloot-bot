@@ -7,6 +7,7 @@ import invariant from 'tiny-invariant';
 import type { Context, ConversationFn } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getUserDisplay } from '../../common/utils/get-user-display.js';
+import { reviveDate } from '../../common/utils/revive-date.js';
 import { showOptionsKeyboard } from '../../common/utils/show-options-keyboard.js';
 import { getConfig } from '../../lib/entities/config.js';
 import {
@@ -63,13 +64,18 @@ export const deleteFoodConversation = (async (cvs, ctx) => {
 
 	const { from, to } = getDailyFromTo(now, dayStart);
 
-	const petFoods = await cvs.external(() =>
-		getPetFoodByRange(
-			currentPet.id,
-			DateTime.toDate(from),
-			DateTime.toDate(to),
-		),
-	);
+	const petFoods = (
+		await cvs.external(() =>
+			getPetFoodByRange(
+				currentPet.id,
+				DateTime.toDate(from),
+				DateTime.toDate(to),
+			),
+		)
+	).map((petFood) => ({
+		...petFood,
+		time: reviveDate(petFood.time),
+	}));
 
 	if (petFoods.length === 0) {
 		await ctx.reply('Ainda não foi colocado ração hoje');
