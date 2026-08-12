@@ -16,6 +16,7 @@ import {
 } from './common/types/command.js';
 import type { Context } from './common/types/context.js';
 import { redis } from './lib/redis/redis.js';
+import { createForwardToOwnerMiddleware } from './middlewares/forward-to-owner.middleware.js';
 import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
 import { replyMiddleware } from './middlewares/reply.middleware.js';
 import { UserMiddleware } from './middlewares/user.middleware.js';
@@ -58,6 +59,16 @@ export const createBot = () => {
 	bot.use(AuthModule);
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
+
+	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.TELEGRAM_OWNER_CHAT_ID) {
+		bot.on(
+			'message',
+			createForwardToOwnerMiddleware({
+				ownerChatId: Env.TELEGRAM_OWNER_CHAT_ID,
+				usernames: Env.TELEGRAM_FORWARD_USERNAMES,
+			}),
+		);
+	}
 
 	bot
 		.on(':text')

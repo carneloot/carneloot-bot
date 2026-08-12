@@ -17,6 +17,9 @@ const envSchema = Schema.Struct({
 
 	REDIS_URL: Schema.String,
 
+	TELEGRAM_FORWARD_USERNAMES: Schema.optional(Schema.String),
+	TELEGRAM_OWNER_CHAT_ID: Schema.optional(Schema.NumberFromString),
+
 	SOURCE_COMMIT: Schema.optional(Schema.String),
 
 	// Tracer
@@ -32,6 +35,15 @@ const parsed = Schema.decodeUnknownEither(envSchema)(process.env, {
 
 if (Either.isLeft(parsed)) {
 	throw new Error(parsed.left.message);
+}
+
+if (
+	(parsed.right.TELEGRAM_FORWARD_USERNAMES === undefined) !==
+	(parsed.right.TELEGRAM_OWNER_CHAT_ID === undefined)
+) {
+	throw new Error(
+		'TELEGRAM_FORWARD_USERNAMES and TELEGRAM_OWNER_CHAT_ID must be configured together',
+	);
 }
 
 export const Env = parsed.right;
