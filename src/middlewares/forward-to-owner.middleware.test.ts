@@ -4,16 +4,19 @@ import type { Context } from '../common/types/context.js';
 import { createForwardToOwnerMiddleware } from './forward-to-owner.middleware.js';
 
 const createContext = (username?: string, isCommand = false) => {
-	const forwardMessage = vi.fn();
+	const calls: string[] = [];
+	const forwardMessage = vi.fn(() => calls.push('forward'));
+	const react = vi.fn(() => calls.push('react'));
 	const context = {
 		forwardMessage,
 		from: username ? { username } : undefined,
 		message: {
 			entities: isCommand ? [{ type: 'bot_command' }] : [],
 		},
+		react,
 	} as unknown as Context;
 
-	return { context, forwardMessage };
+	return { calls, context, forwardMessage, react };
 };
 
 describe('createForwardToOwnerMiddleware', () => {
@@ -23,12 +26,14 @@ describe('createForwardToOwnerMiddleware', () => {
 	});
 
 	it('forwards messages from configured usernames', async () => {
-		const { context, forwardMessage } = createContext('USER_TWO');
+		const { calls, context, forwardMessage, react } = createContext('USER_TWO');
 		const next = vi.fn();
 
 		await middleware(context, next);
 
 		expect(forwardMessage).toHaveBeenCalledWith(12345);
+		expect(react).toHaveBeenCalledWith('🕊');
+		expect(calls).toEqual(['forward', 'react']);
 		expect(next).toHaveBeenCalledOnce();
 	});
 

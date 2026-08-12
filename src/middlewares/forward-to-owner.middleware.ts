@@ -25,6 +25,7 @@ export const createForwardToOwnerMiddleware = ({
 			!isCommand
 		) {
 			await ctx.forwardMessage(ownerChatId);
+			await ctx.react('🕊');
 		}
 
 		await next();
