@@ -52,11 +52,11 @@ if (Either.isLeft(parsed)) {
 }
 
 if (
-	(parsed.right.TELEGRAM_FORWARD_USERNAMES === undefined) !==
-	(parsed.right.TELEGRAM_OWNER_CHAT_ID === undefined)
+	parsed.right.TELEGRAM_FORWARD_USERNAMES !== undefined &&
+	parsed.right.TELEGRAM_OWNER_CHAT_ID === undefined
 ) {
 	throw new Error(
-		'TELEGRAM_FORWARD_USERNAMES and TELEGRAM_OWNER_CHAT_ID must be configured together',
+		'TELEGRAM_OWNER_CHAT_ID must be configured when TELEGRAM_FORWARD_USERNAMES is set',
 	);
 }
 
