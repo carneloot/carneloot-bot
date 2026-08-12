@@ -4,19 +4,14 @@ import type { Context } from '../common/types/context.js';
 
 type ForwardToOwnerConfig = {
 	ownerChatId: number;
-	usernames: string;
+	usernames: ReadonlyArray<string>;
 };
-
-const normalizeUsername = (username: string) =>
-	username.trim().replace(/^@/, '').toLowerCase();
 
 export const createForwardToOwnerMiddleware = ({
 	ownerChatId,
 	usernames,
 }: ForwardToOwnerConfig): MiddlewareFn<Context> => {
-	const allowedUsernames = new Set(
-		usernames.split(',').map(normalizeUsername).filter(Boolean),
-	);
+	const allowedUsernames = new Set(usernames);
 
 	return async (ctx, next) => {
 		const username = ctx.from?.username;
@@ -26,7 +21,7 @@ export const createForwardToOwnerMiddleware = ({
 
 		if (
 			username &&
-			allowedUsernames.has(normalizeUsername(username)) &&
+			allowedUsernames.has(username.toLowerCase()) &&
 			!isCommand
 		) {
 			await ctx.forwardMessage(ownerChatId);

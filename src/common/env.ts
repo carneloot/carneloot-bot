@@ -1,5 +1,19 @@
 import { Either, Schema } from 'effect';
 
+const TelegramUsernamesFromString = Schema.transform(
+	Schema.String,
+	Schema.Array(Schema.String),
+	{
+		strict: true,
+		decode: (usernames) =>
+			usernames
+				.split(',')
+				.map((username) => username.trim().replace(/^@/, '').toLowerCase())
+				.filter(Boolean),
+		encode: (usernames) => usernames.join(','),
+	},
+);
+
 const envSchema = Schema.Struct({
 	BOT_TOKEN: Schema.Redacted(Schema.String),
 	WEBHOOK_URL: Schema.optional(Schema.String),
@@ -17,7 +31,7 @@ const envSchema = Schema.Struct({
 
 	REDIS_URL: Schema.String,
 
-	TELEGRAM_FORWARD_USERNAMES: Schema.optional(Schema.String),
+	TELEGRAM_FORWARD_USERNAMES: Schema.optional(TelegramUsernamesFromString),
 	TELEGRAM_OWNER_CHAT_ID: Schema.optional(Schema.NumberFromString),
 
 	SOURCE_COMMIT: Schema.optional(Schema.String),

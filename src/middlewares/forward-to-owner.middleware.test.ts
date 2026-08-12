@@ -19,7 +19,7 @@ const createContext = (username?: string, isCommand = false) => {
 describe('createForwardToOwnerMiddleware', () => {
 	const middleware = createForwardToOwnerMiddleware({
 		ownerChatId: 12345,
-		usernames: ' User_One, @user_two ',
+		usernames: ['user_one', 'user_two'],
 	});
 
 	it('forwards messages from configured usernames', async () => {
