@@ -1,5 +1,19 @@
 import { Either, Schema } from 'effect';
 
+const TelegramUsernamesFromString = Schema.transform(
+	Schema.String,
+	Schema.Array(Schema.String),
+	{
+		strict: true,
+		decode: (usernames) =>
+			usernames
+				.split(',')
+				.map((username) => username.trim().replace(/^@/, '').toLowerCase())
+				.filter(Boolean),
+		encode: (usernames) => usernames.join(','),
+	},
+);
+
 const envSchema = Schema.Struct({
 	BOT_TOKEN: Schema.Redacted(Schema.String),
 	WEBHOOK_URL: Schema.optional(Schema.String),
@@ -17,6 +31,9 @@ const envSchema = Schema.Struct({
 
 	REDIS_URL: Schema.String,
 
+	TELEGRAM_FORWARD_USERNAMES: Schema.optional(TelegramUsernamesFromString),
+	OWNER_TELEGRAM_ID: Schema.optional(Schema.NumberFromString),
+
 	SOURCE_COMMIT: Schema.optional(Schema.String),
 
 	// Tracer
@@ -32,6 +49,15 @@ const parsed = Schema.decodeUnknownEither(envSchema)(process.env, {
 
 if (Either.isLeft(parsed)) {
 	throw new Error(parsed.left.message);
+}
+
+if (
+	parsed.right.TELEGRAM_FORWARD_USERNAMES !== undefined &&
+	parsed.right.OWNER_TELEGRAM_ID === undefined
+) {
+	throw new Error(
+		'OWNER_TELEGRAM_ID must be configured when TELEGRAM_FORWARD_USERNAMES is set',
+	);
 }
 
 export const Env = parsed.right;
