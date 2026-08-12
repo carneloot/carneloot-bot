@@ -4,8 +4,11 @@ import type { Context } from '../common/types/context.js';
 import { createForwardToOwnerMiddleware } from './forward-to-owner.middleware.js';
 
 const createContext = (username?: string, isCommand = false) => {
-	const forwardMessage = vi.fn();
+	const calls: string[] = [];
+	const sendMessage = vi.fn(() => calls.push('username'));
+	const forwardMessage = vi.fn(() => calls.push('forward'));
 	const context = {
+		api: { sendMessage },
 		forwardMessage,
 		from: username ? { username } : undefined,
 		message: {
@@ -13,7 +16,7 @@ const createContext = (username?: string, isCommand = false) => {
 		},
 	} as unknown as Context;
 
-	return { context, forwardMessage };
+	return { calls, context, forwardMessage, sendMessage };
 };
 
 describe('createForwardToOwnerMiddleware', () => {
@@ -23,12 +26,15 @@ describe('createForwardToOwnerMiddleware', () => {
 	});
 
 	it('forwards messages from configured usernames', async () => {
-		const { context, forwardMessage } = createContext('USER_TWO');
+		const { calls, context, forwardMessage, sendMessage } =
+			createContext('USER_TWO');
 		const next = vi.fn();
 
 		await middleware(context, next);
 
+		expect(sendMessage).toHaveBeenCalledWith(12345, '@USER_TWO');
 		expect(forwardMessage).toHaveBeenCalledWith(12345);
+		expect(calls).toEqual(['username', 'forward']);
 		expect(next).toHaveBeenCalledOnce();
 	});
 
