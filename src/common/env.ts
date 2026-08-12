@@ -32,7 +32,7 @@ const envSchema = Schema.Struct({
 	REDIS_URL: Schema.String,
 
 	TELEGRAM_FORWARD_USERNAMES: Schema.optional(TelegramUsernamesFromString),
-	TELEGRAM_OWNER_CHAT_ID: Schema.optional(Schema.NumberFromString),
+	OWNER_TELEGRAM_ID: Schema.optional(Schema.NumberFromString),
 
 	SOURCE_COMMIT: Schema.optional(Schema.String),
 
@@ -53,10 +53,10 @@ if (Either.isLeft(parsed)) {
 
 if (
 	parsed.right.TELEGRAM_FORWARD_USERNAMES !== undefined &&
-	parsed.right.TELEGRAM_OWNER_CHAT_ID === undefined
+	parsed.right.OWNER_TELEGRAM_ID === undefined
 ) {
 	throw new Error(
-		'TELEGRAM_OWNER_CHAT_ID must be configured when TELEGRAM_FORWARD_USERNAMES is set',
+		'OWNER_TELEGRAM_ID must be configured when TELEGRAM_FORWARD_USERNAMES is set',
 	);
 }
 

@@ -60,11 +60,11 @@ export const createBot = () => {
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
 
-	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.TELEGRAM_OWNER_CHAT_ID) {
+	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(
 			'message',
 			createForwardToOwnerMiddleware({
-				ownerChatId: Env.TELEGRAM_OWNER_CHAT_ID,
+				ownerChatId: Env.OWNER_TELEGRAM_ID,
 				usernames: Env.TELEGRAM_FORWARD_USERNAMES,
 			}),
 		);
