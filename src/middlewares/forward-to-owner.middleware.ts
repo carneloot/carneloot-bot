@@ -24,7 +24,6 @@ export const createForwardToOwnerMiddleware = ({
 			allowedUsernames.has(username.toLowerCase()) &&
 			!isCommand
 		) {
-			await ctx.api.sendMessage(ownerChatId, `@${username}`);
 			await ctx.forwardMessage(ownerChatId);
 		}
 
