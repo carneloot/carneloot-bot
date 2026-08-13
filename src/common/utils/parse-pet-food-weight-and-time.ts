@@ -34,6 +34,18 @@ const MESSAGE_REGEX = createRegExp(
 	[caseInsensitive],
 );
 
+const RELATIVE_TIME_REGEX = createRegExp(
+	oneOrMore(digit)
+		.and(maybe('.', oneOrMore(digit)))
+		.groupedAs('quantity'),
+	maybe(anyOf('mg', 'g', 'kg').groupedAs('unit')),
+	oneOrMore(whitespace),
+	'-',
+	oneOrMore(digit).groupedAs('relativeMinutes'),
+	'min',
+	[caseInsensitive],
+);
+
 interface PetFoodWeightAndTime {
 	messageMatch?: string;
 	messageTime: number;
@@ -50,6 +62,7 @@ const RegexResultSchema = Schema.Struct({
 	year: Schema.optional(Schema.NumberFromString),
 	hour: Schema.optional(Schema.NumberFromString),
 	minute: Schema.optional(Schema.NumberFromString),
+	relativeMinutes: Schema.optional(Schema.NumberFromString),
 });
 
 export class ParsePetFoodError extends Data.TaggedError('ParsePetFoodError')<{
@@ -64,7 +77,9 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 			});
 		}
 
-		const match = messageMatch.match(MESSAGE_REGEX);
+		const match =
+			messageMatch.match(RELATIVE_TIME_REGEX) ??
+			messageMatch.match(MESSAGE_REGEX);
 
 		if (!match) {
 			return yield* new ParsePetFoodError({
@@ -98,7 +113,10 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 		);
 
 		let timeChanged = false;
-		if (groups.hour !== undefined && groups.minute !== undefined) {
+		if (groups.relativeMinutes !== undefined) {
+			timeChanged = true;
+			time = DateTime.subtract(time, { minutes: groups.relativeMinutes });
+		} else if (groups.hour !== undefined && groups.minute !== undefined) {
 			timeChanged = true;
 			const newTime = DateTime.setParts(time, {
 				day: groups.day,

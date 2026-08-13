@@ -134,6 +134,23 @@ describe('parsePetFoodWeightAndTime', () => {
 			}),
 	);
 
+	it.effect('subtracts a relative time from the message time', () =>
+		Effect.gen(function* () {
+			const result = yield* parsePetFoodWeightAndTime({
+				messageMatch: '/todos 8 -5min',
+				messageTime: getUnixTime(date),
+				timezone,
+			});
+
+			expect(result).toEqual({
+				quantity: expect.any(Qty),
+				time: new Date(date.getTime() - 5 * 60 * 1000),
+				timeChanged: true,
+			});
+			expect(result.quantity.scalar).toEqual(8);
+		}),
+	);
+
 	it.effect(
 		'returns the quantity and time when the messageMatch is valid and includes a date',
 		() =>
