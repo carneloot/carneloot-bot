@@ -7,13 +7,5 @@ services:
       - valkey_data:/data
     restart: always
 
-  otel-lgtm:
-    image: grafana/otel-lgtm
-    ports:
-      - '3000:3000'
-      - '4317:4317'
-      - '4318:4318'
-    restart: on-failure
-
 volumes:
   valkey_data:

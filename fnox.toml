@@ -5,11 +5,15 @@ type = "age"
 recipients = ["age1g2udjp9yyh2z8k4rf7jvc2lsk3fxm4nwp02f8025v2etel8dw3fscjqxay"]
 
 [secrets]
+DEBUG = { default = "grammy*" }
+
+[profiles.local.secrets]
 BOT_TOKEN = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBHc0gyVGYvcTVzaVB0QlJBWUNWaGhYcFJEYkcyMjVHa3NnNmthSFdPU0ZFCkFqNFhVQ3NJNTRmVjQyQ3RnV0liSjZrYXFXdDRoYnFRSTNLOUZRUUk3NHcKLT4gOVstZ3JlYXNlID5eNyJ0IFQ4cCdwT00gLXg2Uy0zXGggfDYKOUliWkhRUUJqa0YzZ2lOTTFweWhDb3J6Ci0tLSA5d1FobFBHbk1RUjdPNUdMSHdiZ1haOWZuVmdBTjd0ZTFKQVc2M2JPSGdNCr6l5/cyNIlUSIz9XTDc3Z0wJNqh4LNXFM3BK8K3iEbgoWM9nmha2IFKnE8EjZqL1Hh9ub8o3YTEEm0SBPR/DUu3BcWlkoNW4SF0l3x60w==" }
 TELEGRAM_FORWARD_USERNAMES = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB2aEtVTngvRFgydkk2MW5iVTNOT1dicEtGSnB5c2pYa3NJTFN1bjY3QWxRCnNGdENwb1ZFOUwxK0pCd1U3UmVPcUNZRVVxajl5a1g0cmZDQVEvanE5d28KLT4gXyItZ3JlYXNlIEcuVGsKT3cvSlFGenNLU2dKaGpRCi0tLSBCN1JsNHRWd1RQRzVybzVHQkJDYlR1OEVhc2tmYS8zNkpEK3BFVTRyMDFJCgKR0qisiA53DSomIOeTmjNhGikVc32RrU7m1bnaYUoKjNgL7Jrz0aFqGeMj" }
 OWNER_TELEGRAM_ID = { provider = "age", value = "YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBiMFRRTTdIdVpZeEt1ckZSMWRxb1V1cm9kZVh6MmRubytHMCs1VU1TK2pFCllaVkNJUVN6QUtMUmZIeDdFVlNBOGhzbVAydWJUMFBsZE1GbTI0NXc4TzAKLT4gTS1ncmVhc2UgXydXaCA4e1Z2encmIFxRNHAhJApIUFJJWE1GS2p2MW00Zis1TUFLYnBka0VRTmNKdDFyZ3U2Q0c0bzgKLS0tIExwWituQ1d6T1hKSU9TRzFUamMwaFhDeUd3Yy9NVXVPUWFjajE0blNVQ00K6X9p8YzF31vwG7GLhwG5fJ3EXEwXrSvlFErxvGBw848k0vhGtNIYk1o=" }
+DATABASE_URL = { default = "file:///home/matheus/Documents/Projects/carneloot-bot/carneloot.db" }
+REDIS_URL = { default = "redis://localhost:6379" }
 RUN_MODE = { default = "polling" }
-DEBUG = { default = "grammy*" }
 
 [profiles.production.providers.op]
 type = "1password"

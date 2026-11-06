@@ -10,7 +10,7 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"build:dev": "tsc",
-		"dev": "nodemon",
+		"dev": "fnox run -P local -- nodemon",
 		"start": "bun run src/index.ts",
 		"set-webhook": "curl $BOT_URL/api/set-webhook",
 		"test": "TZ=UTC vitest --exclude=opensrc/**",
