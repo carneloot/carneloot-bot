@@ -14,6 +14,8 @@ import { PetFoodNotificationQueue } from '../lib/queues/pet-food-notification.js
 import { RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
+import { PetRepository } from '../lib/repositories/pet.js';
+import { UserRepository } from '../lib/repositories/user.js';
 import { NotificationService } from '../lib/services/notification.js';
 import { PetFoodService } from '../lib/services/pet-food.js';
 
@@ -50,7 +52,9 @@ const AppServicesLive = Layer.mergeAll(
 	RedisServicesLive,
 	NotificationService.layer,
 	NotificationRepository.layer,
+	PetRepository.layer,
 	PetFoodRepository.layer,
+	UserRepository.layer,
 	PetFoodService.layer,
 	ConfigService.layer,
 );
@@ -63,7 +67,9 @@ export type AppServices =
 	| PetFoodNotificationQueue
 	| NotificationService
 	| NotificationRepository
+	| PetRepository
 	| PetFoodRepository
+	| UserRepository
 	| PetFoodService
 	| ConfigService;
 

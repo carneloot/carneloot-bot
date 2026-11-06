@@ -17,8 +17,8 @@ import type { NotifyParams } from '../../api/types/notify-params.js';
 import { matchBotError } from '../../common/error.js';
 import type { Context } from '../../common/types/context.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
-import { getUserFromApiKey, type User } from '../../lib/entities/user.js';
 import { NotificationRepository } from '../repositories/notification.js';
+import { type User, UserRepository } from '../repositories/user.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
 	variables: string[];
@@ -68,6 +68,7 @@ interface SendNotificationAndLog {
 
 const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
+	const userRepository = yield* UserRepository;
 
 	const sendNotificationAndLog = Effect.fn(
 		'NotificationService.sendNotificationAndLog',
@@ -97,7 +98,7 @@ const makeNotificationService = Effect.gen(function* () {
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
 		function* (bot: Bot<Context>, params: NotifyParams) {
-			const user = yield* getUserFromApiKey(params.apiKey);
+			const user = yield* userRepository.getUserFromApiKey(params.apiKey);
 
 			const { notification, usersToNotify } =
 				yield* notificationRepository.getNotificationByOwnerAndKeyword(
@@ -157,5 +158,6 @@ export class NotificationService extends EffectContext.Service<
 
 	static readonly layer = Layer.effect(this, makeNotificationService).pipe(
 		Layer.provide(NotificationRepository.layer),
+		Layer.provide(UserRepository.layer),
 	);
 }
