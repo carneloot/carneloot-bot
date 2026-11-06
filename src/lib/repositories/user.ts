@@ -51,6 +51,28 @@ const makeUserRepository = Effect.gen(function* () {
 			).pipe(Effect.withSpan('UserRepository.getUserByTelegramID')),
 	);
 
+	const getUserByID = db.makeQuery((execute, userID: User['id']) =>
+		execute((client) =>
+			client
+				.select()
+				.from(usersTable)
+				.where(eq(usersTable.id, userID))
+				.get()
+				.then(Option.fromNullishOr),
+		),
+	);
+
+	const getUserByUsername = db.makeQuery((execute, username: string) =>
+		execute((client) =>
+			client
+				.select()
+				.from(usersTable)
+				.where(eq(usersTable.username, username))
+				.get()
+				.then(Option.fromNullishOr),
+		),
+	);
+
 	const userHasApiKey = db.makeQuery((execute, userID: User['id']) =>
 		execute((client) =>
 			client
@@ -110,6 +132,8 @@ const makeUserRepository = Effect.gen(function* () {
 	return {
 		createUser,
 		getUserByTelegramID,
+		getUserByID,
+		getUserByUsername,
 		userHasApiKey,
 		generateApiKeyForUser,
 		getUserFromApiKey,
@@ -126,6 +150,12 @@ export class UserRepository extends Context.Service<
 	declare readonly getUserByTelegramID: Effect.Success<
 		typeof makeUserRepository
 	>['getUserByTelegramID'];
+	declare readonly getUserByID: Effect.Success<
+		typeof makeUserRepository
+	>['getUserByID'];
+	declare readonly getUserByUsername: Effect.Success<
+		typeof makeUserRepository
+	>['getUserByUsername'];
 	declare readonly userHasApiKey: Effect.Success<
 		typeof makeUserRepository
 	>['userHasApiKey'];

@@ -21,15 +21,15 @@ import { GenericErrorMiddleware } from '../../middlewares/generic-error.middlewa
 import { replyMiddleware } from '../../middlewares/reply.middleware.js';
 import { createUserMiddleware } from '../../middlewares/user.middleware.js';
 import { createPetFoodModule } from '../../modules/pet-food/pet-food.module.js';
-import { createPetModule } from '../../modules/pet/pet.module.js';
 import type { Execute } from '../execute.js';
-import type { ConversationStorage } from './conversation-storage.js';
 import {
 	createApiKeyConfirmationMenu,
 	createGenerateApiKeyCommand,
 	createSignupCommand,
 } from './auth.js';
+import type { ConversationStorage } from './conversation-storage.js';
 import { createListPetsCommand } from './list-pets.js';
+import { createPetCommand, registerPetConversations } from './pets/index.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -82,7 +82,34 @@ export const createBot = (
 		createGenerateApiKeyCommand(execute, apiKeyConfirmationMenu),
 	);
 	bot.command('listar_pets', userMiddleware, createListPetsCommand(execute));
-	bot.use(createPetModule(userMiddleware));
+	bot.use(...registerPetConversations(execute));
+	bot.command('adicionar_pet', userMiddleware, createPetCommand('addPet'));
+	bot.command('deletar_pet', userMiddleware, createPetCommand('deletePet'));
+	bot.command(
+		'adicionar_cuidador',
+		userMiddleware,
+		createPetCommand('addCarer', { overwrite: true }),
+	);
+	bot.command(
+		'remover_cuidador',
+		userMiddleware,
+		createPetCommand('removeCarer', { overwrite: true }),
+	);
+	bot.command(
+		'listar_cuidadores',
+		userMiddleware,
+		createPetCommand('listCarers', { overwrite: true }),
+	);
+	bot.command(
+		'convites_pet',
+		userMiddleware,
+		createPetCommand('petInvites', { overwrite: true }),
+	);
+	bot.command(
+		'parar_de_cuidar_pet',
+		userMiddleware,
+		createPetCommand('stopCaring'),
+	);
 	bot.use(createPetFoodModule(userMiddleware));
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
