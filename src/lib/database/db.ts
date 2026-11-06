@@ -12,12 +12,10 @@ import {
 import {
 	Context,
 	Data,
-	Duration,
 	Effect,
 	Exit,
 	Layer,
 	Predicate,
-	Random,
 	Redacted,
 	Schedule,
 } from 'effect';
@@ -69,11 +67,7 @@ const makeService = Effect.gen(function* () {
 	yield* Effect.tryPromise(() => client.execute('SELECT 1')).pipe(
 		Effect.retry(
 			Schedule.spaced('1.25 seconds').pipe(
-				Schedule.modifyDelay(({ duration }) =>
-					Random.next.pipe(
-						Effect.map((random) => Duration.times(duration, 0.5 + random)),
-					),
-				),
+				Schedule.jittered,
 				Schedule.tap(({ output }) =>
 					Effect.logWarning(
 						`[Database client]: Connection to the database failed. Retrying (attempt ${output}).`,
