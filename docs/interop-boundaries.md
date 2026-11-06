@@ -6,12 +6,12 @@ adapters receive it through the `Execute` capability in
 
 ## Migration inventory
 
-| Boundary | Current locations | Target migration |
-| --- | --- | --- |
-| Telegram commands and middleware | `src/commands/`, `src/middlewares/reply.middleware.ts`, `src/modules/` | Inject `Execute` through Telegram adapter construction. |
-| Conversation builders and wait predicates | `src/modules/pet/`, `src/modules/pet-food/` | Use a schema-backed `conversation.external` adapter. |
-| Hono route handlers | `src/index.ts` | Inject `Execute` when building the HTTP adapter. |
-| BullMQ worker callbacks | `src/lib/queues/pet-food-notification.ts` | Start the worker in the application scope and supply its executor there. |
-| Drizzle transaction callback | `src/lib/database/db.ts` | Keep captured-context execution internal to the database adapter; remove the global runtime dependency. |
+| Boundary                                  | Current locations                                                      | Target migration                                                                                        |
+| ----------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Telegram commands and middleware          | `src/commands/`, `src/middlewares/reply.middleware.ts`, `src/modules/` | Inject `Execute` through Telegram adapter construction.                                                 |
+| Conversation builders and wait predicates | `src/modules/pet/`, `src/modules/pet-food/`                            | Use a schema-backed `conversation.external` adapter.                                                    |
+| Hono route handlers                       | `src/index.ts`                                                         | Inject `Execute` when building the HTTP adapter.                                                        |
+| BullMQ worker callbacks                   | `src/lib/queues/pet-food-notification.ts`                              | Start the worker in the application scope and supply its executor there.                                |
+| Drizzle transaction callback              | `src/lib/database/db.ts`                                               | Keep captured-context execution internal to the database adapter; remove the global runtime dependency. |
 
 `Effect.runPromise`/`runtime.runPromise` use outside this inventory is a migration bug.
