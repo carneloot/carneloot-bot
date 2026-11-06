@@ -23,19 +23,19 @@ import { runtime } from '../../runtime.js';
 import type { PetFoodID, PetID } from '../database/schema.js';
 import { ConfigService } from '../entities/config.js';
 import { getPetByID, getPetCarers } from '../entities/pet.js';
-import { redis } from '../redis/redis.js';
+import { Redis } from '../redis/redis.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
 import { NotificationService } from '../services/notification.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 
-const queueConnection: ConnectionOptions = {
-	host: redis.options.host,
-	port: redis.options.port,
-	username: redis.options.username,
-	password: redis.options.password,
+const getQueueConnection = (redis: Redis): ConnectionOptions => ({
+	host: redis.client.options.host,
+	port: redis.client.options.port,
+	username: redis.client.options.username,
+	password: redis.client.options.password,
 	maxRetriesPerRequest: null,
-};
+});
 
 const getJobName = (petID: PetID): string => `pet-${petID}`;
 
@@ -54,6 +54,8 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 			const petFoodRepository = yield* PetFoodRepository;
 			const notificationService = yield* NotificationService;
 			const config = yield* ConfigService;
+			const redis = yield* Redis;
+			const queueConnection = getQueueConnection(redis);
 
 			const queue = yield* Effect.acquireRelease(
 				Effect.sync(

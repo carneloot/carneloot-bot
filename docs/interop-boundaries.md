@@ -16,3 +16,16 @@ it is migrated; new adapter code must use `Execute` instead.
 | Drizzle transaction callback              | `src/lib/database/db.ts`                                               | Keep captured-context execution internal to the database adapter; remove the global runtime dependency. |
 
 `Effect.runPromise`/`runtime.runPromise` use outside this inventory is a migration bug.
+
+## Conversation persistence
+
+Conversation data is stored under the `conversation:v1:` Redis prefix with
+grammY storage version `1`. Updates from a chat are processed in FIFO order;
+updates without a chat ID are not serialized, and sequencing is local to one
+bot process.
+
+The previous unversioned `session:` keys are intentionally left untouched by
+this release. Before removing them, inspect their production TTLs and retain
+them until active flows have expired or been cancelled. Increment the storage
+version whenever a conversation change invalidates its replay state; grammY
+will then discard incompatible state instead of replaying it against new code.
