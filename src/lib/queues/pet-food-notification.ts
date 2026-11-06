@@ -18,6 +18,7 @@ import Qty from 'js-quantities';
 import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
+import { getDelayUntil } from '../../common/utils/get-delay-until.js';
 import { runtime } from '../../runtime.js';
 import type { PetFoodID, PetID } from '../database/schema.js';
 import { ConfigService } from '../entities/config.js';
@@ -157,11 +158,7 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 						return;
 					}
 
-					const delay = timeToRun.pipe(
-						DateTime.distance(now),
-						Duration.toMillis,
-						(d) => Math.max(d, 0),
-					);
+					const delay = getDelayUntil(now, timeToRun);
 
 					yield* Effect.tryPromise({
 						try: () =>
