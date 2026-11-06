@@ -17,6 +17,7 @@ import { parsePetFoodWeightAndTime } from '../../../common/utils/parse-pet-food-
 import { showOptionsKeyboard } from '../../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../../common/utils/show-yes-or-no-question.js';
 import type { PetID } from '../../../lib/database/schema.js';
+import { DuplicatedEntryError } from '../../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 import type { Execute } from '../../execute.js';
 import { conversationExternal } from '../conversation-external.js';
@@ -400,7 +401,7 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 			).pipe(
 				Effect.match({
 					onFailure: (error) => ({
-						message: error._tag === 'DuplicatedEntryError' ? error.message : '',
+						message: error instanceof DuplicatedEntryError ? error.message : '',
 					}),
 					onSuccess: (value) => value,
 				}),

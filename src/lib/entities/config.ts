@@ -46,7 +46,7 @@ export type ConfigValue<
 	? Schema.Schema.Type<Configs[Context][Key]>
 	: never;
 
-class MissingConfigError<
+export class MissingConfigError<
 	TContext extends ConfigContext,
 	TKey extends ConfigKey<TContext>,
 > extends Data.TaggedError('MissingConfigError')<{

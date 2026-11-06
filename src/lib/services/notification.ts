@@ -11,11 +11,9 @@ import {
 	pipe,
 	String,
 } from 'effect';
-import type { Bot } from 'grammy';
 
+import { NotificationSender } from '../../adapters/telegram/notification-sender.js';
 import type { NotifyParams } from '../../api/types/notify-params.js';
-import { matchBotError } from '../../common/error.js';
-import type { Context } from '../../common/types/context.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
 import { NotificationRepository } from '../repositories/notification.js';
 import { type User, UserRepository } from '../repositories/user.js';
@@ -59,7 +57,6 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 	}).pipe(Effect.withSpan('parseMessage'));
 
 interface SendNotificationAndLog {
-	bot: Bot<Context>;
 	user: User;
 	notificationID?: NotificationID;
 	petID?: PetID;
@@ -69,35 +66,31 @@ interface SendNotificationAndLog {
 const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
 	const userRepository = yield* UserRepository;
+	const notificationSender = yield* NotificationSender;
 
 	const sendNotificationAndLog = Effect.fn(
 		'NotificationService.sendNotificationAndLog',
 	)(function* ({
-		bot,
 		user,
 		messageText,
 		notificationID,
 		petID,
 	}: SendNotificationAndLog) {
-		const message = yield* Effect.tryPromise({
-			try: () => bot.api.sendMessage(user.telegramID, messageText),
-			catch: (cause) => {
-				const error = matchBotError(cause);
-				if (error) return error;
-				throw cause;
-			},
-		}).pipe(Effect.withSpan('bot.api.sendMessage'));
+		const message = yield* notificationSender.sendMessage(
+			user.telegramID,
+			messageText,
+		);
 
 		yield* notificationRepository.createNotificationHistory({
 			notificationID: notificationID ?? null,
 			petID: petID ?? null,
 			userID: user.id,
-			messageID: message.message_id,
+			messageID: message.messageID,
 		});
 	});
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
-		function* (bot: Bot<Context>, params: NotifyParams) {
+		function* (params: NotifyParams) {
 			const user = yield* userRepository.getUserFromApiKey(params.apiKey);
 
 			const { notification, usersToNotify } =
@@ -114,14 +107,12 @@ const makeNotificationService = Effect.gen(function* () {
 			yield* Effect.forEach(
 				[
 					sendNotificationAndLog({
-						bot,
 						user,
 						notificationID: notification.id,
 						messageText,
 					}),
 					...usersToNotify.map((user) =>
 						sendNotificationAndLog({
-							bot,
 							user,
 							notificationID: notification.id,
 							messageText,

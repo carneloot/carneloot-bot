@@ -2,13 +2,13 @@ import { Reactions } from '@grammyjs/emoji';
 import { DateTime, Effect } from 'effect';
 import invariant from 'tiny-invariant';
 
-import type { Context } from '../../common/types/context.js';
-import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-weight-and-time.js';
-import type { PetID } from '../../lib/database/schema.js';
-import { ConfigService } from '../../lib/entities/config.js';
-import { getPetByID } from '../../lib/entities/pet.js';
-import { PetFoodService } from '../../lib/services/pet-food.js';
-import { sendAddedFoodNotification } from '../pet-food/utils/send-added-food-notification.js';
+import type { Context } from '../../../common/types/context.js';
+import { parsePetFoodWeightAndTime } from '../../../common/utils/parse-pet-food-weight-and-time.js';
+import type { PetID } from '../../../lib/database/schema.js';
+import { ConfigService } from '../../../lib/entities/config.js';
+import { getPetByID } from '../../../lib/entities/pet.js';
+import { PetFoodService } from '../../../lib/services/pet-food.js';
+import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 
 export const handlePetFoodNotificationReply = Effect.fn(
 	'handlePetFoodNotificationReply',

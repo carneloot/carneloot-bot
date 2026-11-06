@@ -5,9 +5,10 @@ import {
 } from '@grammyjs/conversations';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 import { Context as EffectContext, Effect, Layer } from 'effect';
+import { Redis } from 'ioredis';
 
+import { Env } from '../../common/env.js';
 import type { Context } from '../../common/types/context.js';
-import { Redis } from '../../lib/redis/redis.js';
 
 export const conversationStorageVersion = 1;
 
@@ -30,9 +31,8 @@ export type ConversationPersistence = typeof ConversationPersistence.Identifier;
 export const ConversationPersistenceLive = Layer.effect(
 	ConversationPersistence,
 	Effect.gen(function* () {
-		const redis = yield* Redis;
 		const client = yield* Effect.acquireRelease(
-			Effect.sync(() => redis.client.duplicate()),
+			Effect.sync(() => new Redis(Env.REDIS_URL)),
 			(client) => Effect.promise(() => client.quit()),
 		);
 

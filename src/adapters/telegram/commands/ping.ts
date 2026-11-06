@@ -1,12 +1,15 @@
 import { Duration, Effect, Option, Predicate, Schema } from 'effect';
 import invariant from 'tiny-invariant';
 
-import type { Command } from '../common/types/command.js';
-import { runtime } from '../runtime.js';
+import type { AppServices } from '../../../app/layer.js';
+import type { Command } from '../../../common/types/command.js';
+import type { Execute } from '../../execute.js';
 
 const MAX_DURATION = Duration.fromInputUnsafe('10 seconds');
 
-export const PingCommand: Command<'ping'> = {
+export const createPingCommand = (
+	execute: Execute<AppServices>,
+): Command<'ping'> => ({
 	command: 'ping',
 	description: 'Ponga de volta',
 	middleware: () => (ctx) =>
@@ -38,5 +41,5 @@ export const PingCommand: Command<'ping'> = {
 					},
 				}),
 			).pipe(Effect.withSpan('ctx.reply'));
-		}).pipe(Effect.withSpan('PingCommand'), runtime.runPromise),
-};
+		}).pipe(Effect.withSpan('PingCommand'), execute),
+});

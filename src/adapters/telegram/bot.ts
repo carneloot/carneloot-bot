@@ -5,10 +5,6 @@ import { Effect, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
 import type { AppServices } from '../../app/layer.js';
-import { CafeCommand } from '../../commands/cafe-command.js';
-import { CafeInvCommand } from '../../commands/cafe-inv-command.js';
-import { PingCommand } from '../../commands/ping.command.js';
-import { WhatsCommand } from '../../commands/whats-command.js';
 import { Env } from '../../common/env.js';
 import { Module } from '../../common/module/module.js';
 import {
@@ -18,18 +14,21 @@ import {
 import type { Context } from '../../common/types/context.js';
 import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
 import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
-import { replyMiddleware } from '../../middlewares/reply.middleware.js';
 import { createUserMiddleware } from '../../middlewares/user.middleware.js';
-import { AddFoodAllCommand } from '../../modules/pet-food/add-food-all.command.js';
-import { FoodStatusCommand } from '../../modules/pet-food/food-status.command.js';
 import type { Execute } from '../execute.js';
 import {
 	createApiKeyConfirmationMenu,
 	createGenerateApiKeyCommand,
 	createSignupCommand,
 } from './auth.js';
+import { createCafeInvCommand } from './commands/cafe-inv.js';
+import { createCafeCommand } from './commands/cafe.js';
+import { createPingCommand } from './commands/ping.js';
+import { createWhatsCommand } from './commands/whats.js';
 import type { ConversationStorage } from './conversation-storage.js';
 import { createListPetsCommand } from './list-pets.js';
+import { createAddFoodAllCommand } from './pet-food/add-food-all.js';
+import { createFoodStatusCommand } from './pet-food/food-status.js';
 import {
 	AddFoodCommand,
 	CorrectFoodCommand,
@@ -39,6 +38,7 @@ import {
 	SetNotificationDelayCommand,
 } from './pet-food/index.js';
 import { createPetCommand, registerPetConversations } from './pets/index.js';
+import { createReplyMiddleware } from './reply.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -54,6 +54,10 @@ export const createBot = (
 	const myEmojiParser = emojiParser();
 	const userMiddleware = createUserMiddleware(execute);
 	const apiKeyConfirmationMenu = createApiKeyConfirmationMenu(execute);
+	const pingCommand = createPingCommand(execute);
+	const whatsCommand = createWhatsCommand(execute);
+	const cafeCommand = createCafeCommand(execute);
+	const cafeInvCommand = createCafeInvCommand(execute);
 
 	bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
 
@@ -76,12 +80,12 @@ export const createBot = (
 	bot.use(GenericErrorMiddleware);
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
-	bot.on('message', userMiddleware, replyMiddleware);
+	bot.on('message', userMiddleware, createReplyMiddleware(execute));
 
-	bot.command(PingCommand.command, PingCommand);
-	bot.command(WhatsCommand.command, WhatsCommand);
-	bot.command(CafeCommand.command, CafeCommand);
-	bot.command(CafeInvCommand.command, CafeInvCommand);
+	bot.command(pingCommand.command, pingCommand);
+	bot.command(whatsCommand.command, whatsCommand);
+	bot.command(cafeCommand.command, cafeCommand);
+	bot.command(cafeInvCommand.command, cafeInvCommand);
 
 	bot.use(apiKeyConfirmationMenu);
 	bot.command('cadastrar', createSignupCommand(execute));
@@ -158,13 +162,13 @@ export const createBot = (
 		'status_racao',
 		'Exibe o status atual do rastreamento de ração',
 		userMiddleware,
-		FoodStatusCommand,
+		createFoodStatusCommand(execute),
 	);
 	petFoodModule.setCommand(
 		['colocar_racao_todos', 'todos'],
 		'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
 		userMiddleware,
-		AddFoodAllCommand,
+		createAddFoodAllCommand(execute),
 	);
 	bot.use(petFoodModule);
 
@@ -206,20 +210,20 @@ export const createBot = (
 		setCommands: async () => {
 			const commands = [
 				{
-					command: getCommandForHelp(PingCommand),
-					description: getDescriptionForHelp(PingCommand),
+					command: getCommandForHelp(pingCommand),
+					description: getDescriptionForHelp(pingCommand),
 				},
 				{
-					command: getCommandForHelp(WhatsCommand),
-					description: getDescriptionForHelp(WhatsCommand),
+					command: getCommandForHelp(whatsCommand),
+					description: getDescriptionForHelp(whatsCommand),
 				},
 				{
-					command: getCommandForHelp(CafeCommand),
-					description: getDescriptionForHelp(CafeCommand),
+					command: getCommandForHelp(cafeCommand),
+					description: getDescriptionForHelp(cafeCommand),
 				},
 				{
-					command: getCommandForHelp(CafeInvCommand),
-					description: getDescriptionForHelp(CafeInvCommand),
+					command: getCommandForHelp(cafeInvCommand),
+					description: getDescriptionForHelp(cafeInvCommand),
 				},
 				{
 					command: 'cancelar',

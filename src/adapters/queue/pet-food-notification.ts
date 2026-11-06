@@ -7,35 +7,35 @@ import {
 	DateTime,
 	Duration,
 	Effect,
+	FiberSet,
 	Layer,
 	Option,
 	pipe,
-	Redacted,
 } from 'effect';
-import { Bot } from 'grammy';
 import Qty from 'js-quantities';
 
 import { Env } from '../../common/env.js';
-import type { Context } from '../../common/types/context.js';
 import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getDelayUntil } from '../../common/utils/get-delay-until.js';
-import { runtime } from '../../runtime.js';
-import type { PetFoodID, PetID } from '../database/schema.js';
-import { ConfigService } from '../entities/config.js';
-import { getPetByID, getPetCarers } from '../entities/pet.js';
-import { Redis } from '../redis/redis.js';
-import { PetFoodRepository } from '../repositories/pet-food.js';
-import { NotificationService } from '../services/notification.js';
+import type { PetFoodID, PetID } from '../../lib/database/schema.js';
+import { ConfigService } from '../../lib/entities/config.js';
+import { getPetByID, getPetCarers } from '../../lib/entities/pet.js';
+import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
+import { NotificationService } from '../../lib/services/notification.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 
-const getQueueConnection = (redis: Redis): ConnectionOptions => ({
-	host: redis.client.options.host,
-	port: redis.client.options.port,
-	username: redis.client.options.username,
-	password: redis.client.options.password,
-	maxRetriesPerRequest: null,
-});
+const getQueueConnection = (): ConnectionOptions => {
+	const redisUrl = new URL(Env.REDIS_URL);
+
+	return {
+		host: redisUrl.hostname,
+		port: Number.parseInt(redisUrl.port, 10),
+		username: redisUrl.username || undefined,
+		password: redisUrl.password || undefined,
+		maxRetriesPerRequest: null,
+	};
+};
 
 const getJobName = (petID: PetID): string => `pet-${petID}`;
 
@@ -45,7 +45,9 @@ type Data = {
 
 class MissingPetId extends D.TaggedError('MissingPetId') {}
 
-class QueueError extends D.TaggedError('QueueError')<{ message: string }> {}
+export class QueueError extends D.TaggedError('QueueError')<{
+	message: string;
+}> {}
 
 export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotificationQueue>()(
 	'app/PetFoodNotificationQueue',
@@ -54,8 +56,8 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 			const petFoodRepository = yield* PetFoodRepository;
 			const notificationService = yield* NotificationService;
 			const config = yield* ConfigService;
-			const redis = yield* Redis;
-			const queueConnection = getQueueConnection(redis);
+			const queueConnection = getQueueConnection();
+			const execute = yield* FiberSet.makeRuntimePromise();
 
 			const queue = yield* Effect.acquireRelease(
 				Effect.sync(
@@ -124,8 +126,6 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 					Effect.map(A.filter((carer) => carer.status === 'accepted')),
 				);
 
-				const bot = new Bot<Context>(Redacted.value(Env.BOT_TOKEN));
-
 				const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
 
 				const message = [
@@ -140,7 +140,6 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 					[{ carer: pet.owner }, ...carers],
 					({ carer }) =>
 						notificationService.sendNotificationAndLog({
-							bot,
 							messageText: message,
 							user: carer,
 							petID: payload.petID,
@@ -193,7 +192,7 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 									Option.getOrElse(() => DateTime.makeUnsafe(new Date())),
 								);
 
-								await runtime.runPromise(handler(job.data, now));
+								await execute(handler(job.data, now));
 							},
 							{
 								connection: queueConnection,

@@ -30,46 +30,40 @@ export const startHttpServer = (
 						const body = context.req.valid('json');
 						const notificationService = yield* NotificationService;
 
-						return yield* notificationService
-							.sendNotification(telegramBot.bot, body)
-							.pipe(
-								Effect.map(() =>
-									context.json({ message: 'Notification sent successfully!' }),
-								),
-								Effect.catchTags({
-									UserNotFoundError: () =>
-										Effect.succeed(
-											context.json(
-												{ message: 'User not found for apiKey' },
-												404,
-											),
+						return yield* notificationService.sendNotification(body).pipe(
+							Effect.map(() =>
+								context.json({ message: 'Notification sent successfully!' }),
+							),
+							Effect.catchTags({
+								UserNotFoundError: () =>
+									Effect.succeed(
+										context.json({ message: 'User not found for apiKey' }, 404),
+									),
+								MissingVariablesError: (error) =>
+									Effect.succeed(
+										context.json(
+											{
+												message: 'Missing used variables',
+												variables: error.variables,
+											},
+											422,
 										),
-									MissingVariablesError: (error) =>
-										Effect.succeed(
-											context.json(
-												{
-													message: 'Missing used variables',
-													variables: error.variables,
-												},
-												422,
-											),
+									),
+								NotificationNotFoundError: () =>
+									Effect.succeed(
+										context.json(
+											{
+												message: 'Notification not found for user and keyword',
+											},
+											404,
 										),
-									NotificationNotFoundError: () =>
-										Effect.succeed(
-											context.json(
-												{
-													message:
-														'Notification not found for user and keyword',
-												},
-												404,
-											),
-										),
-									DatabaseError: () =>
-										Effect.succeed(
-											context.json({ message: 'Database error' }, 500),
-										),
-								}),
-							);
+									),
+								DatabaseError: () =>
+									Effect.succeed(
+										context.json({ message: 'Database error' }, 500),
+									),
+							}),
+						);
 					}).pipe(Effect.withSpan('/api/post/notify')),
 				),
 			);

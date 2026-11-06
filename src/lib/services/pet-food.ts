@@ -10,10 +10,10 @@ import {
 } from 'effect';
 import type Qty from 'js-quantities';
 
+import { PetFoodNotificationQueue } from '../../adapters/queue/pet-food-notification.js';
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
 import { ConfigService, type ConfigValue } from '../entities/config.js';
 import type { Pet } from '../entities/pet.js';
-import { PetFoodNotificationQueue } from '../queues/pet-food-notification.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
 
 const LIMIT_DURATION = Duration.fromInputUnsafe('1 minutes');

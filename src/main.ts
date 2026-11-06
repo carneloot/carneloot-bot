@@ -1,13 +1,13 @@
 import { Effect, FiberSet } from 'effect';
 
 import { startHttpServer } from './adapters/http/server.js';
+import { PetFoodNotificationQueue } from './adapters/queue/pet-food-notification.js';
 import { createBot } from './adapters/telegram/bot.js';
 import { ConversationPersistence } from './adapters/telegram/conversation-storage.js';
 import { startPolling } from './adapters/telegram/polling.js';
 import { type AppServices, runtime } from './app/layer.js';
 import { Env } from './common/env.js';
 import { syncDatabaseSchema } from './lib/database/sync-schema.js';
-import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
 
 const waitForShutdown = Effect.callback<void>((resume) => {
 	const stop = () => resume(Effect.void);
