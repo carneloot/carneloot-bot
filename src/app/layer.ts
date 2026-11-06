@@ -3,10 +3,15 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { Layer, ManagedRuntime, Redacted } from 'effect';
 
+import {
+	ConversationPersistence,
+	ConversationPersistenceLive,
+} from '../adapters/telegram/conversation-storage.js';
 import { Env } from '../common/env.js';
 import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
 import { PetFoodNotificationQueue } from '../lib/queues/pet-food-notification.js';
+import { RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
 import { NotificationService } from '../lib/services/notification.js';
@@ -34,10 +39,15 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 	),
 }));
 
-export const appLayer = Layer.mergeAll(
+const RedisServicesLive = Layer.mergeAll(
+	ConversationPersistenceLive,
+	PetFoodNotificationQueue.layer,
+);
+
+const AppServicesLive = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
-	PetFoodNotificationQueue.layer,
+	RedisServicesLive,
 	NotificationService.layer,
 	NotificationRepository.layer,
 	PetFoodRepository.layer,
@@ -45,8 +55,11 @@ export const appLayer = Layer.mergeAll(
 	ConfigService.layer,
 );
 
+export const appLayer = AppServicesLive.pipe(Layer.provide(RedisLive));
+
 export type AppServices =
 	| Database.Database
+	| ConversationPersistence
 	| PetFoodNotificationQueue
 	| NotificationService
 	| NotificationRepository

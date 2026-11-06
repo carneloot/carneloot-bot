@@ -2,6 +2,7 @@ import { Effect, FiberSet } from 'effect';
 
 import { startHttpServer } from './adapters/http/server.js';
 import { createBot } from './adapters/telegram/bot.js';
+import { ConversationPersistence } from './adapters/telegram/conversation-storage.js';
 import { startPolling } from './adapters/telegram/polling.js';
 import { type AppServices, runtime } from './app/layer.js';
 import { Env } from './common/env.js';
@@ -25,7 +26,8 @@ const app = Effect.scoped(
 		yield* Effect.tryPromise(() => syncDatabaseSchema());
 
 		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
-		const telegramBot = createBot(execute);
+		const conversationPersistence = yield* ConversationPersistence;
+		const telegramBot = createBot(execute, conversationPersistence.storage);
 
 		yield* PetFoodNotificationQueue;
 		yield* startHttpServer(telegramBot, execute);

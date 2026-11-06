@@ -1,6 +1,6 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
-import { RedisAdapter } from '@grammyjs/storage-redis';
+import { sequentialize } from '@grammyjs/runner';
 import { Effect, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
@@ -15,7 +15,6 @@ import {
 	getDescriptionForHelp,
 } from '../../common/types/command.js';
 import type { Context } from '../../common/types/context.js';
-import { redis } from '../../lib/redis/redis.js';
 import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
 import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
 import { replyMiddleware } from '../../middlewares/reply.middleware.js';
@@ -24,6 +23,7 @@ import { AuthModule } from '../../modules/auth/auth-module.js';
 import { PetFoodModule } from '../../modules/pet-food/pet-food.module.js';
 import { PetModule } from '../../modules/pet/pet.module.js';
 import type { Execute } from '../execute.js';
+import type { ConversationStorage } from './conversation-storage.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -33,15 +33,16 @@ export type TelegramBot = {
 
 export const createBot = <Requirements>(
 	execute: Execute<Requirements>,
+	conversationStorage: ConversationStorage,
 ): TelegramBot => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
 
+	bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
+
 	bot.use(
 		conversations({
-			storage: new RedisAdapter({
-				instance: redis.duplicate({ keyPrefix: 'session:' }),
-			}),
+			storage: conversationStorage,
 			plugins: [myEmojiParser],
 		}),
 	);
