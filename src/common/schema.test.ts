@@ -1,4 +1,4 @@
-import { Array as A, Duration, Either, pipe, Schema } from 'effect';
+import { Array as A, Duration, pipe, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { DurationFromParts } from './schema.js';
@@ -15,28 +15,28 @@ describe('DurationFromParts', () => {
 			seconds: 14,
 		};
 
-		const decoded = Schema.decodeEither(DurationFromParts)(input);
+		const decoded = Schema.decodeResult(DurationFromParts)(input);
 
-		expect(decoded._tag).toEqual('Right');
+		expect(decoded._tag).toEqual('Success');
 
-		const output = Either.getOrThrow(decoded);
+		const output = Result.getOrThrow(decoded);
 
-		const encoded = Schema.encodeEither(DurationFromParts)(output);
+		const encoded = Schema.encodeResult(DurationFromParts)(output);
 
-		expect(encoded._tag).toEqual('Right');
+		expect(encoded._tag).toEqual('Success');
 
-		const finalResult = Either.getOrThrow(encoded);
+		const finalResult = Result.getOrThrow(encoded);
 
 		expect(finalResult).toEqual(input);
 	});
 
 	describe('Decoding', () => {
 		it('should correctly decode an empty object', () => {
-			const output = Schema.decodeEither(DurationFromParts)({});
+			const output = Schema.decodeResult(DurationFromParts)({});
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
 			expect(result).toEqual(Duration.zero);
 		});
@@ -46,13 +46,13 @@ describe('DurationFromParts', () => {
 				minutes: 15,
 			};
 
-			const output = Schema.decodeEither(DurationFromParts)(input);
+			const output = Schema.decodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
-			expect(result).toEqual(Duration.decode('15 minutes'));
+			expect(result).toEqual(Duration.fromInputUnsafe('15 minutes'));
 		});
 
 		it('should correctly decode years', () => {
@@ -60,13 +60,13 @@ describe('DurationFromParts', () => {
 				years: 2,
 			};
 
-			const output = Schema.decodeEither(DurationFromParts)(input);
+			const output = Schema.decodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
-			expect(result).toEqual(Duration.decode('730 days'));
+			expect(result).toEqual(Duration.fromInputUnsafe('730 days'));
 		});
 
 		it('should correctly decode months', () => {
@@ -74,13 +74,13 @@ describe('DurationFromParts', () => {
 				months: 16,
 			};
 
-			const output = Schema.decodeEither(DurationFromParts)(input);
+			const output = Schema.decodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
-			expect(result).toEqual(Duration.decode('480 days'));
+			expect(result).toEqual(Duration.fromInputUnsafe('480 days'));
 		});
 
 		it('should correctly decode weeks', () => {
@@ -88,13 +88,13 @@ describe('DurationFromParts', () => {
 				weeks: 16,
 			};
 
-			const output = Schema.decodeEither(DurationFromParts)(input);
+			const output = Schema.decodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
-			expect(result).toEqual(Duration.decode('112 days'));
+			expect(result).toEqual(Duration.fromInputUnsafe('112 days'));
 		});
 
 		it('should correctly decode a full object', () => {
@@ -108,12 +108,12 @@ describe('DurationFromParts', () => {
 				seconds: 58,
 			};
 
-			const output = Schema.decodeEither(DurationFromParts)(input);
+			const output = Schema.decodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
-			const expected = Duration.decode('124892638 seconds');
+			const result = Result.getOrThrow(output);
+			const expected = Duration.fromInputUnsafe('124892638 seconds');
 
 			expect(result).toEqual(expected);
 		});
@@ -121,23 +121,23 @@ describe('DurationFromParts', () => {
 
 	describe('Encoding', () => {
 		it('should correctly encode a zero duration', () => {
-			const output = Schema.encodeEither(DurationFromParts)(Duration.zero);
+			const output = Schema.encodeResult(DurationFromParts)(Duration.zero);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
 			expect(result).toEqual({});
 		});
 
 		it('should correctly encode a simple duration', () => {
-			const output = Schema.encodeEither(DurationFromParts)(
-				Duration.decode('7 minute'),
+			const output = Schema.encodeResult(DurationFromParts)(
+				Duration.fromInputUnsafe('7 minute'),
 			);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
 			expect(result).toEqual({
 				minutes: 7,
@@ -155,11 +155,11 @@ describe('DurationFromParts', () => {
 				A.reduce(Duration.zero, Duration.sum),
 			);
 
-			const output = Schema.encodeEither(DurationFromParts)(input);
+			const output = Schema.encodeResult(DurationFromParts)(input);
 
-			expect(output._tag).toEqual('Right');
+			expect(output._tag).toEqual('Success');
 
-			const result = Either.getOrThrow(output);
+			const result = Result.getOrThrow(output);
 
 			expect(result).toEqual({
 				years: 1,

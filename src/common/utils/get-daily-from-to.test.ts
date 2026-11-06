@@ -8,7 +8,7 @@ describe('getDailyFromTo', () => {
 
 	const makeDateTime = (input: DateTime.DateTime.Input) =>
 		DateTime.toUtc(
-			DateTime.unsafeMakeZoned(input, {
+			DateTime.makeZonedUnsafe(input, {
 				timeZone: timezone,
 				adjustForTimeZone: true,
 			}),

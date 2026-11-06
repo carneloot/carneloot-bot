@@ -78,7 +78,7 @@ export const FoodStatusCommand = ((ctx) =>
 
 		invariant(ctx.message, 'Message object not found.');
 
-		const now = yield* DateTime.make(ctx.message.date * 1000);
+		const now = DateTime.makeUnsafe(ctx.message.date * 1000);
 
 		const allPets = yield* Effect.all(
 			[
@@ -104,8 +104,8 @@ export const FoodStatusCommand = ((ctx) =>
 							),
 						).pipe(
 							Effect.withSpan('ctx.reply'),
-							Effect.ignoreLogged,
-							Effect.andThen(Effect.succeedNone),
+							Effect.ignore({ log: 'Unhandled' }),
+							Effect.andThen(() => Effect.succeed(Option.none())),
 						),
 					),
 				),

@@ -1,4 +1,4 @@
-import { Effect, Either, Match } from 'effect';
+import { Effect, Result } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Context } from '../common/types/context.js';
@@ -27,17 +27,17 @@ export const replyMiddleware = ((ctx, next) =>
 
 		const notification = yield* notificationRepository
 			.getNotificationFromHistory(repliedMessage.message_id, user.id)
-			.pipe(Effect.either);
+			.pipe(Effect.result);
 
-		if (Either.isRight(notification)) {
-			if (notification.right.petID) {
+		if (Result.isSuccess(notification)) {
+			if (notification.success.petID) {
 				return yield* handlePetFoodNotificationReply(
 					ctx,
-					notification.right.petID,
+					notification.success.petID,
 				);
 			}
 
-			return yield* handleNotificationReply(ctx, notification.right);
+			return yield* handleNotificationReply(ctx, notification.success);
 		}
 
 		// Check if the message is a reply to a food entry
@@ -54,35 +54,25 @@ export const replyMiddleware = ((ctx, next) =>
 		Effect.catchTag('MissingConfigError', (err) =>
 			Effect.tryPromise(() =>
 				ctx.reply(
-					Match.value(err.key).pipe(
-						Match.when(
-							'dayStart',
-							() =>
-								'Por favor, configure o horário de início do dia para o pet.',
-						),
-						Match.when(
-							'notificationDelay',
-							() =>
-								'Por favor, configure o tempo de notificação para o seu pet',
-						),
-						Match.exhaustive,
-					),
+					err.key === 'dayStart'
+						? 'Por favor, configure o horário de início do dia para o pet.'
+						: 'Por favor, configure o tempo de notificação para o seu pet',
 				),
 			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore),
 		),
 		Effect.catchTag('ParsePetFoodError', (err) =>
 			Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 				Effect.withSpan('ctx.reply'),
-				Effect.ignoreLogged,
+				Effect.ignore({ log: 'Unhandled' }),
 			),
 		),
 		Effect.catchTag('QueueError', (err) =>
-			Effect.logError(err.message).pipe(Effect.ignoreLogged),
+			Effect.logError(err.message).pipe(Effect.ignore({ log: 'Unhandled' })),
 		),
 		Effect.catchTag('DuplicatedEntryError', (err) =>
 			Effect.tryPromise(() => ctx.reply(err.message)).pipe(
 				Effect.withSpan('ctx.reply'),
-				Effect.ignoreLogged,
+				Effect.ignore({ log: 'Unhandled' }),
 			),
 		),
 		Effect.withSpan('replyMiddleware'),

@@ -10,15 +10,15 @@ import {
 	type LibSQLTransaction,
 } from 'drizzle-orm/libsql';
 import {
-	Cause,
 	Context,
 	Data,
+	Duration,
 	Effect,
 	Exit,
 	Layer,
 	Predicate,
+	Random,
 	Redacted,
-	Runtime,
 	Schedule,
 } from 'effect';
 
@@ -68,11 +68,13 @@ const makeService = Effect.gen(function* () {
 	// Trying to reach the database
 	yield* Effect.tryPromise(() => client.execute('SELECT 1')).pipe(
 		Effect.retry(
-			Schedule.jitteredWith(Schedule.spaced('1.25 seconds'), {
-				min: 0.5,
-				max: 1.5,
-			}).pipe(
-				Schedule.tapOutput((output) =>
+			Schedule.spaced('1.25 seconds').pipe(
+				Schedule.modifyDelay(({ duration }) =>
+					Random.next.pipe(
+						Effect.map((random) => Duration.times(duration, 0.5 + random)),
+					),
+				),
+				Schedule.tap(({ output }) =>
 					Effect.logWarning(
 						`[Database client]: Connection to the database failed. Retrying (attempt ${output}).`,
 					),
@@ -111,40 +113,39 @@ const makeService = Effect.gen(function* () {
 				) => Effect.Effect<U, DatabaseError>,
 			) => Effect.Effect<T, E, R>,
 		) =>
-			Effect.runtime<R>().pipe(
-				Effect.map((runtime) => Runtime.runPromiseExit(runtime)),
-				Effect.flatMap((runPromiseExit) =>
-					Effect.async<T, E>((resume) => {
-						db.transaction(async (tx) => {
-							const txWrapper = <U>(
-								fn: (client: TransactionClient) => Promise<U>,
-							) =>
-								Effect.tryPromise({
-									try: () => fn(tx),
-									catch: (cause) => {
-										const error = matchError(cause);
-										if (Predicate.isNotNull(error)) {
-											return error;
-										}
-										throw cause;
+			Effect.context<R>().pipe(
+				Effect.flatMap((context) =>
+					Effect.callback<T, E>((resume) => {
+						void db
+							.transaction(async (tx) => {
+								const txWrapper = <U>(
+									fn: (client: TransactionClient) => Promise<U>,
+								) =>
+									Effect.tryPromise({
+										try: () => fn(tx),
+										catch: (cause) => {
+											const error = matchError(cause);
+											if (Predicate.isNotNull(error)) {
+												return error;
+											}
+											throw cause;
+										},
+									});
+
+								const result = await Effect.runPromiseExitWith(context)(
+									execute(txWrapper),
+								);
+
+								Exit.match(result, {
+									onSuccess: (value) => {
+										resume(Effect.succeed(value));
+									},
+									onFailure: (cause) => {
+										resume(Effect.failCause(cause));
 									},
 								});
-
-							const result = await runPromiseExit(execute(txWrapper));
-
-							Exit.match(result, {
-								onSuccess: (value) => {
-									resume(Effect.succeed(value));
-								},
-								onFailure: (cause) => {
-									if (Cause.isFailure(cause)) {
-										resume(Effect.failCause(cause));
-									} else {
-										resume(Effect.die(cause));
-									}
-								},
-							});
-						});
+							})
+							.catch((cause) => resume(Effect.die(cause)));
 					}),
 				),
 			),
@@ -175,11 +176,11 @@ const makeService = Effect.gen(function* () {
 	} as const;
 });
 
-type Shape = Effect.Effect.Success<typeof makeService>;
+type Shape = Effect.Success<typeof makeService>;
 
-export class Database extends Context.Tag('Database')<Database, Shape>() {}
+export class Database extends Context.Service<Database, Shape>()('Database') {}
 
-export const layer = Layer.scoped(Database, makeService);
+export const layer = Layer.effect(Database, makeService);
 
 const oldClient = createClient({
 	url: Env.DATABASE_URL,

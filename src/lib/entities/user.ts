@@ -104,7 +104,7 @@ export const getUserFromApiKey = (apiKey: string) =>
 				.get(),
 		);
 
-		if (Predicate.isNullable(result?.user)) {
+		if (Predicate.isNullish(result?.user)) {
 			return yield* new UserNotFoundError();
 		}
 

@@ -6,7 +6,7 @@ import { parsePetFoodWeightAndTime } from '../../common/utils/parse-pet-food-wei
 import { ConfigService } from '../../lib/entities/config.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 
-type PetFoods = Effect.Effect.Success<
+type PetFoods = Effect.Success<
 	ReturnType<PetFoodRepository['getPetFoodsFromMessage']>
 >;
 
@@ -58,5 +58,5 @@ export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 
 	yield* Effect.tryPromise(() =>
 		ctx.reply('Rações atualizadas com sucesso!'),
-	).pipe(Effect.withSpan('ctx.reply'), Effect.ignoreLogged);
+	).pipe(Effect.withSpan('ctx.reply'), Effect.ignore({ log: 'Unhandled' }));
 });

@@ -37,12 +37,12 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 const appLayer = Layer.mergeAll(
 	NodeSdkLive,
 	Database.layer,
-	PetFoodNotificationQueue.Default,
-	NotificationService.Default,
-	NotificationRepository.Default,
-	PetFoodRepository.Default,
-	PetFoodService.Default,
-	ConfigService.Default,
+	PetFoodNotificationQueue.layer,
+	NotificationService.layer,
+	NotificationRepository.layer,
+	PetFoodRepository.layer,
+	PetFoodService.layer,
+	ConfigService.layer,
 );
 
 export const runtime = ManagedRuntime.make(appLayer);

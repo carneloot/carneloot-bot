@@ -1,22 +1,20 @@
 import { DateTime } from 'effect';
 
-import type { ConfigValue } from '../../lib/entities/config.js';
-
 export const getDailyFromTo = (
 	now: DateTime.DateTime,
-	dayStart: ConfigValue<'pet', 'dayStart'>,
+	dayStart: { hour: number; timezone: string },
 ) => {
-	const nowZoned = now.pipe(DateTime.unsafeSetZoneNamed(dayStart.timezone));
+	const nowZoned = now.pipe(DateTime.setZoneNamedUnsafe(dayStart.timezone));
 
 	const fromZoned = nowZoned.pipe(
 		DateTime.setParts({
-			hours: dayStart.hour,
-			minutes: 0,
-			seconds: 0,
-			millis: 0,
+			hour: dayStart.hour,
+			minute: 0,
+			second: 0,
+			millisecond: 0,
 		}),
 		(v) =>
-			DateTime.greaterThan(v, nowZoned)
+			DateTime.isGreaterThan(v, nowZoned)
 				? DateTime.subtractDuration(v, '1 day')
 				: v,
 	);

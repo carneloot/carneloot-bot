@@ -4,7 +4,7 @@ import invariant from 'tiny-invariant';
 import type { Command } from '../common/types/command.js';
 import { runtime } from '../runtime.js';
 
-const MAX_DURATION = Duration.decode('10 seconds');
+const MAX_DURATION = Duration.fromInputUnsafe('10 seconds');
 
 export const PingCommand: Command<'ping'> = {
 	command: 'ping',
@@ -15,11 +15,11 @@ export const PingCommand: Command<'ping'> = {
 
 			invariant(message);
 
-			const duration = Option.fromNullable(ctx.match).pipe(
+			const duration = Option.fromNullishOr(ctx.match).pipe(
 				Option.filter(Predicate.isString),
 				Option.andThen(Schema.decodeOption(Schema.NumberFromString)),
 				Option.andThen(Duration.millis),
-				Option.filter(Duration.lessThanOrEqualTo(MAX_DURATION)),
+				Option.filter(Duration.isLessThanOrEqualTo(MAX_DURATION)),
 			);
 
 			if (Option.isSome(duration)) {

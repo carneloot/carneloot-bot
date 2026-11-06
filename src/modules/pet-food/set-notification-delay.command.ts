@@ -15,6 +15,9 @@ import { runtime } from '../../runtime.js';
 const ExternalDurationSchema = Schema.OptionFromUndefinedOr(
 	Schema.DurationFromMillis,
 );
+const DurationFromString = Schema.decodeUnknownOption(
+	Schema.DurationFromString,
+);
 
 export const setNotificationDelayConversation = (async (cvs, ctx) => {
 	const user = await cvs.external((ctx) => ctx.user);
@@ -81,7 +84,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 		);
 
 		const durationResponse = await cvs.waitUntil(
-			(ctx) => Duration.decodeUnknown(ctx.message?.text).pipe(Option.isSome),
+			(ctx) => DurationFromString(ctx.message?.text).pipe(Option.isSome),
 			{
 				otherwise: (ctx) =>
 					ctx.reply(
@@ -94,7 +97,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 
 		invariant(newDurationString, 'Duration string is not defined');
 
-		const newDuration = Duration.decodeUnknown(newDurationString).pipe(
+		const newDuration = DurationFromString(newDurationString).pipe(
 			Option.getOrThrow, // This should always be true since it is checked inside the waitUntil
 		);
 		await cvs.external(() =>
@@ -119,7 +122,7 @@ export const setNotificationDelayConversation = (async (cvs, ctx) => {
 					yield* petFoodService.schedulePetFoodNotification(
 						pet.id,
 						lastPetFood.value.id,
-						DateTime.unsafeMake(lastPetFood.value.time),
+						DateTime.makeUnsafe(lastPetFood.value.time),
 					);
 				}
 			}).pipe(runtime.runPromise),
