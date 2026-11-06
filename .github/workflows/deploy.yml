@@ -59,7 +59,7 @@ jobs:
         run: |
           command=(
             fnox --non-interactive --profile production exec --
-            bunx alchemy deploy --stage production
+            bunx alchemy deploy --stage production --yes
           )
           if [[ "$ADOPT" == 'true' ]]; then
             command+=(--adopt)
