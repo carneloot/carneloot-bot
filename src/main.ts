@@ -7,6 +7,7 @@ import { ConversationPersistence } from './adapters/telegram/conversation-storag
 import { startPolling } from './adapters/telegram/polling.js';
 import { type AppServices, runtime } from './app/layer.js';
 import { Env } from './common/env.js';
+import { Database } from './lib/database/db.js';
 import { syncDatabaseSchema } from './lib/database/sync-schema.js';
 
 const waitForShutdown = Effect.callback<void>((resume) => {
@@ -28,9 +29,21 @@ const app = Effect.scoped(
 		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
 		const conversationPersistence = yield* ConversationPersistence;
 		const telegramBot = createBot(execute, conversationPersistence.storage);
+		const database = yield* Database;
+		const notificationQueue = yield* PetFoodNotificationQueue;
+		const readiness = Effect.all([
+			database.checkHealth(),
+			conversationPersistence.checkHealth,
+			notificationQueue.checkHealth,
+			Effect.tryPromise(() => telegramBot.checkHealth()),
+		]).pipe(
+			Effect.asVoid,
+			Effect.withSpan('application.readiness', {
+				attributes: { 'application.run.mode': Env.RUN_MODE },
+			}),
+		);
 
-		yield* PetFoodNotificationQueue;
-		yield* startHttpServer(telegramBot, execute);
+		yield* startHttpServer(telegramBot, execute, readiness);
 
 		if (Env.RUN_MODE === 'polling') {
 			yield* startPolling(telegramBot);

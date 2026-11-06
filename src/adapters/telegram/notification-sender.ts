@@ -33,7 +33,9 @@ export const NotificationSenderLive = Layer.effect(
 					},
 				}).pipe(
 					Effect.map((sentMessage) => ({ messageID: sentMessage.message_id })),
-					Effect.withSpan('telegram.sendMessage'),
+					Effect.withSpan('telegram.sendMessage', {
+						attributes: { 'telegram.chat.id': telegramID },
+					}),
 				),
 		});
 	}),

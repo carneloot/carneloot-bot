@@ -42,6 +42,7 @@ import { createReplyMiddleware } from './reply.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
+	readonly checkHealth: () => Promise<void>;
 	readonly setWebhook: (url: string) => Promise<unknown>;
 	readonly setCommands: () => Promise<void>;
 };
@@ -59,7 +60,36 @@ export const createBot = (
 	const cafeCommand = createCafeCommand(execute);
 	const cafeInvCommand = createCafeInvCommand(execute);
 
+	bot.use((ctx, next) =>
+		execute(
+			Effect.promise(() => next()).pipe(
+				Effect.withSpan('telegram.update', {
+					attributes: {
+						'telegram.chat.id': ctx.chat?.id ?? 'unknown',
+						'telegram.update.id': ctx.update.update_id,
+						'telegram.update.type':
+							Object.keys(ctx.update).find((key) => key !== 'update_id') ??
+							'unknown',
+					},
+				}),
+			),
+		),
+	);
+
 	bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
+
+	bot.use((ctx, next) => {
+		const command = ctx.message?.text?.match(/^\/([^\s@]+)/)?.[1];
+		if (!command) return next();
+
+		return execute(
+			Effect.promise(() => next()).pipe(
+				Effect.withSpan('telegram.command', {
+					attributes: { 'telegram.command.name': command },
+				}),
+			),
+		);
+	});
 
 	bot.use(
 		conversations({
@@ -206,6 +236,9 @@ export const createBot = (
 
 	return {
 		bot,
+		checkHealth: async () => {
+			await bot.api.getMe();
+		},
 		setWebhook: (url) => bot.api.setWebhook(url),
 		setCommands: async () => {
 			const commands = [

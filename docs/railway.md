@@ -40,6 +40,18 @@ BOT_TOKEN=... RUN_MODE=polling bunx alchemy deploy --stage production
 Verify the bot starts and handles a request before retiring the Dokploy database.
 Keep the Dokploy database as a rollback copy until the Railway bot is verified.
 
+## Run mode and rollout requirements
+
+Deploy one application process for either `RUN_MODE=polling` or
+`RUN_MODE=webhook`. Do not scale polling horizontally with one bot token. For
+multiple webhook processes, route updates for each chat to one process in FIFO
+order. The bot only preserves chat ordering inside one process.
+
+Before a rollout, wait for `GET /api/readyz` to return `200`. During a rollback,
+keep Redis conversation prefixes and use an application release that can read
+the active conversation storage version. Read [the operations runbook](runbook.md)
+for shutdown, alerts, queue failures, retries, and corrupt conversation state.
+
 ## Application configuration
 
 The stack reads the bot variables from the deployer's environment and writes

@@ -22,10 +22,13 @@ it is migrated; new adapter code must use `Execute` instead.
 Conversation data is stored under the `conversation:v1:` Redis prefix with
 grammY storage version `1`. Updates from a chat are processed in FIFO order;
 updates without a chat ID are not serialized, and sequencing is local to one
-bot process.
+bot process. A multi-process webhook deployment must route every chat to one
+ordered consumer. Two polling processes must not share a bot token.
 
 The previous unversioned `session:` keys are intentionally left untouched by
 this release. Before removing them, inspect their production TTLs and retain
 them until active flows have expired or been cancelled. Increment the storage
 version whenever a conversation change invalidates its replay state; grammY
 will then discard incompatible state instead of replaying it against new code.
+Keep old prefixes for the rollback window. Treat corrupt or version-dropped
+state as a cancelled flow and ask the user to restart the command.

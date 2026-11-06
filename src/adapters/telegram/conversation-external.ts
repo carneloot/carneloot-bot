@@ -6,6 +6,7 @@ import type {
 	ConversationContext,
 } from '../../common/types/context.js';
 import type { Execute } from '../execute.js';
+import { conversationStorageVersion } from './conversation-storage-version.js';
 
 /** Runs an Effect once and persists its Schema-encoded result for conversation replay. */
 export const conversationExternal = <Value, Encoded, Requirements>(
@@ -15,7 +16,17 @@ export const conversationExternal = <Value, Encoded, Requirements>(
 	operation: (context: Context) => Effect.Effect<Value, unknown, Requirements>,
 ) =>
 	conversation.external({
-		task: (context) => execute(operation(context)),
+		task: (context) =>
+			execute(
+				operation(context).pipe(
+					Effect.withSpan('telegram.conversation.external', {
+						attributes: {
+							'conversation.storage.version': conversationStorageVersion,
+							'telegram.chat.id': context.chat?.id ?? 'unknown',
+						},
+					}),
+				),
+			),
 		beforeStore: Schema.encodePromise(schema),
 		afterLoad: Schema.decodePromise(schema),
 	});

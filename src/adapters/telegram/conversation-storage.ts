@@ -8,8 +8,9 @@ import { Context as EffectContext, Effect, Layer } from 'effect';
 
 import type { Context } from '../../common/types/context.js';
 import { Redis } from '../../lib/redis/redis.js';
+import { conversationStorageVersion } from './conversation-storage-version.js';
 
-export const conversationStorageVersion = 1;
+export { conversationStorageVersion } from './conversation-storage-version.js';
 
 export type ConversationStorage = GrammyConversationStorage<
 	Context,
@@ -18,6 +19,7 @@ export type ConversationStorage = GrammyConversationStorage<
 
 type ConversationPersistenceService = {
 	readonly storage: ConversationStorage;
+	readonly checkHealth: Effect.Effect<void, unknown>;
 };
 
 export const ConversationPersistence =
@@ -41,6 +43,15 @@ export const ConversationPersistenceLive = Layer.effect(
 			}),
 		} satisfies ConversationStorage;
 
-		return ConversationPersistence.of({ storage });
+		const checkHealth = Effect.tryPromise(() => redis.client.ping()).pipe(
+			Effect.asVoid,
+			Effect.withSpan('conversation-storage.health', {
+				attributes: {
+					'conversation.storage.version': conversationStorageVersion,
+				},
+			}),
+		);
+
+		return ConversationPersistence.of({ storage, checkHealth });
 	}),
 );
