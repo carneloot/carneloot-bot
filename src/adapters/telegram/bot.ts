@@ -1,30 +1,39 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { RedisAdapter } from '@grammyjs/storage-redis';
-import { Redacted } from 'effect';
+import { Effect, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
-import { CafeCommand } from './commands/cafe-command.js';
-import { CafeInvCommand } from './commands/cafe-inv-command.js';
-import { PingCommand } from './commands/ping.command.js';
-import { WhatsCommand } from './commands/whats-command.js';
-import { Env } from './common/env.js';
-import { Module } from './common/module/module.js';
+import { CafeCommand } from '../../commands/cafe-command.js';
+import { CafeInvCommand } from '../../commands/cafe-inv-command.js';
+import { PingCommand } from '../../commands/ping.command.js';
+import { WhatsCommand } from '../../commands/whats-command.js';
+import { Env } from '../../common/env.js';
+import { Module } from '../../common/module/module.js';
 import {
 	getCommandForHelp,
 	getDescriptionForHelp,
-} from './common/types/command.js';
-import type { Context } from './common/types/context.js';
-import { redis } from './lib/redis/redis.js';
-import { createForwardToOwnerMiddleware } from './middlewares/forward-to-owner.middleware.js';
-import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.js';
-import { replyMiddleware } from './middlewares/reply.middleware.js';
-import { UserMiddleware } from './middlewares/user.middleware.js';
-import { AuthModule } from './modules/auth/auth-module.js';
-import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
-import { PetModule } from './modules/pet/pet.module.js';
+} from '../../common/types/command.js';
+import type { Context } from '../../common/types/context.js';
+import { redis } from '../../lib/redis/redis.js';
+import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
+import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
+import { replyMiddleware } from '../../middlewares/reply.middleware.js';
+import { UserMiddleware } from '../../middlewares/user.middleware.js';
+import { AuthModule } from '../../modules/auth/auth-module.js';
+import { PetFoodModule } from '../../modules/pet-food/pet-food.module.js';
+import { PetModule } from '../../modules/pet/pet.module.js';
+import type { Execute } from '../execute.js';
 
-export const createBot = () => {
+export type TelegramBot = {
+	readonly bot: Bot<Context>;
+	readonly setWebhook: (url: string) => Promise<unknown>;
+	readonly setCommands: () => Promise<void>;
+};
+
+export const createBot = <Requirements>(
+	execute: Execute<Requirements>,
+): TelegramBot => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
 
@@ -78,9 +87,23 @@ export const createBot = () => {
 			),
 		);
 
+	bot.catch((error) =>
+		execute(
+			Effect.logError('Telegram update failed').pipe(
+				Effect.annotateLogs({
+					chatId: error.ctx.chat?.id ?? 'unknown',
+					error: String(error.error),
+					updateId: error.ctx.update.update_id,
+				}),
+			),
+		).catch((reportingError) => {
+			console.error('Could not report Telegram update error', reportingError);
+		}),
+	);
+
 	return {
 		bot,
-		setWebhook: (url: string) => bot.api.setWebhook(url),
+		setWebhook: (url) => bot.api.setWebhook(url),
 		setCommands: async () => {
 			const commands = [
 				{
