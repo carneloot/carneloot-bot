@@ -59,8 +59,9 @@ without applying them.
 The `Deploy` workflow deploys every push to `main` and can be run manually from
 the Actions tab on any branch that contains the workflow. Manual runs offer an
 `adopt` option for importing existing Railway resources into a fresh state
-store. It uses the GitHub `production` environment, so configure the following
-environment secrets before its first run:
+store and a `plan` option that previews changes without applying them. It uses
+the GitHub `production` environment, so configure the following environment
+secrets before its first run:
 
 - `OP_SERVICE_ACCOUNT_TOKEN`: a 1Password service-account token with read
   access to the `Secrets` vault and the `carneloot-bot` item, including its

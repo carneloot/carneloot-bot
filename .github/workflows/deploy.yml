@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      plan:
+        description: Preview the deployment without applying changes
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -45,9 +50,10 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: fnox --non-interactive --profile production ci-redact
 
-      - name: Deploy to Railway
+      - name: Run Alchemy
         env:
           ADOPT: ${{ inputs.adopt }}
+          PLAN: ${{ inputs.plan }}
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
@@ -57,5 +63,8 @@ jobs:
           )
           if [[ "$ADOPT" == 'true' ]]; then
             command+=(--adopt)
+          fi
+          if [[ "$PLAN" == 'true' ]]; then
+            command+=(--dry-run)
           fi
           "${command[@]}"
