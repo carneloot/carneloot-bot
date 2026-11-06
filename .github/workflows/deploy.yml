@@ -5,6 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      adopt:
+        description: Adopt existing Railway resources into a fresh state store
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -41,8 +47,15 @@ jobs:
 
       - name: Deploy to Railway
         env:
+          ADOPT: ${{ inputs.adopt }}
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           SOURCE_COMMIT: ${{ github.sha }}
-        run: >-
-          fnox --non-interactive --profile production exec --
-          bunx alchemy deploy --stage production
+        run: |
+          command=(
+            fnox --non-interactive --profile production exec --
+            bunx alchemy deploy --stage production
+          )
+          if [[ "$ADOPT" == 'true' ]]; then
+            command+=(--adopt)
+          fi
+          "${command[@]}"

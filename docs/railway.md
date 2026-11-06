@@ -57,8 +57,10 @@ without applying them.
 ## GitHub Actions deployment
 
 The `Deploy` workflow deploys every push to `main` and can be run manually from
-the Actions tab. It uses the GitHub `production` environment, so configure the
-following environment secrets before its first run:
+the Actions tab on any branch that contains the workflow. Manual runs offer an
+`adopt` option for importing existing Railway resources into a fresh state
+store. It uses the GitHub `production` environment, so configure the following
+environment secrets before its first run:
 
 - `OP_SERVICE_ACCOUNT_TOKEN`: a 1Password service-account token with read
   access to the `Secrets` vault and the `carneloot-bot` item, including its
