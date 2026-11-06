@@ -1,14 +1,16 @@
+import * as Cloudflare from '@alchemy.run/cloudflare';
 import * as Railway from '@alchemy.run/railway';
 import * as Alchemy from 'alchemy';
 import * as Effect from 'effect/Effect';
+import * as Layer from 'effect/Layer';
 
 import { RailwayEnvironment } from './infrastructure/railway-environment.js';
 
 export default Alchemy.Stack(
 	'CarnelootBot',
 	{
-		providers: Railway.providers(),
-		state: Alchemy.localState(),
+		providers: Layer.mergeAll(Railway.providers(), Cloudflare.providers()),
+		state: Cloudflare.state(),
 	},
 	Effect.gen(function* () {
 		const config = yield* RailwayEnvironment;

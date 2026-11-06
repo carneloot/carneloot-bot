@@ -1,0 +1,70 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      adopt:
+        description: Adopt existing Railway resources into a fresh state store
+        required: false
+        default: false
+        type: boolean
+      plan:
+        description: Preview the deployment without applying changes
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: railway-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up mise
+        uses: jdx/mise-action@v5
+        with:
+          cache: false
+          install_args: bun fnox
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Mask deployment secrets
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: fnox --non-interactive --profile production ci-redact
+
+      - name: Run Alchemy
+        env:
+          ADOPT: ${{ inputs.adopt }}
+          PLAN: ${{ inputs.plan }}
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          command=(
+            fnox --non-interactive --profile production exec --
+            bunx alchemy deploy --stage production
+          )
+          if [[ "$ADOPT" == 'true' ]]; then
+            command+=(--adopt)
+          fi
+          if [[ "$PLAN" == 'true' ]]; then
+            command+=(--dry-run)
+          fi
+          "${command[@]}"
