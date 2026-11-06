@@ -3,7 +3,6 @@ import { and, eq } from 'drizzle-orm';
 import { Context, Data, Effect, Layer, Predicate, Schema } from 'effect';
 
 import * as CustomSchema from '../../common/schema.js';
-import { runtime } from '../../runtime.js';
 import * as Database from '../database/db.js';
 import {
 	type ConfigID,
@@ -201,52 +200,3 @@ export class ConfigService extends Context.Service<
 		Layer.provide(Database.layer),
 	);
 }
-
-export const getConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) =>
-			config
-				.getConfig(context, key, id)
-				.pipe(
-					Effect.catchTag('MissingConfigError', () => Effect.succeed(null)),
-				),
-		),
-		runtime.runPromise,
-	);
-
-export const setConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-	value: ConfigValue<Context, Key>,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) => config.setConfig(context, key, id, value)),
-		runtime.runPromise,
-	);
-
-export const deleteConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) => config.deleteConfig(context, key, id)),
-		runtime.runPromise,
-	);

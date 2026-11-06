@@ -20,7 +20,8 @@ import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-own
 import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
 import { replyMiddleware } from '../../middlewares/reply.middleware.js';
 import { createUserMiddleware } from '../../middlewares/user.middleware.js';
-import { createPetFoodModule } from '../../modules/pet-food/pet-food.module.js';
+import { AddFoodAllCommand } from '../../modules/pet-food/add-food-all.command.js';
+import { FoodStatusCommand } from '../../modules/pet-food/food-status.command.js';
 import type { Execute } from '../execute.js';
 import {
 	createApiKeyConfirmationMenu,
@@ -29,6 +30,14 @@ import {
 } from './auth.js';
 import type { ConversationStorage } from './conversation-storage.js';
 import { createListPetsCommand } from './list-pets.js';
+import {
+	AddFoodCommand,
+	CorrectFoodCommand,
+	DeleteFoodCommand,
+	registerPetFoodConversations,
+	SetDayStartCommand,
+	SetNotificationDelayCommand,
+} from './pet-food/index.js';
 import { createPetCommand, registerPetConversations } from './pets/index.js';
 
 export type TelegramBot = {
@@ -110,7 +119,54 @@ export const createBot = (
 		userMiddleware,
 		createPetCommand('stopCaring'),
 	);
-	bot.use(createPetFoodModule(userMiddleware));
+	bot.use(...registerPetFoodConversations(execute));
+	const petFoodModule = new Module<Context>(
+		'',
+		'Operações de rastreamento de ração',
+	);
+	petFoodModule.setCommand(
+		'configurar_inicio_dia',
+		'Configura o horário de início do dia para rastreamento de ração',
+		userMiddleware,
+		SetDayStartCommand,
+	);
+	petFoodModule.setCommand(
+		'configurar_atraso_notificacao',
+		'Configura o atraso de notificação para rastreamento de ração',
+		userMiddleware,
+		SetNotificationDelayCommand,
+	);
+	petFoodModule.setCommand(
+		'colocar_racao',
+		'Adiciona ração ao rastreamento de ração',
+		userMiddleware,
+		AddFoodCommand,
+	);
+	petFoodModule.setCommand(
+		'deletar_racao',
+		'Deleta ração do rastreamento de ração',
+		userMiddleware,
+		DeleteFoodCommand,
+	);
+	petFoodModule.setCommand(
+		'corrigir_racao',
+		'Corrige o valor e tempo de um comando de ração mandado anteriormente',
+		userMiddleware,
+		CorrectFoodCommand,
+	);
+	petFoodModule.setCommand(
+		'status_racao',
+		'Exibe o status atual do rastreamento de ração',
+		userMiddleware,
+		FoodStatusCommand,
+	);
+	petFoodModule.setCommand(
+		['colocar_racao_todos', 'todos'],
+		'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
+		userMiddleware,
+		AddFoodAllCommand,
+	);
+	bot.use(petFoodModule);
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(
