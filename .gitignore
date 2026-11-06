@@ -272,3 +272,6 @@ opensrc/
 
 .lalph
 .codemogger/
+
+# Alchemy's local infrastructure state.
+.alchemy/

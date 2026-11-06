@@ -8,9 +8,12 @@ import { logger } from 'hono/logger';
 import { NotifyParams } from './api/types/notify-params.js';
 import { createBot } from './bot.js';
 import { Env } from './common/env.js';
+import { syncDatabaseSchema } from './lib/database/sync-schema.js';
 import { PetFoodNotificationQueue } from './lib/queues/pet-food-notification.js';
 import { NotificationService } from './lib/services/notification.js';
 import { runtime } from './runtime.js';
+
+await syncDatabaseSchema();
 
 const { bot, setCommands, setWebhook } = createBot();
 
