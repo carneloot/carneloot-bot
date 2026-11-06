@@ -16,19 +16,23 @@ class MissingRequiredFieldError extends Data.TaggedError(
 
 export const AddFoodAllCommand = (ctx: Context) =>
 	Effect.gen(function* () {
-		const user = yield* Option.fromNullable(ctx.user).pipe(
-			Effect.catchTag('NoSuchElementException', () =>
+		const user = yield* Effect.fromOption(Option.fromNullishOr(ctx.user)).pipe(
+			Effect.catchTag('NoSuchElementError', () =>
 				Effect.fail(new MissingUserError()),
 			),
 		);
 
-		const messageTime = yield* Option.fromNullable(ctx.message?.date).pipe(
-			Effect.catchTag('NoSuchElementException', () =>
+		const messageTime = yield* Effect.fromOption(
+			Option.fromNullishOr(ctx.message?.date),
+		).pipe(
+			Effect.catchTag('NoSuchElementError', () =>
 				Effect.fail(new MissingRequiredFieldError()),
 			),
 		);
-		const messageID = yield* Option.fromNullable(ctx.message?.message_id).pipe(
-			Effect.catchTag('NoSuchElementException', () =>
+		const messageID = yield* Effect.fromOption(
+			Option.fromNullishOr(ctx.message?.message_id),
+		).pipe(
+			Effect.catchTag('NoSuchElementError', () =>
 				Effect.fail(new MissingRequiredFieldError()),
 			),
 		);
@@ -46,7 +50,7 @@ export const AddFoodAllCommand = (ctx: Context) =>
 			{ concurrency: 'unbounded' },
 		).pipe(Effect.map(Array.flatten));
 
-		if (Array.isEmptyArray(allPets)) {
+		if (allPets.length === 0) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply('Você não possui nenhum pet'),
 			).pipe(Effect.withSpan('ctx.reply'));
@@ -79,7 +83,7 @@ export const AddFoodAllCommand = (ctx: Context) =>
 					messageID,
 					userID: user.id,
 
-					time: DateTime.unsafeMake(time),
+					time: DateTime.makeUnsafe(time),
 					quantity,
 					timeChanged,
 
@@ -107,13 +111,10 @@ export const AddFoodAllCommand = (ctx: Context) =>
 					Effect.withSpan('ctx.react'),
 				),
 			],
-			{ concurrency: 'unbounded', mode: 'either' },
+			{ concurrency: 'unbounded', mode: 'result' },
 		);
 	}).pipe(
 		Effect.catchTags({
-			UnknownException: Effect.die,
-			DatabaseError: Effect.die,
-			MissingRequiredFieldError: Effect.die,
 			MissingUserError: () =>
 				Effect.tryPromise(() =>
 					ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar'),

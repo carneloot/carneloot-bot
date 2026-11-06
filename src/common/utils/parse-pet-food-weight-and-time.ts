@@ -1,4 +1,4 @@
-import { Data, DateTime, Duration, Effect, Schema } from 'effect';
+import { Data, DateTime, Duration, Effect, Option, Schema } from 'effect';
 import Qty from 'js-quantities';
 import {
 	anyOf,
@@ -54,9 +54,9 @@ interface PetFoodWeightAndTime {
 
 const RegexResultSchema = Schema.Struct({
 	quantity: Schema.NumberFromString,
-	unit: Schema.optionalWith(Schema.Literal('mg', 'g', 'kg'), {
-		default: () => 'g',
-	}),
+	unit: Schema.Literals(['mg', 'g', 'kg']).pipe(
+		Schema.withDecodingDefaultType(Effect.succeed('g')),
+	),
 	day: Schema.optional(Schema.NumberFromString),
 	month: Schema.optional(Schema.NumberFromString),
 	year: Schema.optional(Schema.NumberFromString),
@@ -88,10 +88,10 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 			});
 		}
 
-		const groups = yield* Schema.decodeUnknown(RegexResultSchema)(
+		const groups = yield* Schema.decodeUnknownEffect(RegexResultSchema)(
 			match.groups,
 		).pipe(
-			Effect.catchTag('ParseError', () =>
+			Effect.catchTag('SchemaError', () =>
 				Effect.fail(
 					new ParsePetFoodError({
 						message: 'A quantidade de ração informada é inválida.',
@@ -102,14 +102,18 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 
 		const quantity = Qty(groups.quantity, groups.unit).to('g');
 
-		let time = yield* Effect.orDieWith(
-			DateTime.makeZoned(messageTime * 1000, {
-				timeZone: timezone,
+		let time = yield* DateTime.makeZoned(messageTime * 1000, {
+			timeZone: timezone,
+		}).pipe(
+			Option.match({
+				onNone: () =>
+					Effect.die(
+						new Error(
+							`Failed to create DateTime from message date with timezone ${timezone}`,
+						),
+					),
+				onSome: Effect.succeed,
 			}),
-			() =>
-				new Error(
-					`Failed to create DateTime from message date with timezone ${timezone}`,
-				),
 		);
 
 		let timeChanged = false;
@@ -122,15 +126,18 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 				day: groups.day,
 				month: groups.month,
 				year: groups.year,
-				hours: groups.hour,
-				minutes: groups.minute,
-				seconds: 0,
-				millis: 0,
+				hour: groups.hour,
+				minute: groups.minute,
+				second: 0,
+				millisecond: 0,
 			});
 
-			if (DateTime.greaterThan(newTime, time)) {
+			if (DateTime.isGreaterThan(newTime, time)) {
 				time = DateTime.subtract(newTime, {
-					days: DateTime.distanceDuration(newTime, time).pipe(Duration.toDays),
+					days: DateTime.distance(newTime, time).pipe(
+						Duration.abs,
+						Duration.toDays,
+					),
 				});
 			} else {
 				time = newTime;

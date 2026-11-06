@@ -26,7 +26,7 @@ export const ListPetsCommand = (async (ctx) => {
 	await ctx.reply(
 		pipe(
 			pets,
-			A.sort(Order.string),
+			A.sort(Order.String),
 			A.map((name, index) => `${index + 1}. ${name}`),
 			A.join('\n'),
 		),

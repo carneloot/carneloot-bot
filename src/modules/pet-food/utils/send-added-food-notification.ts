@@ -29,8 +29,8 @@ export const sendAddedFoodNotification =
 				getPetByID(id, { withOwner: true }),
 			).pipe(
 				Effect.withSpan('getPetByID'),
-				Effect.andThen(Option.fromNullable),
-				Effect.catchTag('NoSuchElementException', () =>
+				Effect.andThen((pet) => Effect.fromOption(Option.fromNullishOr(pet))),
+				Effect.catchTag('NoSuchElementError', () =>
 					Effect.fail(new MissingPetError()),
 				),
 			);
@@ -41,13 +41,12 @@ export const sendAddedFoodNotification =
 
 			const carers = yield* Effect.tryPromise(() => getPetCarers(id)).pipe(
 				Effect.withSpan('getPetCarers'),
-				Effect.catchAll(() =>
-					Effect.zipRight(
-						Console.warn('Error getting pet carers'),
-						Effect.succeed([] as Awaited<ReturnType<typeof getPetCarers>>),
+				Effect.catch(() =>
+					Console.warn('Error getting pet carers').pipe(
+						Effect.as([] as Awaited<ReturnType<typeof getPetCarers>>),
 					),
 				),
-				Effect.andThen(
+				Effect.map(
 					flow(
 						A.filter((carer) => carer.status === 'accepted'),
 						A.map((v) => v.carer),
@@ -88,7 +87,7 @@ export const sendAddedFoodNotification =
 				),
 				{
 					concurrency: 'unbounded',
-					mode: 'either',
+					mode: 'result',
 				},
 			);
 		}).pipe(Effect.withSpan('sendAddedFoodNotification'));

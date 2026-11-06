@@ -1,5 +1,5 @@
 import { Reactions } from '@grammyjs/emoji';
-import { Array as Arr, DateTime, Effect, Either } from 'effect';
+import { Array as Arr, DateTime, Effect, Result } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 import invariant from 'tiny-invariant';
 
@@ -57,9 +57,9 @@ export const addFoodConversation = (async (cvs, ctx) => {
 				messageMatch: ctx.message.text,
 				messageTime: ctx.message.date,
 				timezone: dayStart.timezone,
-			}).pipe(Effect.either, runtime.runPromise);
+			}).pipe(Effect.result, runtime.runPromise);
 
-			return Either.isRight(result);
+			return Result.isSuccess(result);
 		},
 		{ otherwise: (ctx) => ctx.reply('Envie a quantidade de ração colocada') },
 	);
@@ -73,14 +73,15 @@ export const addFoodConversation = (async (cvs, ctx) => {
 		messageMatch: foodResponseMessage.text,
 		messageTime: foodResponseMessage.date,
 		timezone: dayStart.timezone,
-	}).pipe(Effect.either, runtime.runPromise);
+	}).pipe(Effect.result, runtime.runPromise);
 
-	if (Either.isLeft(parsePetFoodWeightAndTimeResult)) {
-		await ctx.reply(parsePetFoodWeightAndTimeResult.left.message);
+	if (Result.isFailure(parsePetFoodWeightAndTimeResult)) {
+		await ctx.reply(parsePetFoodWeightAndTimeResult.failure.message);
 		return;
 	}
 
-	const { quantity, time, timeChanged } = parsePetFoodWeightAndTimeResult.right;
+	const { quantity, time, timeChanged } =
+		parsePetFoodWeightAndTimeResult.success;
 
 	const addPetFoodResult = await cvs.external(() =>
 		PetFoodService.pipe(
@@ -90,7 +91,7 @@ export const addFoodConversation = (async (cvs, ctx) => {
 					messageID: foodResponseMessage.message_id,
 					userID: user.id,
 
-					time: DateTime.unsafeMake(time),
+					time: DateTime.makeUnsafe(time),
 					quantity,
 					timeChanged,
 

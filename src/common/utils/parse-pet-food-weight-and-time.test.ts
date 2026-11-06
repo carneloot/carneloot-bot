@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from '@effect/vitest';
 import { getUnixTime, set } from 'date-fns';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { Effect, Equal, Exit } from 'effect';
+import { Cause, Effect, Exit } from 'effect';
 import Qty from 'js-quantities';
 
 import {
@@ -26,11 +26,14 @@ describe('parsePetFoodWeightAndTime', () => {
 				}),
 			);
 
-			const expected = Exit.fail(
-				new ParsePetFoodError({ message: 'Por favor, envie uma mensagem' }),
-			);
-
-			expect(Equal.equals(result, expected)).toBeTruthy();
+			expect(Exit.isFailure(result)).toBeTruthy();
+			if (Exit.isFailure(result)) {
+				const error = Cause.squash(result.cause);
+				expect(error).toBeInstanceOf(ParsePetFoodError);
+				expect(error).toMatchObject({
+					message: 'Por favor, envie uma mensagem',
+				});
+			}
 		}),
 	);
 
@@ -44,14 +47,15 @@ describe('parsePetFoodWeightAndTime', () => {
 				}),
 			);
 
-			const expected = Exit.fail(
-				new ParsePetFoodError({
+			expect(Exit.isFailure(result)).toBeTruthy();
+			if (Exit.isFailure(result)) {
+				const error = Cause.squash(result.cause);
+				expect(error).toBeInstanceOf(ParsePetFoodError);
+				expect(error).toMatchObject({
 					message:
 						'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).',
-				}),
-			);
-
-			expect(Equal.equals(result, expected)).toBeTruthy();
+				});
+			}
 		}),
 	);
 

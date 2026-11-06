@@ -55,7 +55,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 
 	invariant(ctx.message, 'Message object not found.');
 
-	const now = DateTime.unsafeMake(ctx.message.date * 1000);
+	const now = DateTime.makeUnsafe(ctx.message.date * 1000);
 
 	const { from, to } = getDailyFromTo(now, dayStart);
 
@@ -154,7 +154,7 @@ export const correctFoodConversation = (async (cvs, ctx) => {
 					service.schedulePetFoodNotification(
 						currentPet.id,
 						petFood.id,
-						DateTime.unsafeMake(time),
+						DateTime.makeUnsafe(time),
 					),
 				),
 				runtime.runPromise,

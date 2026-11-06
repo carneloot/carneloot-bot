@@ -45,7 +45,7 @@ export const handlePetFoodNotificationReply = Effect.fn(
 		messageID: ctx.message.message_id,
 		userID: ctx.user.id,
 
-		time: DateTime.unsafeMake(time),
+		time: DateTime.makeUnsafe(time),
 		quantity,
 		timeChanged,
 
@@ -67,6 +67,6 @@ export const handlePetFoodNotificationReply = Effect.fn(
 				time: timeChanged ? time : undefined,
 			})(ctx),
 		],
-		{ concurrency: 'unbounded', mode: 'either' },
+		{ concurrency: 'unbounded', mode: 'result' },
 	);
 });
