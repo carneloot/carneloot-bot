@@ -55,6 +55,7 @@
 		"@alchemy.run/cloudflare": "^2.0.0-beta.85",
 		"@alchemy.run/railway": "^2.0.0-beta.85",
 		"@effect/language-service": "^0.44.1",
+		"@effect/platform-node": "^4.1.2",
 		"@effect/vitest": "^4.1.2",
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/bun": "1.4.4",
