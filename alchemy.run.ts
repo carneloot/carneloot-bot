@@ -17,7 +17,7 @@ export default Alchemy.Stack(
 			name: 'carneloot-bot',
 			description: 'Carneloot Telegram bot',
 		});
-		const redis = yield* Railway.Redis('Redis', {
+		yield* Railway.Redis('Redis', {
 			project,
 			name: 'redis',
 		});
@@ -30,7 +30,7 @@ export default Alchemy.Stack(
 			env: {
 				...config.environment,
 				DATABASE_URL: 'file:/data/carneloot.db',
-				REDIS_URL: Railway.ref(redis, 'REDIS_URL'),
+				REDIS_URL: Railway.ref('redis', 'REDIS_URL'),
 			},
 		});
 		const database = yield* Railway.Volume('Database', {
