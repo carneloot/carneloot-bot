@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      bootstrap_state:
+        description: Temporarily bootstrap or upgrade the Cloudflare state store
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -50,7 +55,16 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: fnox --non-interactive --profile production ci-redact
 
+      - name: Bootstrap Cloudflare state store
+        if: ${{ inputs.bootstrap_state }}
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: >-
+          fnox --non-interactive --profile production exec --
+          bunx alchemy state bootstrap
+
       - name: Run Alchemy
+        if: ${{ !inputs.bootstrap_state }}
         env:
           ADOPT: ${{ inputs.adopt }}
           PLAN: ${{ inputs.plan }}
