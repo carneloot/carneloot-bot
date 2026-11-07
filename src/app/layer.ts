@@ -12,6 +12,7 @@ import { NotificationSenderLive } from '../adapters/telegram/notification-sender
 import { Env } from '../common/env.js';
 import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
+import { RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
 import { PetRepository } from '../lib/repositories/pet.js';
@@ -60,6 +61,7 @@ const AppServicesLive = Layer.mergeAll(
 );
 
 export const appLayer = AppServicesLive.pipe(
+	Layer.provide(RedisLive),
 	Layer.provide(NotificationSenderLive),
 );
 
