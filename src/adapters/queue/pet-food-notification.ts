@@ -1,7 +1,5 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import {
-	Array as A,
-	Console,
 	Context as EffectContext,
 	Data as D,
 	DateTime,
@@ -19,8 +17,8 @@ import { getDailyFromTo } from '../../common/utils/get-daily-from-to.js';
 import { getDelayUntil } from '../../common/utils/get-delay-until.js';
 import type { PetFoodID, PetID } from '../../lib/database/schema.js';
 import { ConfigService } from '../../lib/entities/config.js';
-import { getPetByID, getPetCarers } from '../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
+import { PetRepository } from '../../lib/repositories/pet.js';
 import { NotificationService } from '../../lib/services/notification.js';
 
 const QUEUE_NAME = 'pet-food-notification';
@@ -54,6 +52,7 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 	{
 		make: Effect.gen(function* () {
 			const petFoodRepository = yield* PetFoodRepository;
+			const petRepository = yield* PetRepository;
 			const notificationService = yield* NotificationService;
 			const config = yield* ConfigService;
 			const queueConnection = getQueueConnection();
@@ -89,15 +88,14 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 					pet: payload.petID,
 				});
 
-				const pet = yield* Effect.tryPromise(() =>
-					getPetByID(payload.petID, { withOwner: true }),
-				).pipe(
-					Effect.withSpan('getPetByID'),
-					Effect.andThen(Effect.fromNullishOr),
-					Effect.catchTag('NoSuchElementError', () =>
-						Effect.fail(new MissingPetId()),
-					),
-				);
+				const pet = yield* petRepository
+					.getPetByIDWithOwner(payload.petID)
+					.pipe(
+						Effect.flatMap(Effect.fromOption),
+						Effect.catchTag('NoSuchElementError', () =>
+							Effect.fail(new MissingPetId()),
+						),
+					);
 
 				const dayStart = yield* config.getConfig(
 					'pet',
@@ -114,16 +112,14 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 						to,
 					});
 
-				const carers = yield* Effect.tryPromise(() =>
-					getPetCarers(payload.petID),
-				).pipe(
-					Effect.withSpan('getPetCarers'),
-					Effect.catch(() =>
-						Console.warn('Error getting pet carers').pipe(
-							Effect.as([] as Awaited<ReturnType<typeof getPetCarers>>),
-						),
+				const carers = yield* petRepository.getPetCarers(payload.petID).pipe(
+					Effect.tapError(() =>
+						Effect.sync(() => console.warn('Error getting pet carers')),
 					),
-					Effect.map(A.filter((carer) => carer.status === 'accepted')),
+					Effect.orElseSucceed(() => []),
+					Effect.map((carers) =>
+						carers.filter((carer) => carer.status === 'accepted'),
+					),
 				);
 
 				const quantity = Option.map(dailyConsumption, (v) => Qty(v.total, 'g'));
@@ -237,6 +233,7 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 	static readonly layer = Layer.effect(this, this.make).pipe(
 		Layer.provide(NotificationService.layer),
 		Layer.provide(PetFoodRepository.layer),
+		Layer.provide(PetRepository.layer),
 		Layer.provide(ConfigService.layer),
 	);
 }

@@ -183,10 +183,3 @@ type Shape = Effect.Success<typeof makeService>;
 export class Database extends Context.Service<Database, Shape>()('Database') {}
 
 export const layer = Layer.effect(Database, makeService);
-
-const oldClient = createClient({
-	url: Env.DATABASE_URL,
-	authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value),
-});
-
-export const db = drizzle(oldClient, { schema: DbSchema });

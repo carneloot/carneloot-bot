@@ -11,10 +11,7 @@ import {
 	ConfigService,
 	MissingConfigError,
 } from '../../../lib/entities/config.js';
-import {
-	getUserCaredPets,
-	getUserOwnedPets,
-} from '../../../lib/entities/pet.js';
+import { PetRepository } from '../../../lib/repositories/pet.js';
 import {
 	DuplicatedEntryError,
 	PetFoodService,
@@ -53,15 +50,12 @@ export const createAddFoodAllCommand =
 				),
 			);
 			const messageMatch = ctx.message?.text;
+			const petRepository = yield* PetRepository;
 
 			const allPets = yield* Effect.all(
 				[
-					Effect.tryPromise(() => getUserOwnedPets(user.id)).pipe(
-						Effect.withSpan('getUserOwnedPets'),
-					),
-					Effect.tryPromise(() => getUserCaredPets(user.id)).pipe(
-						Effect.withSpan('getUserCaredPets'),
-					),
+					petRepository.getUserOwnedPets(user.id),
+					petRepository.getUserCaredPets(user.id),
 				],
 				{ concurrency: 'unbounded' },
 			).pipe(Effect.map(Array.flatten));

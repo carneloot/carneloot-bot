@@ -8,12 +8,8 @@ import type { Context } from '../../../common/types/context.js';
 import { getDailyFromTo } from '../../../common/utils/get-daily-from-to.js';
 import { getRelativeTime } from '../../../common/utils/get-relative-time.js';
 import { ConfigService } from '../../../lib/entities/config.js';
-import {
-	getUserCaredPets,
-	getUserOwnedPets,
-	type Pet,
-} from '../../../lib/entities/pet.js';
 import { PetFoodRepository } from '../../../lib/repositories/pet-food.js';
+import { type Pet, PetRepository } from '../../../lib/repositories/pet.js';
 import type { Execute } from '../../execute.js';
 
 const getPetMessage = Effect.fn('getPetMessage')(function* (
@@ -80,15 +76,12 @@ export const createFoodStatusCommand =
 			invariant(ctx.message, 'Message object not found.');
 
 			const now = DateTime.makeUnsafe(ctx.message.date * 1000);
+			const petRepository = yield* PetRepository;
 
 			const allPets = yield* Effect.all(
 				[
-					Effect.tryPromise(() => getUserOwnedPets(user.id)).pipe(
-						Effect.withSpan('getUserOwnedPets'),
-					),
-					Effect.tryPromise(() => getUserCaredPets(user.id)).pipe(
-						Effect.withSpan('getUserCaredPets'),
-					),
+					petRepository.getUserOwnedPets(user.id),
+					petRepository.getUserCaredPets(user.id),
 				],
 				{ concurrency: 'unbounded' },
 			).pipe(Effect.map(Array.flatten));

@@ -6,7 +6,7 @@ import type { Context } from '../../../common/types/context.js';
 import { parsePetFoodWeightAndTime } from '../../../common/utils/parse-pet-food-weight-and-time.js';
 import type { PetID } from '../../../lib/database/schema.js';
 import { ConfigService } from '../../../lib/entities/config.js';
-import { getPetByID } from '../../../lib/entities/pet.js';
+import { PetRepository } from '../../../lib/repositories/pet.js';
 import { PetFoodService } from '../../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 
@@ -17,13 +17,14 @@ export const handlePetFoodNotificationReply = Effect.fn(
 	invariant(ctx.user, 'User is not defined.');
 
 	const config = yield* ConfigService;
+	const petRepository = yield* PetRepository;
 	const petFoodService = yield* PetFoodService;
 
-	const pet = yield* Effect.tryPromise(() => getPetByID(petID)).pipe(
-		Effect.withSpan('getPetByID'),
-	);
+	const pet = yield* petRepository
+		.getPetByID(petID)
+		.pipe(Effect.flatMap(Effect.fromOption), Effect.option);
 
-	if (!pet) {
+	if (pet._tag === 'None') {
 		yield* Effect.tryPromise(() =>
 			ctx.reply(
 				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.',
@@ -41,7 +42,7 @@ export const handlePetFoodNotificationReply = Effect.fn(
 	});
 
 	const { message } = yield* petFoodService.addPetFoodAndScheduleNotification({
-		pet,
+		pet: pet.value,
 		messageID: ctx.message.message_id,
 		userID: ctx.user.id,
 

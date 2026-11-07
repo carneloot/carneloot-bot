@@ -1,13 +1,13 @@
 import { utcToZonedTime } from 'date-fns-tz';
-import { Array as A, Console, Data, Effect, flow, Option } from 'effect';
+import { Data, Effect } from 'effect';
 import type Qty from 'js-quantities';
 
 import type { Context } from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
 import type { PetID } from '../../../lib/database/schema.js';
 import { ConfigService } from '../../../lib/entities/config.js';
-import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
-import type { User } from '../../../lib/entities/user.js';
+import { PetRepository } from '../../../lib/repositories/pet.js';
+import type { User } from '../../../lib/repositories/user.js';
 
 class MissingPetError extends Data.TaggedError('MissingPetError') {}
 
@@ -25,11 +25,9 @@ export const sendAddedFoodNotification =
 	}) =>
 	(ctx: Context) =>
 		Effect.gen(function* () {
-			const pet = yield* Effect.tryPromise(() =>
-				getPetByID(id, { withOwner: true }),
-			).pipe(
-				Effect.withSpan('getPetByID'),
-				Effect.andThen((pet) => Effect.fromOption(Option.fromNullishOr(pet))),
+			const petRepository = yield* PetRepository;
+			const pet = yield* petRepository.getPetByIDWithOwner(id).pipe(
+				Effect.flatMap(Effect.fromOption),
 				Effect.catchTag('NoSuchElementError', () =>
 					Effect.fail(new MissingPetError()),
 				),
@@ -39,18 +37,15 @@ export const sendAddedFoodNotification =
 
 			const dayStart = yield* config.getConfig('pet', 'dayStart', id);
 
-			const carers = yield* Effect.tryPromise(() => getPetCarers(id)).pipe(
-				Effect.withSpan('getPetCarers'),
-				Effect.catch(() =>
-					Console.warn('Error getting pet carers').pipe(
-						Effect.as([] as Awaited<ReturnType<typeof getPetCarers>>),
-					),
+			const carers = yield* petRepository.getPetCarers(id).pipe(
+				Effect.tapError(() =>
+					Effect.sync(() => console.warn('Error getting pet carers')),
 				),
-				Effect.map(
-					flow(
-						A.filter((carer) => carer.status === 'accepted'),
-						A.map((v) => v.carer),
-					),
+				Effect.orElseSucceed(() => []),
+				Effect.map((carers) =>
+					carers
+						.filter((carer) => carer.status === 'accepted')
+						.map((carer) => carer.carer),
 				),
 			);
 

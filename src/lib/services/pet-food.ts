@@ -13,8 +13,8 @@ import type Qty from 'js-quantities';
 import { PetFoodNotificationQueue } from '../../adapters/queue/pet-food-notification.js';
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
 import { ConfigService, type ConfigValue } from '../entities/config.js';
-import type { Pet } from '../entities/pet.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
+import type { Pet } from '../repositories/pet.js';
 
 const LIMIT_DURATION = Duration.fromInputUnsafe('1 minutes');
 

@@ -24,6 +24,7 @@ const { PetFoodNotificationQueue } = await import('./pet-food-notification.js');
 const { ConfigService } = await import('../../lib/entities/config.js');
 const { PetFoodRepository } =
 	await import('../../lib/repositories/pet-food.js');
+const { PetRepository } = await import('../../lib/repositories/pet.js');
 const { NotificationService } =
 	await import('../../lib/services/notification.js');
 
@@ -40,6 +41,23 @@ const queueDependencies = Layer.mergeAll(
 			addPetFood: unused,
 			getPetFoodsFromMessage: unused,
 			updatePetFood: unused,
+		}),
+	),
+	Layer.succeed(
+		PetRepository,
+		PetRepository.of({
+			getUserOwnedPets: unused,
+			getUserCaredPets: unused,
+			createPet: unused,
+			deletePet: unused,
+			getPetByID: unused,
+			getPetByIDWithOwner: unused,
+			getPetCarers: unused,
+			getPetCarerStatus: unused,
+			addCarer: unused,
+			removeCarer: unused,
+			getPendingPetInvites: unused,
+			answerPendingPetInvite: unused,
 		}),
 	),
 	Layer.succeed(
