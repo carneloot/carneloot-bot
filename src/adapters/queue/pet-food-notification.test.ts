@@ -1,18 +1,36 @@
-import { Effect, Layer } from 'effect';
-import { describe, expect, it, vi } from 'vitest';
+import { Effect, Layer, Logger } from 'effect';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { queueClose, workerClose } = vi.hoisted(() => ({
+const {
+	queueClose,
+	queueWaitUntilReady,
+	workerClose,
+	workerErrorHandlers,
+	workerOn,
+	workerWaitUntilReady,
+} = vi.hoisted(() => ({
 	queueClose: vi.fn(async () => undefined),
+	queueWaitUntilReady: vi.fn(async () => undefined),
 	workerClose: vi.fn(async () => undefined),
+	workerErrorHandlers: [] as Array<(error: Error) => void>,
+	workerOn: vi.fn((event: string, handler: (error: Error) => void) => {
+		if (event === 'error') {
+			workerErrorHandlers.push(handler);
+		}
+	}),
+	workerWaitUntilReady: vi.fn(async () => undefined),
 }));
 
 vi.mock('bullmq', () => ({
 	Queue: class {
 		readonly name = 'pet-food-notification';
 		readonly close = queueClose;
+		readonly waitUntilReady = queueWaitUntilReady;
 	},
 	Worker: class {
 		readonly close = workerClose;
+		readonly on = workerOn;
+		readonly waitUntilReady = workerWaitUntilReady;
 	},
 }));
 
@@ -78,6 +96,11 @@ const queueDependencies = Layer.mergeAll(
 );
 
 describe('PetFoodNotificationQueue', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		workerErrorHandlers.length = 0;
+	});
+
 	it('closes BullMQ worker and queue when its scope closes', async () => {
 		await Effect.runPromise(
 			Effect.scoped(
@@ -87,5 +110,53 @@ describe('PetFoodNotificationQueue', () => {
 
 		expect(workerClose).toHaveBeenCalledOnce();
 		expect(queueClose).toHaveBeenCalledOnce();
+	});
+
+	it('waits for queue and worker readiness and logs worker errors', async () => {
+		const { promise: workerReady, resolve: resolveWorkerReady } =
+			Promise.withResolvers<undefined>();
+		workerWaitUntilReady.mockReturnValueOnce(workerReady);
+		const logs: Array<{
+			readonly logLevel: string;
+			readonly message: unknown;
+		}> = [];
+		const logger = Logger.make((log) => {
+			logs.push(log);
+		});
+
+		let finished = false;
+		const healthCheck = Effect.runPromise(
+			Effect.scoped(
+				Effect.gen(function* () {
+					const queue = yield* PetFoodNotificationQueue.make.pipe(
+						Effect.provide(queueDependencies),
+					);
+
+					yield* queue.checkHealth;
+				}),
+			).pipe(Effect.provide(Logger.layer([logger]))),
+		).then(() => {
+			finished = true;
+		});
+
+		await vi.waitFor(() => {
+			expect(queueWaitUntilReady).toHaveBeenCalledOnce();
+			expect(workerWaitUntilReady).toHaveBeenCalledOnce();
+		});
+		expect(finished).toBe(false);
+
+		const workerError = new Error('Redis connection lost');
+		workerErrorHandlers[0]?.(workerError);
+		await vi.waitFor(() =>
+			expect(logs).toContainEqual(
+				expect.objectContaining({
+					logLevel: 'Error',
+					message: ['PetFoodNotificationQueue worker error', workerError],
+				}),
+			),
+		);
+
+		resolveWorkerReady(undefined);
+		await healthCheck;
 	});
 });

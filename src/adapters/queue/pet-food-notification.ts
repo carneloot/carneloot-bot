@@ -175,12 +175,7 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 						new QueueError({ message: 'Failed to remove from queue' }),
 				}).pipe(Effect.withSpan('PetFoodNotificationQueue.removeFromQueue'));
 
-			const checkHealth = Effect.tryPromise(() => queue.waitUntilReady()).pipe(
-				Effect.asVoid,
-				Effect.withSpan('pet-food-notification-queue.health'),
-			);
-
-			yield* Effect.acquireRelease(
+			const worker = yield* Effect.acquireRelease(
 				Effect.sync(
 					() =>
 						new Worker<Data, void, string>(
@@ -220,6 +215,20 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 							Effect.log('PetFoodNotificationQueue worker closed'),
 						),
 					),
+			);
+
+			worker.on('error', (error) => {
+				void execute(
+					Effect.logError('PetFoodNotificationQueue worker error', error),
+				).catch(() => undefined);
+			});
+
+			const checkHealth = Effect.all([
+				Effect.tryPromise(() => queue.waitUntilReady()),
+				Effect.tryPromise(() => worker.waitUntilReady()),
+			]).pipe(
+				Effect.asVoid,
+				Effect.withSpan('pet-food-notification-queue.health'),
 			);
 
 			return {
