@@ -22,8 +22,8 @@ export const RedisLive = Layer.effect(
 					new IORedis({
 						host: redisUrl.hostname,
 						port: Number.parseInt(redisUrl.port, 10),
-						username: redisUrl.username,
-						password: redisUrl.password,
+						username: redisUrl.username || undefined,
+						password: redisUrl.password || undefined,
 						maxRetriesPerRequest: null,
 					}),
 			),
