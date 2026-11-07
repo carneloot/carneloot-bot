@@ -4,6 +4,7 @@ import { sequentialize } from '@grammyjs/runner';
 import { Effect, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
+import type { AppServices } from '../../app/layer.js';
 import { CafeCommand } from '../../commands/cafe-command.js';
 import { CafeInvCommand } from '../../commands/cafe-inv-command.js';
 import { PingCommand } from '../../commands/ping.command.js';
@@ -18,12 +19,17 @@ import type { Context } from '../../common/types/context.js';
 import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
 import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
 import { replyMiddleware } from '../../middlewares/reply.middleware.js';
-import { UserMiddleware } from '../../middlewares/user.middleware.js';
-import { AuthModule } from '../../modules/auth/auth-module.js';
-import { PetFoodModule } from '../../modules/pet-food/pet-food.module.js';
-import { PetModule } from '../../modules/pet/pet.module.js';
+import { createUserMiddleware } from '../../middlewares/user.middleware.js';
+import { createPetFoodModule } from '../../modules/pet-food/pet-food.module.js';
+import { createPetModule } from '../../modules/pet/pet.module.js';
 import type { Execute } from '../execute.js';
 import type { ConversationStorage } from './conversation-storage.js';
+import {
+	createApiKeyConfirmationMenu,
+	createGenerateApiKeyCommand,
+	createSignupCommand,
+} from './auth.js';
+import { createListPetsCommand } from './list-pets.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -31,12 +37,14 @@ export type TelegramBot = {
 	readonly setCommands: () => Promise<void>;
 };
 
-export const createBot = <Requirements>(
-	execute: Execute<Requirements>,
+export const createBot = (
+	execute: Execute<AppServices>,
 	conversationStorage: ConversationStorage,
 ): TelegramBot => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
+	const userMiddleware = createUserMiddleware(execute);
+	const apiKeyConfirmationMenu = createApiKeyConfirmationMenu(execute);
 
 	bot.use(sequentialize((ctx) => ctx.chat?.id.toString()));
 
@@ -59,16 +67,23 @@ export const createBot = <Requirements>(
 	bot.use(GenericErrorMiddleware);
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
-	bot.on('message', UserMiddleware, replyMiddleware);
+	bot.on('message', userMiddleware, replyMiddleware);
 
 	bot.command(PingCommand.command, PingCommand);
 	bot.command(WhatsCommand.command, WhatsCommand);
 	bot.command(CafeCommand.command, CafeCommand);
 	bot.command(CafeInvCommand.command, CafeInvCommand);
 
-	bot.use(AuthModule);
-	bot.use(PetModule);
-	bot.use(PetFoodModule);
+	bot.use(apiKeyConfirmationMenu);
+	bot.command('cadastrar', createSignupCommand(execute));
+	bot.command(
+		'gerar_chave',
+		userMiddleware,
+		createGenerateApiKeyCommand(execute, apiKeyConfirmationMenu),
+	);
+	bot.command('listar_pets', userMiddleware, createListPetsCommand(execute));
+	bot.use(createPetModule(userMiddleware));
+	bot.use(createPetFoodModule(userMiddleware));
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(
@@ -126,6 +141,18 @@ export const createBot = <Requirements>(
 				{
 					command: 'cancelar',
 					description: 'Cancela a operação atual',
+				},
+				{
+					command: 'cadastrar',
+					description: 'Cadastra a sua conta no banco de dados',
+				},
+				{
+					command: 'gerar_chave',
+					description: 'Gera uma nova api-key para o usuario',
+				},
+				{
+					command: 'listar_pets',
+					description: 'Lista os seus pets',
 				},
 				...Module.getCommandList(),
 			];

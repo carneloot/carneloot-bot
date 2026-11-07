@@ -1,8 +1,8 @@
 import { createConversation } from '@grammyjs/conversations';
+import type { MiddlewareFn } from 'grammy';
 
 import { Module } from '../../common/module/module.js';
 import type { Context } from '../../common/types/context.js';
-import { UserMiddleware } from '../../middlewares/user.middleware.js';
 import { AddCarerCommand, addCarerConversation } from './add-carer.command.js';
 import { AddPetCommand, addPetConversation } from './add-pet.command.js';
 import {
@@ -13,7 +13,6 @@ import {
 	ListCarersCommand,
 	listCarersConversation,
 } from './list-carers.command.js';
-import { ListPetsCommand } from './list-pets.command.js';
 import {
 	PetInvitesCommand,
 	petInvitesConversation,
@@ -27,78 +26,71 @@ import {
 	stopCaringConversation,
 } from './stop-caring.command.js';
 
-export const PetModule = new Module<Context>(
-	'',
-	'Opções de gerenciamento de pet',
-);
+export const createPetModule = (userMiddleware: MiddlewareFn<Context>) => {
+	const petModule = new Module<Context>('', 'Opções de gerenciamento de pet');
 
-// Add pet
-PetModule.use(createConversation(addPetConversation, 'addPet'));
-PetModule.setCommand(
-	'adicionar_pet',
-	'Adiciona um pet ao seu usuário',
-	UserMiddleware,
-	AddPetCommand,
-);
+	// Add pet
+	petModule.use(createConversation(addPetConversation, 'addPet'));
+	petModule.setCommand(
+		'adicionar_pet',
+		'Adiciona um pet ao seu usuário',
+		userMiddleware,
+		AddPetCommand,
+	);
 
-// Delete pet
-PetModule.use(createConversation(deletePetConversation, 'deletePet'));
-PetModule.setCommand(
-	'deletar_pet',
-	'Deleta um pet do seu usuário',
-	UserMiddleware,
-	DeletePetCommand,
-);
+	// Delete pet
+	petModule.use(createConversation(deletePetConversation, 'deletePet'));
+	petModule.setCommand(
+		'deletar_pet',
+		'Deleta um pet do seu usuário',
+		userMiddleware,
+		DeletePetCommand,
+	);
 
-// List pets
-PetModule.setCommand(
-	'listar_pets',
-	'Lista os seus pets',
-	UserMiddleware,
-	ListPetsCommand,
-);
+	// Add carer
+	petModule.use(createConversation(addCarerConversation, 'addCarer'));
+	petModule.setCommand(
+		'adicionar_cuidador',
+		'Adiciona um cuidador para um pet',
+		userMiddleware,
+		AddCarerCommand,
+	);
 
-// Add carer
-PetModule.use(createConversation(addCarerConversation, 'addCarer'));
-PetModule.setCommand(
-	'adicionar_cuidador',
-	'Adiciona um cuidador para um pet',
-	UserMiddleware,
-	AddCarerCommand,
-);
+	// Remove carer
+	petModule.use(createConversation(removeCarerConversation, 'removeCarer'));
+	petModule.setCommand(
+		'remover_cuidador',
+		'Remove um cuidador de um pet',
+		userMiddleware,
+		RemoveCarerCommand,
+	);
 
-// Remove carer
-PetModule.use(createConversation(removeCarerConversation, 'removeCarer'));
-PetModule.setCommand(
-	'remover_cuidador',
-	'Remove um cuidador de um pet',
-	UserMiddleware,
-	RemoveCarerCommand,
-);
+	// List carers
+	petModule.use(createConversation(listCarersConversation, 'listCarers'));
+	petModule.setCommand(
+		'listar_cuidadores',
+		'Lista os cuidadores de um pet',
+		userMiddleware,
+		ListCarersCommand,
+	);
 
-// List carers
-PetModule.use(createConversation(listCarersConversation, 'listCarers'));
-PetModule.setCommand(
-	'listar_cuidadores',
-	'Lista os cuidadores de um pet',
-	UserMiddleware,
-	ListCarersCommand,
-);
+	// Invites
+	petModule.use(createConversation(petInvitesConversation, 'petInvites'));
+	petModule.setCommand(
+		'convites_pet',
+		'Lista os convites para cuidar de um pet',
+		userMiddleware,
+		PetInvitesCommand,
+	);
 
-// Invites
-PetModule.use(createConversation(petInvitesConversation, 'petInvites'));
-PetModule.setCommand(
-	'convites_pet',
-	'Lista os convites para cuidar de um pet',
-	UserMiddleware,
-	PetInvitesCommand,
-);
+	// Stop caring
+	petModule.use(createConversation(stopCaringConversation, 'stopCaring'));
+	petModule.setCommand(
+		'parar_de_cuidar_pet',
+		'Para de cuidar de um pet',
+		userMiddleware,
+		StopCaringCommand,
+	);
 
-// Stop caring
-PetModule.use(createConversation(stopCaringConversation, 'stopCaring'));
-PetModule.setCommand(
-	'parar_de_cuidar_pet',
-	'Para de cuidar de um pet',
-	UserMiddleware,
-	StopCaringCommand,
-);
+	return petModule;
+};

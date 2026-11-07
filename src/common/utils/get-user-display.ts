@@ -1,6 +1,6 @@
 import type { User as TelegramUser } from '@grammyjs/types';
 
-import type { User } from '../../lib/entities/user.js';
+import type { User } from '../../lib/repositories/user.js';
 
 export const getUserDisplay = (user: TelegramUser | User) => {
 	const isDbUser = 'telegramID' in user;
