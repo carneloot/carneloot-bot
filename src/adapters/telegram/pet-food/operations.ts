@@ -7,7 +7,7 @@ import type { ConfigValue } from '../../../lib/entities/config.js';
 import { ConfigService } from '../../../lib/entities/config.js';
 import { PetFoodRepository } from '../../../lib/repositories/pet-food.js';
 import { PetRepository } from '../../../lib/repositories/pet.js';
-import type { PetFoodService } from '../../../lib/services/pet-food.js';
+import { PetFoodService } from '../../../lib/services/pet-food.js';
 import { PetDto } from './codecs.js';
 
 export {
@@ -24,15 +24,6 @@ export const getUserOwnedPets = (userID: string) =>
 	PetRepository.pipe(
 		Effect.andThen((pets) => pets.getUserOwnedPets(userID as UserID)),
 	);
-
-const petFoodService: Effect.Effect<
-	PetFoodService['Service'],
-	never,
-	PetFoodService
-> = Effect.promise(() => import('../../../lib/services/pet-food.js')).pipe(
-	Effect.orDie,
-	Effect.andThen(({ PetFoodService }) => PetFoodService),
-);
 
 export const getUserPets = (userID: string) =>
 	PetRepository.pipe(
@@ -87,7 +78,7 @@ export const setNotificationDelay = (petID: string, delay: Duration.Duration) =>
 			config.setConfig('pet', 'notificationDelay', petID as PetID, delay),
 		),
 		Effect.andThen(() =>
-			petFoodService.pipe(
+			PetFoodService.pipe(
 				Effect.andThen((service) =>
 					service.rescheduleLastPetFoodNotification(petID as PetID),
 				),
@@ -97,7 +88,7 @@ export const setNotificationDelay = (petID: string, delay: Duration.Duration) =>
 	);
 
 export const deleteNotificationDelay = (petID: string) =>
-	petFoodService.pipe(
+	PetFoodService.pipe(
 		Effect.andThen((service) => service.disableNotification(petID as PetID)),
 		Effect.as(null),
 	);
@@ -114,7 +105,7 @@ export const getFoodEntries = (
 	);
 
 export const deleteFood = (petFoodID: string) =>
-	petFoodService.pipe(
+	PetFoodService.pipe(
 		Effect.andThen((service) =>
 			service.deletePetFoodAndNotification(petFoodID as PetFoodID),
 		),
@@ -128,7 +119,7 @@ export const updateFood = (
 	time: Date,
 	timeChanged: boolean,
 ) =>
-	petFoodService.pipe(
+	PetFoodService.pipe(
 		Effect.andThen((service) =>
 			service.updatePetFoodAndNotification(
 				petID as PetID,
@@ -150,7 +141,7 @@ export const addFood = (
 	timeChanged: boolean,
 	dayStart: ConfigValue<'pet', 'dayStart'>,
 ) =>
-	petFoodService.pipe(
+	PetFoodService.pipe(
 		Effect.andThen((service) =>
 			service.addPetFoodAndScheduleNotification({
 				pet: { id: pet.id as PetID, name: pet.name },
