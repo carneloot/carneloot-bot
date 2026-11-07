@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 
-import type { Context } from '../../common/types/context.js';
-import { getUserDisplay } from '../../common/utils/get-user-display.js';
-import type { NotificationRepository } from '../../lib/repositories/notification.js';
+import type { Context } from '../../../common/types/context.js';
+import { getUserDisplay } from '../../../common/utils/get-user-display.js';
+import type { NotificationRepository } from '../../../lib/repositories/notification.js';
 
 type Notification = Effect.Success<
 	ReturnType<NotificationRepository['getNotificationFromHistory']>

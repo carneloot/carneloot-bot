@@ -163,10 +163,18 @@ const makeService = Effect.gen(function* () {
 		};
 	};
 
+	const checkHealth = Effect.fn('Database.checkHealth')(() =>
+		Effect.tryPromise({
+			try: () => client.execute('SELECT 1'),
+			catch: (cause) => matchError(cause) ?? cause,
+		}).pipe(Effect.asVoid, Effect.withSpan('database.health')),
+	);
+
 	return {
 		execute,
 		transaction,
 		makeQuery,
+		checkHealth,
 	} as const;
 });
 

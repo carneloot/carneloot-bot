@@ -5,11 +5,12 @@ import type { ConversationFn } from '../types/context.js';
 import { parseMessageForMarkdown } from './parse-message-for-makdown.js';
 
 type ShowOptionsKeyboardOpts<T, AddCancel extends boolean> = {
-	values: T[];
+	values: readonly T[];
 	labelFn: (value: T) => string;
 	message: string;
 	addCancel?: AddCancel;
 	keyboardType?: 'inline' | 'custom';
+	userId?: number;
 	/** number of items per row */
 	rowNum?: number;
 };
@@ -53,9 +54,12 @@ export const showOptionsKeyboard = <T, AddCancel extends boolean = false>(
 		if (keyboard instanceof InlineKeyboard) {
 			const trigger = addCancel ? [/values-(\d+)/, 'Cancelar'] : /values-(\d+)/;
 
-			const response = await cvs.waitForCallbackQuery(trigger, {
+			const waitForResponse = cvs.waitForCallbackQuery(trigger, {
 				otherwise: (ctx) => ctx.reply('Por favor, escolha uma opção'),
 			});
+			const response = await (options.userId === undefined
+				? waitForResponse
+				: waitForResponse.and((ctx) => ctx.from?.id === options.userId));
 			await response.answerCallbackQuery();
 
 			if (addCancel && response.callbackQuery.data === 'Cancelar') {

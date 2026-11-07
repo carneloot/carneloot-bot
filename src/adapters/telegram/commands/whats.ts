@@ -1,7 +1,8 @@
 import { Data, Effect } from 'effect';
 
-import type { Command } from '../common/types/command.js';
-import { runtime } from '../runtime.js';
+import type { AppServices } from '../../../app/layer.js';
+import type { Command } from '../../../common/types/command.js';
+import type { Execute } from '../../execute.js';
 
 const formatMessage = (message: string) =>
 	encodeURIComponent(message).replace(/!/g, '%21');
@@ -11,7 +12,9 @@ const phoneRegex =
 
 class ParsePhoneNumberError extends Data.TaggedError('ParsePhoneNumberError') {}
 
-export const WhatsCommand: Command<'whats'> = {
+export const createWhatsCommand = (
+	execute: Execute<AppServices>,
+): Command<'whats'> => ({
 	command: 'whats',
 	description:
 		'Gera um link para mandar mensagem no WhatsApp sem precisar adicionar o contato',
@@ -52,6 +55,6 @@ export const WhatsCommand: Command<'whats'> = {
 				).pipe(Effect.withSpan('ctx.reply')),
 			),
 			Effect.withSpan('WhatsCommand'),
-			runtime.runPromise,
+			execute,
 		),
-};
+});

@@ -26,6 +26,8 @@ const createExecute = (
 	const users = UserRepository.of({
 		createUser: () => Effect.void,
 		getUserByTelegramID,
+		getUserByID: () => Effect.succeed(Option.none()),
+		getUserByUsername: () => Effect.succeed(Option.none()),
 		userHasApiKey: () => Effect.succeed(false),
 		generateApiKeyForUser: () => Effect.succeed('api-key'),
 		getUserFromApiKey: () => Effect.die('not used'),
