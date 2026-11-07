@@ -14,6 +14,7 @@ import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
 import { RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
+import { PetFoodSchedulingOutboxRepository } from '../lib/repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
 import { PetRepository } from '../lib/repositories/pet.js';
 import { UserRepository } from '../lib/repositories/user.js';
@@ -73,6 +74,7 @@ export type AppServices =
 	| NotificationRepository
 	| PetRepository
 	| PetFoodRepository
+	| PetFoodSchedulingOutboxRepository
 	| UserRepository
 	| PetFoodService
 	| ConfigService;
