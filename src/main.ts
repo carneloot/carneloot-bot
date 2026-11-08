@@ -25,7 +25,7 @@ const waitForShutdown = Effect.callback<void>((resume) => {
 
 const app = Effect.scoped(
 	Effect.gen(function* () {
-		yield* syncDatabaseSchema();
+		yield* Effect.scoped(syncDatabaseSchema());
 
 		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
 		const conversationPersistence = yield* ConversationPersistence;
