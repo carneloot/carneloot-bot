@@ -113,8 +113,8 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 					});
 
 				const carers = yield* petRepository.getPetCarers(payload.petID).pipe(
-					Effect.tapError(() =>
-						Effect.sync(() => console.warn('Error getting pet carers')),
+					Effect.tapError((error) =>
+						Effect.logWarning('Error getting pet carers', error),
 					),
 					Effect.orElseSucceed(() => []),
 					Effect.map((carers) =>

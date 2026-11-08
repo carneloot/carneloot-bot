@@ -38,8 +38,8 @@ export const sendAddedFoodNotification =
 			const dayStart = yield* config.getConfig('pet', 'dayStart', id);
 
 			const carers = yield* petRepository.getPetCarers(id).pipe(
-				Effect.tapError(() =>
-					Effect.sync(() => console.warn('Error getting pet carers')),
+				Effect.tapError((error) =>
+					Effect.logWarning('Error getting pet carers', error),
 				),
 				Effect.orElseSucceed(() => []),
 				Effect.map((carers) =>
@@ -73,12 +73,16 @@ export const sendAddedFoodNotification =
 							ctx.api.sendMessage(userToNotify.telegramID, message, {
 								disable_notification: true,
 							}),
-						catch: (err) =>
-							console.error(
+						catch: (error) => error,
+					}).pipe(
+						Effect.tapError((error) =>
+							Effect.logError(
 								`Error sending notification to ${getUserDisplay(userToNotify)}`,
-								err,
+								error,
 							),
-					}).pipe(Effect.withSpan('bot.api.sendMessage')),
+						),
+						Effect.withSpan('bot.api.sendMessage'),
+					),
 				),
 				{
 					concurrency: 'unbounded',

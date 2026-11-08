@@ -13,7 +13,7 @@ import {
 } from '../../common/types/command.js';
 import type { Context } from '../../common/types/context.js';
 import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
-import { GenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
+import { createGenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
 import { createUserMiddleware } from '../../middlewares/user.middleware.js';
 import type { Execute } from '../execute.js';
 import {
@@ -26,6 +26,7 @@ import { createCafeCommand } from './commands/cafe.js';
 import { createPingCommand } from './commands/ping.js';
 import { createWhatsCommand } from './commands/whats.js';
 import type { ConversationStorage } from './conversation-storage.js';
+import { installGrammyDebugLogger } from './debug.js';
 import { createListPetsCommand } from './list-pets.js';
 import { createAddFoodAllCommand } from './pet-food/add-food-all.js';
 import { createFoodStatusCommand } from './pet-food/food-status.js';
@@ -51,6 +52,7 @@ export const createBot = (
 	execute: Execute<AppServices>,
 	conversationStorage: ConversationStorage,
 ): TelegramBot => {
+	installGrammyDebugLogger(execute);
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
 	const userMiddleware = createUserMiddleware(execute);
@@ -107,7 +109,7 @@ export const createBot = (
 
 	bot.use(myEmojiParser);
 
-	bot.use(GenericErrorMiddleware);
+	bot.use(createGenericErrorMiddleware(execute));
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
 	bot.on('message', userMiddleware, createReplyMiddleware(execute));
@@ -230,7 +232,12 @@ export const createBot = (
 				}),
 			),
 		).catch((reportingError) => {
-			console.error('Could not report Telegram update error', reportingError);
+			void execute(
+				Effect.logError(
+					'Could not report Telegram update error',
+					reportingError,
+				),
+			).catch(() => undefined);
 		}),
 	);
 
