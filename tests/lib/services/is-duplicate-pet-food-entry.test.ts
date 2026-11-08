@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@effect/vitest';
 import { DateTime } from 'effect';
 
-import { isDuplicatePetFoodEntry } from './is-duplicate-pet-food-entry.js';
+import { isDuplicatePetFoodEntry } from '../../../src/lib/services/is-duplicate-pet-food-entry.js';
 
 describe('isDuplicatePetFoodEntry', () => {
 	it('allows a food time earlier than the latest entry', () => {

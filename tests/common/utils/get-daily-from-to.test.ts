@@ -1,7 +1,7 @@
 import { DateTime } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { getDailyFromTo } from './get-daily-from-to.js';
+import { getDailyFromTo } from '../../../src/common/utils/get-daily-from-to.js';
 
 describe('getDailyFromTo', () => {
 	const timezone = 'America/Sao_Paulo';

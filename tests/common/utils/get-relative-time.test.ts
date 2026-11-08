@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getRelativeTime } from './get-relative-time.js';
+import { getRelativeTime } from '../../../src/common/utils/get-relative-time.js';
 
 describe('getRelativeTime', () => {
 	it('returns relative time in hours and minutes when dates are provided', () => {

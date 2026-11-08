@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { Context } from '../common/types/context.js';
-import { createForwardToOwnerMiddleware } from './forward-to-owner.middleware.js';
+import type { Context } from '../../src/common/types/context.js';
+import { createForwardToOwnerMiddleware } from '../../src/middlewares/forward-to-owner.middleware.js';
 
 const createContext = (username?: string, isCommand = false) => {
 	const calls: string[] = [];

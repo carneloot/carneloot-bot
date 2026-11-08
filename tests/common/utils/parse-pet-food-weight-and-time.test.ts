@@ -7,7 +7,7 @@ import Qty from 'js-quantities';
 import {
 	ParsePetFoodError,
 	parsePetFoodWeightAndTime,
-} from './parse-pet-food-weight-and-time.js';
+} from '../../../src/common/utils/parse-pet-food-weight-and-time.js';
 
 describe('parsePetFoodWeightAndTime', () => {
 	const timezone = 'America/Sao_Paulo';
@@ -210,5 +210,21 @@ describe('parsePetFoodWeightAndTime', () => {
 				});
 				expect(result.quantity.scalar).toEqual(10);
 			}),
+	);
+
+	it.effect('treats midnight as an explicit food time', () =>
+		Effect.gen(function* () {
+			const result = yield* parsePetFoodWeightAndTime({
+				messageMatch: '10g 00:00',
+				messageTime: getUnixTime(date),
+				timezone,
+			});
+
+			expect(result).toEqual({
+				quantity: expect.any(Qty),
+				time: zonedTimeToUtc(new Date(2024, 2, 10, 0, 0, 0), timezone),
+				timeChanged: true,
+			});
+		}),
 	);
 });
