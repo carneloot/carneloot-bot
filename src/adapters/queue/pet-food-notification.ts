@@ -239,10 +239,5 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 		}),
 	},
 ) {
-	static readonly layer = Layer.effect(this, this.make).pipe(
-		Layer.provide(NotificationService.layer),
-		Layer.provide(PetFoodRepository.layer),
-		Layer.provide(PetRepository.layer),
-		Layer.provide(ConfigService.layer),
-	);
+	static readonly layer = Layer.effect(this, this.make);
 }

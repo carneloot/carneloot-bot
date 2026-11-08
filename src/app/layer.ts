@@ -8,11 +8,14 @@ import {
 	ConversationPersistence,
 	ConversationPersistenceLive,
 } from '../adapters/telegram/conversation-storage.js';
-import { NotificationSenderLive } from '../adapters/telegram/notification-sender.js';
+import {
+	NotificationSender,
+	NotificationSenderLive,
+} from '../adapters/telegram/notification-sender.js';
 import { Env } from '../common/env.js';
 import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
-import { RedisLive } from '../lib/redis/redis.js';
+import { Redis, RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
 import { PetFoodSchedulingOutboxRepository } from '../lib/repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
@@ -43,28 +46,30 @@ const NodeSdkLive = NodeSdk.layer(() => ({
 	),
 }));
 
-const RedisServicesLive = Layer.mergeAll(
-	ConversationPersistenceLive,
-	PetFoodNotificationQueue.layer,
-);
-
-const AppServicesLive = Layer.mergeAll(
-	NodeSdkLive,
-	Database.layer,
-	RedisServicesLive,
-	NotificationService.layer.pipe(Layer.provide(NotificationSenderLive)),
+const PersistenceLive = Layer.mergeAll(
 	NotificationRepository.layer,
 	PetRepository.layer,
 	PetFoodRepository.layer,
+	PetFoodSchedulingOutboxRepository.layer,
 	UserRepository.layer,
-	PetFoodService.layer,
 	ConfigService.layer,
+).pipe(Layer.provideMerge(Database.layer));
+
+const NotificationServicesLive = NotificationService.layer.pipe(
+	Layer.provideMerge(Layer.mergeAll(PersistenceLive, NotificationSenderLive)),
 );
 
-export const appLayer = AppServicesLive.pipe(
-	Layer.provide(RedisLive),
-	Layer.provide(NotificationSenderLive),
+const QueueServicesLive = Layer.mergeAll(
+	ConversationPersistenceLive,
+	PetFoodNotificationQueue.layer,
+).pipe(Layer.provideMerge(Layer.mergeAll(NotificationServicesLive, RedisLive)));
+
+const AppServicesLive = Layer.mergeAll(
+	NodeSdkLive,
+	PetFoodService.layer.pipe(Layer.provideMerge(QueueServicesLive)),
 );
+
+export const appLayer = AppServicesLive;
 
 export type AppServices =
 	| Database.Database
@@ -77,6 +82,8 @@ export type AppServices =
 	| PetFoodSchedulingOutboxRepository
 	| UserRepository
 	| PetFoodService
-	| ConfigService;
+	| ConfigService
+	| Redis
+	| NotificationSender;
 
 export const runtime = ManagedRuntime.make(appLayer);

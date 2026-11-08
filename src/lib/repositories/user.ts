@@ -166,7 +166,5 @@ export class UserRepository extends Context.Service<
 		typeof makeUserRepository
 	>['getUserFromApiKey'];
 
-	static readonly layer = Layer.effect(this, makeUserRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeUserRepository);
 }

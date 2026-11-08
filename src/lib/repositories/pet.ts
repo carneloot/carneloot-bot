@@ -272,7 +272,5 @@ export class PetRepository extends Context.Service<
 		typeof makePetRepository
 	>['answerPendingPetInvite'];
 
-	static readonly layer = Layer.effect(this, makePetRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makePetRepository);
 }

@@ -342,11 +342,5 @@ export class PetFoodService extends Context.Service<
 		typeof makePetFoodService
 	>['reconcileNotifications'];
 
-	static readonly layer = Layer.effect(this, makePetFoodService).pipe(
-		Layer.provide(PetFoodNotificationQueue.layer),
-		Layer.provideMerge(PetFoodSchedulingOutboxRepository.layer),
-		Layer.provide(PetFoodRepository.layer),
-		Layer.provide(Database.layer),
-		Layer.provide(ConfigService.layer),
-	);
+	static readonly layer = Layer.effect(this, makePetFoodService);
 }

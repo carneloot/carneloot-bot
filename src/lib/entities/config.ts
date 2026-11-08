@@ -199,7 +199,5 @@ export class ConfigService extends Context.Service<
 		typeof makeConfigService
 	>['deleteConfig'];
 
-	static readonly layer = Layer.effect(this, makeConfigService).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeConfigService);
 }

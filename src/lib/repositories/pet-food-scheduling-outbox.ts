@@ -72,5 +72,5 @@ export class PetFoodSchedulingOutboxRepository extends Context.Service<
 	static readonly layer = Layer.effect(
 		this,
 		makePetFoodSchedulingOutboxRepository,
-	).pipe(Layer.provide(Database.layer));
+	);
 }

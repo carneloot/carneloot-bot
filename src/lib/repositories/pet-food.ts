@@ -187,7 +187,5 @@ export class PetFoodRepository extends Context.Service<
 		typeof makePetFoodRepository
 	>['updatePetFood'];
 
-	static readonly layer = Layer.effect(this, makePetFoodRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makePetFoodRepository);
 }

@@ -165,8 +165,5 @@ export class NotificationService extends EffectContext.Service<
 		typeof makeNotificationService
 	>['sendNotification'];
 
-	static readonly layer = Layer.effect(this, makeNotificationService).pipe(
-		Layer.provide(NotificationRepository.layer),
-		Layer.provide(UserRepository.layer),
-	);
+	static readonly layer = Layer.effect(this, makeNotificationService);
 }
