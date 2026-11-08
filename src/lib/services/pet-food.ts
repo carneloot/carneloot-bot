@@ -1,13 +1,4 @@
-import {
-	Context,
-	Data,
-	DateTime,
-	Duration,
-	Effect,
-	Layer,
-	Option,
-	Struct,
-} from 'effect';
+import { Context, Data, DateTime, Effect, Layer, Option, Struct } from 'effect';
 import type Qty from 'js-quantities';
 
 import { PetFoodNotificationQueue } from '../../adapters/queue/pet-food-notification.js';
@@ -17,6 +8,7 @@ import { ConfigService, type ConfigValue } from '../entities/config.js';
 import { PetFoodSchedulingOutboxRepository } from '../repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
 import type { Pet } from '../repositories/pet.js';
+import { isDuplicatePetFoodEntry } from './is-duplicate-pet-food-entry.js';
 
 const LIMIT_DURATION = Duration.fromInputUnsafe('1 minutes');
 
@@ -111,8 +103,9 @@ const makePetFoodService = Effect.gen(function* () {
 		);
 
 		const shouldIgnoreEntry = lastPetFoodTime.pipe(
-			Option.andThen(DateTime.distance(time)),
-			Option.andThen(Duration.isLessThanOrEqualTo(LIMIT_DURATION)),
+			Option.map((lastPetFoodTime) =>
+				isDuplicatePetFoodEntry(lastPetFoodTime, time),
+			),
 			Option.getOrElse(() => false),
 		);
 
