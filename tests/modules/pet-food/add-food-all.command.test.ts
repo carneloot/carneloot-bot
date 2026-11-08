@@ -2,10 +2,12 @@ import { Effect } from 'effect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+	activeWrites: 0,
 	addedFoods: [] as Array<Record<string, unknown>>,
 	dayStart: { hour: 4, timezone: 'America/Sao_Paulo' },
 	getUserCaredPets: vi.fn(),
 	getUserOwnedPets: vi.fn(),
+	maxConcurrentWrites: 0,
 	notifications: [] as Array<Record<string, unknown>>,
 }));
 
@@ -23,7 +25,21 @@ vi.mock('../../../src/lib/entities/pet.js', () => ({
 vi.mock('../../../src/lib/services/pet-food.js', () => ({
 	PetFoodService: Effect.succeed({
 		addPetFoodAndScheduleNotification: (input: Record<string, unknown>) =>
-			Effect.sync(() => mocks.addedFoods.push(input)),
+			Effect.tryPromise(
+				() =>
+					new Promise<void>((resolve) => {
+						mocks.activeWrites += 1;
+						mocks.maxConcurrentWrites = Math.max(
+							mocks.maxConcurrentWrites,
+							mocks.activeWrites,
+						);
+						setTimeout(() => {
+							mocks.activeWrites -= 1;
+							mocks.addedFoods.push(input);
+							resolve();
+						}, 5);
+					}),
+			),
 	}),
 }));
 
@@ -43,7 +59,9 @@ import { AddFoodAllCommand } from '../../../src/modules/pet-food/add-food-all.co
 
 describe('AddFoodAllCommand', () => {
 	beforeEach(() => {
+		mocks.activeWrites = 0;
 		mocks.addedFoods.length = 0;
+		mocks.maxConcurrentWrites = 0;
 		mocks.notifications.length = 0;
 		mocks.getUserOwnedPets.mockReset();
 		mocks.getUserCaredPets.mockReset();
@@ -81,6 +99,7 @@ describe('AddFoodAllCommand', () => {
 			{ scalar: 25 },
 			{ scalar: 25 },
 		]);
+		expect(mocks.maxConcurrentWrites).toBe(1);
 		expect(mocks.notifications).toHaveLength(2);
 		expect(ctx.reply).toHaveBeenCalledWith(
 			'Foram adicionados 25 g de ração para todos os seus pets',
