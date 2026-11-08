@@ -40,10 +40,29 @@ export const createHttpApp = (
 				const notificationService = yield* NotificationService;
 
 				return yield* notificationService.sendNotification(body).pipe(
-					Effect.map(() =>
-						context.json({ message: 'Notification sent successfully!' }),
+					Effect.map((outcome) =>
+						outcome.failed === 0
+							? context.json({ message: 'Notification sent successfully!' })
+							: context.json(
+									{
+										message: 'Notification partially delivered',
+										delivered: outcome.delivered,
+										failed: outcome.failed,
+									},
+									207,
+								),
 					),
 					Effect.catchTags({
+						NotificationDeliveryError: (error) =>
+							Effect.succeed(
+								context.json(
+									{
+										message: 'Notification delivery failed',
+										failed: error.attempted,
+									},
+									502,
+								),
+							),
 						UserNotFoundError: () =>
 							Effect.succeed(
 								context.json({ message: 'User not found for apiKey' }, 404),

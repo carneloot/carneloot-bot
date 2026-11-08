@@ -22,6 +22,12 @@ class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
 	variables: string[];
 }> {}
 
+export class NotificationDeliveryError extends Data.TaggedError(
+	'NotificationDeliveryError',
+)<{
+	attempted: number;
+}> {}
+
 const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 	Effect.gen(function* () {
 		const usedVariables = pipe(
@@ -63,7 +69,7 @@ interface SendNotificationAndLog {
 	messageText: string;
 }
 
-const makeNotificationService = Effect.gen(function* () {
+export const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
 	const userRepository = yield* UserRepository;
 	const notificationSender = yield* NotificationSender;
@@ -104,7 +110,7 @@ const makeNotificationService = Effect.gen(function* () {
 				params.variables,
 			);
 
-			yield* Effect.forEach(
+			const outcomes = yield* Effect.forEach(
 				[
 					sendNotificationAndLog({
 						user,
@@ -121,12 +127,24 @@ const makeNotificationService = Effect.gen(function* () {
 				],
 				(v) =>
 					v.pipe(
+						Effect.as(true),
 						Effect.catch(() =>
-							Console.error('Error when sending notification to user'),
+							Console.error('Error when sending notification to user').pipe(
+								Effect.as(false),
+							),
 						),
 					),
 				{ concurrency: 'unbounded' },
 			);
+
+			const delivered = outcomes.filter(Boolean).length;
+			if (delivered === 0) {
+				return yield* new NotificationDeliveryError({
+					attempted: outcomes.length,
+				});
+			}
+
+			return { delivered, failed: outcomes.length - delivered };
 		},
 	);
 
