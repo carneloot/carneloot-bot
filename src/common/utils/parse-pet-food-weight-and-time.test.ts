@@ -59,6 +59,24 @@ describe('parsePetFoodWeightAndTime', () => {
 		}),
 	);
 
+	it.effect('returns an error when only a time is provided', () =>
+		Effect.gen(function* () {
+			const result = yield* Effect.exit(
+				parsePetFoodWeightAndTime({
+					messageMatch: '10:12',
+					messageTime: getUnixTime(date),
+					timezone,
+				}),
+			);
+
+			expect(Exit.isFailure(result)).toBeTruthy();
+			if (Exit.isFailure(result)) {
+				const error = Cause.squash(result.cause);
+				expect(error).toBeInstanceOf(ParsePetFoodError);
+			}
+		}),
+	);
+
 	it.effect(
 		'returns the quantity and time when only the quantity is passed',
 		() =>
