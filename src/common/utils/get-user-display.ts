@@ -1,13 +1,8 @@
 import type { User as TelegramUser } from '@grammyjs/types';
 
-type StoredUser = {
-	telegramID: string;
-	username: string | null;
-	firstName: string;
-	lastName: string | null;
-};
+import type { User } from '../../lib/entities/user.js';
 
-export const getUserDisplay = (user: TelegramUser | StoredUser) => {
+export const getUserDisplay = (user: TelegramUser | User) => {
 	const isDbUser = 'telegramID' in user;
 	const username = user.username;
 	const firstName = isDbUser ? user.firstName : user.first_name;

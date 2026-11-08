@@ -1,13 +1,13 @@
 import { utcToZonedTime } from 'date-fns-tz';
-import { Data, Effect } from 'effect';
+import { Array as A, Console, Data, Effect, flow, Option } from 'effect';
 import type Qty from 'js-quantities';
 
 import type { Context } from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
 import type { PetID } from '../../../lib/database/schema.js';
 import { ConfigService } from '../../../lib/entities/config.js';
-import { PetRepository } from '../../../lib/repositories/pet.js';
-import type { User } from '../../../lib/repositories/user.js';
+import { getPetByID, getPetCarers } from '../../../lib/entities/pet.js';
+import type { User } from '../../../lib/entities/user.js';
 
 class MissingPetError extends Data.TaggedError('MissingPetError') {}
 
@@ -25,9 +25,11 @@ export const sendAddedFoodNotification =
 	}) =>
 	(ctx: Context) =>
 		Effect.gen(function* () {
-			const petRepository = yield* PetRepository;
-			const pet = yield* petRepository.getPetByIDWithOwner(id).pipe(
-				Effect.flatMap(Effect.fromOption),
+			const pet = yield* Effect.tryPromise(() =>
+				getPetByID(id, { withOwner: true }),
+			).pipe(
+				Effect.withSpan('getPetByID'),
+				Effect.andThen((pet) => Effect.fromOption(Option.fromNullishOr(pet))),
 				Effect.catchTag('NoSuchElementError', () =>
 					Effect.fail(new MissingPetError()),
 				),
@@ -37,15 +39,18 @@ export const sendAddedFoodNotification =
 
 			const dayStart = yield* config.getConfig('pet', 'dayStart', id);
 
-			const carers = yield* petRepository.getPetCarers(id).pipe(
-				Effect.tapError((error) =>
-					Effect.logWarning('Error getting pet carers', error),
+			const carers = yield* Effect.tryPromise(() => getPetCarers(id)).pipe(
+				Effect.withSpan('getPetCarers'),
+				Effect.catch(() =>
+					Console.warn('Error getting pet carers').pipe(
+						Effect.as([] as Awaited<ReturnType<typeof getPetCarers>>),
+					),
 				),
-				Effect.orElseSucceed(() => []),
-				Effect.map((carers) =>
-					carers
-						.filter((carer) => carer.status === 'accepted')
-						.map((carer) => carer.carer),
+				Effect.map(
+					flow(
+						A.filter((carer) => carer.status === 'accepted'),
+						A.map((v) => v.carer),
+					),
 				),
 			);
 
@@ -73,16 +78,12 @@ export const sendAddedFoodNotification =
 							ctx.api.sendMessage(userToNotify.telegramID, message, {
 								disable_notification: true,
 							}),
-						catch: (error) => error,
-					}).pipe(
-						Effect.tapError((error) =>
-							Effect.logError(
+						catch: (err) =>
+							console.error(
 								`Error sending notification to ${getUserDisplay(userToNotify)}`,
-								error,
+								err,
 							),
-						),
-						Effect.withSpan('bot.api.sendMessage'),
-					),
+					}).pipe(Effect.withSpan('bot.api.sendMessage')),
 				),
 				{
 					concurrency: 'unbounded',

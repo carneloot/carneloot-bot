@@ -1,11 +1,8 @@
-import { Effect } from 'effect';
-import type { MiddlewareFn } from 'grammy';
+import type { Context, NextFunction } from 'grammy';
 
-import type { Execute } from '../adapters/execute.js';
 import { Env } from '../common/env.js';
 import type { GifResponse } from '../common/response/response.js';
 import { sendResponse } from '../common/response/send-response.js';
-import type { Context } from '../common/types/context.js';
 
 const errorResponse: GifResponse = {
 	type: 'gif',
@@ -14,17 +11,16 @@ const errorResponse: GifResponse = {
 	caption: 'Aconteceu um erro nesse comando 😢',
 };
 
-export const createGenericErrorMiddleware =
-	(execute: Execute<never>): MiddlewareFn<Context> =>
-	async (ctx, next) => {
-		try {
-			await next();
-		} catch (error) {
-			if (Env.DEBUG) {
-				void execute(Effect.logError('Telegram command failed', error)).catch(
-					() => undefined,
-				);
-			}
-			await sendResponse(ctx, errorResponse);
+export const GenericErrorMiddleware = async (
+	ctx: Context,
+	next: NextFunction,
+) => {
+	try {
+		await next();
+	} catch (err) {
+		if (Env.DEBUG) {
+			console.error(err);
 		}
-	};
+		await sendResponse(ctx, errorResponse);
+	}
+};

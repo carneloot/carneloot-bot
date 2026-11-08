@@ -4,16 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.dockerignore'
-      - 'Dockerfile'
-      - 'alchemy.run.ts'
-      - 'bun.lock'
-      - 'fnox.toml'
-      - 'infrastructure/**'
-      - 'package.json'
-      - 'public/**'
-      - 'src/**'
   workflow_dispatch:
     inputs:
       adopt:
