@@ -170,7 +170,5 @@ export class NotificationRepository extends Context.Service<
 		typeof makeNotificationRepository
 	>['createNotificationHistory'];
 
-	static readonly layer = Layer.effect(this, makeNotificationRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeNotificationRepository);
 }

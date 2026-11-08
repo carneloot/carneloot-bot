@@ -3,7 +3,6 @@ import { and, eq } from 'drizzle-orm';
 import { Context, Data, Effect, Layer, Predicate, Schema } from 'effect';
 
 import * as CustomSchema from '../../common/schema.js';
-import { runtime } from '../../runtime.js';
 import * as Database from '../database/db.js';
 import {
 	type ConfigID,
@@ -47,7 +46,7 @@ export type ConfigValue<
 	? Schema.Schema.Type<Configs[Context][Key]>
 	: never;
 
-class MissingConfigError<
+export class MissingConfigError<
 	TContext extends ConfigContext,
 	TKey extends ConfigKey<TContext>,
 > extends Data.TaggedError('MissingConfigError')<{
@@ -66,6 +65,7 @@ const makeConfigService = Effect.gen(function* () {
 		context: Context,
 		key: Key,
 		id: Identifier,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			yield* Effect.annotateCurrentSpan({
@@ -74,7 +74,7 @@ const makeConfigService = Effect.gen(function* () {
 				config_id: id,
 			});
 
-			const queryResult = yield* db.execute((db) =>
+			const queryResult = yield* (tx ?? db.execute)((db) =>
 				db
 					.select({ value: configsTable.value })
 					.from(configsTable)
@@ -118,6 +118,7 @@ const makeConfigService = Effect.gen(function* () {
 		key: Key,
 		id: Identifier,
 		value: ConfigValue<Context, Key>,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			const schema = Configs[context][key] as Schema.Any;
@@ -130,7 +131,7 @@ const makeConfigService = Effect.gen(function* () {
 
 			const result = yield* Schema.encodeEffect(schema)(value);
 
-			yield* db.execute((client) =>
+			yield* (tx ?? db.execute)((client) =>
 				client
 					.insert(configsTable)
 					.values({
@@ -156,6 +157,7 @@ const makeConfigService = Effect.gen(function* () {
 		context: Context,
 		key: Key,
 		id: Identifier,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			yield* Effect.annotateCurrentSpan({
@@ -164,7 +166,7 @@ const makeConfigService = Effect.gen(function* () {
 				config_id: id,
 			});
 
-			yield* db.execute((client) =>
+			yield* (tx ?? db.execute)((client) =>
 				client
 					.delete(configsTable)
 					.where(
@@ -197,56 +199,5 @@ export class ConfigService extends Context.Service<
 		typeof makeConfigService
 	>['deleteConfig'];
 
-	static readonly layer = Layer.effect(this, makeConfigService).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeConfigService);
 }
-
-export const getConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) =>
-			config
-				.getConfig(context, key, id)
-				.pipe(
-					Effect.catchTag('MissingConfigError', () => Effect.succeed(null)),
-				),
-		),
-		runtime.runPromise,
-	);
-
-export const setConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-	value: ConfigValue<Context, Key>,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) => config.setConfig(context, key, id, value)),
-		runtime.runPromise,
-	);
-
-export const deleteConfig = <
-	Context extends ConfigContext,
-	Key extends ConfigKey<Context>,
-	Identifier extends ContextIdentifier<Context>,
->(
-	context: Context,
-	key: Key,
-	id: Identifier,
-) =>
-	ConfigService.pipe(
-		Effect.andThen((config) => config.deleteConfig(context, key, id)),
-		runtime.runPromise,
-	);
