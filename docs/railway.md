@@ -47,7 +47,8 @@ Deploy one application process for either `RUN_MODE=polling` or
 multiple webhook processes, route updates for each chat to one process in FIFO
 order. The bot only preserves chat ordering inside one process.
 
-Before a rollout, wait for `GET /api/readyz` to return `200`. During a rollback,
+Railway uses `GET /api/readyz` as its deployment healthcheck and waits for a
+`200` response before switching traffic to a new deployment. During a rollback,
 keep Redis conversation prefixes and use an application release that can read
 the active conversation storage version. Read [the operations runbook](runbook.md)
 for shutdown, alerts, queue failures, retries, and corrupt conversation state.
