@@ -73,16 +73,9 @@ export const getNotificationDelay = (petID: string) =>
 	);
 
 export const setNotificationDelay = (petID: string, delay: Duration.Duration) =>
-	ConfigService.pipe(
-		Effect.andThen((config) =>
-			config.setConfig('pet', 'notificationDelay', petID as PetID, delay),
-		),
-		Effect.andThen(() =>
-			PetFoodService.pipe(
-				Effect.andThen((service) =>
-					service.rescheduleLastPetFoodNotification(petID as PetID),
-				),
-			),
+	PetFoodService.pipe(
+		Effect.andThen((service) =>
+			service.setNotificationDelayAndReschedule(petID as PetID, delay),
 		),
 		Effect.as(null),
 	);

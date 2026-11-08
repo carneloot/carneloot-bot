@@ -65,6 +65,7 @@ const makeConfigService = Effect.gen(function* () {
 		context: Context,
 		key: Key,
 		id: Identifier,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			yield* Effect.annotateCurrentSpan({
@@ -73,7 +74,7 @@ const makeConfigService = Effect.gen(function* () {
 				config_id: id,
 			});
 
-			const queryResult = yield* db.execute((db) =>
+			const queryResult = yield* (tx ?? db.execute)((db) =>
 				db
 					.select({ value: configsTable.value })
 					.from(configsTable)
@@ -117,6 +118,7 @@ const makeConfigService = Effect.gen(function* () {
 		key: Key,
 		id: Identifier,
 		value: ConfigValue<Context, Key>,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			const schema = Configs[context][key] as Schema.Any;
@@ -129,7 +131,7 @@ const makeConfigService = Effect.gen(function* () {
 
 			const result = yield* Schema.encodeEffect(schema)(value);
 
-			yield* db.execute((client) =>
+			yield* (tx ?? db.execute)((client) =>
 				client
 					.insert(configsTable)
 					.values({
@@ -155,6 +157,7 @@ const makeConfigService = Effect.gen(function* () {
 		context: Context,
 		key: Key,
 		id: Identifier,
+		tx?: Database.Transaction,
 	) =>
 		Effect.gen(function* () {
 			yield* Effect.annotateCurrentSpan({
@@ -163,7 +166,7 @@ const makeConfigService = Effect.gen(function* () {
 				config_id: id,
 			});
 
-			yield* db.execute((client) =>
+			yield* (tx ?? db.execute)((client) =>
 				client
 					.delete(configsTable)
 					.where(

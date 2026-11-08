@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Option } from 'effect';
 
 import * as Database from '../database/db.js';
 import {
@@ -11,6 +11,8 @@ import {
 	usersTable,
 } from '../database/schema.js';
 import type { User } from './user.js';
+
+export type Pet = typeof petsTable.$inferSelect;
 
 const makePetRepository = Effect.gen(function* () {
 	const db = yield* Database.Database;
@@ -66,6 +68,29 @@ const makePetRepository = Effect.gen(function* () {
 			execute((client) =>
 				client.delete(petsTable).where(eq(petsTable.id, petID)).run(),
 			),
+	);
+
+	const getPetByID = db.makeQuery((execute, petID: Pet['id']) =>
+		execute((client) =>
+			client
+				.select({ id: petsTable.id, name: petsTable.name })
+				.from(petsTable)
+				.where(eq(petsTable.id, petID))
+				.get()
+				.then(Option.fromNullishOr),
+		),
+	);
+
+	const getPetByIDWithOwner = db.makeQuery((execute, petID: Pet['id']) =>
+		execute((client) =>
+			client
+				.select({ id: petsTable.id, name: petsTable.name, owner: usersTable })
+				.from(petsTable)
+				.innerJoin(usersTable, eq(petsTable.ownerID, usersTable.id))
+				.where(eq(petsTable.id, petID))
+				.get()
+				.then(Option.fromNullishOr),
+		),
 	);
 
 	const getPetCarers = db.makeQuery(
@@ -195,6 +220,8 @@ const makePetRepository = Effect.gen(function* () {
 		getUserCaredPets,
 		createPet,
 		deletePet,
+		getPetByID,
+		getPetByIDWithOwner,
 		getPetCarers,
 		getPetCarerStatus,
 		addCarer,
@@ -220,6 +247,12 @@ export class PetRepository extends Context.Service<
 	declare readonly deletePet: Effect.Success<
 		typeof makePetRepository
 	>['deletePet'];
+	declare readonly getPetByID: Effect.Success<
+		typeof makePetRepository
+	>['getPetByID'];
+	declare readonly getPetByIDWithOwner: Effect.Success<
+		typeof makePetRepository
+	>['getPetByIDWithOwner'];
 	declare readonly getPetCarers: Effect.Success<
 		typeof makePetRepository
 	>['getPetCarers'];

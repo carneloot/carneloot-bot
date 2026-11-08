@@ -27,10 +27,14 @@ type Client = LibSQLDatabase<typeof DbSchema> & {
 	$client: LibSQLClient;
 };
 
-type TransactionClient = LibSQLTransaction<
+export type TransactionClient = LibSQLTransaction<
 	typeof DbSchema,
 	ExtractTablesWithRelations<typeof DbSchema>
 >;
+
+export type Transaction = <T>(
+	fn: (client: TransactionClient) => Promise<T>,
+) => Effect.Effect<T, DatabaseError>;
 
 export class DatabaseError extends Data.TaggedError('DatabaseError')<{
 	cause: LibsqlError;
@@ -100,13 +104,7 @@ const makeService = Effect.gen(function* () {
 	);
 
 	const transaction = Effect.fn('Database.transaction')(
-		<T, E, R>(
-			execute: (
-				tx: <U>(
-					fn: (client: TransactionClient) => Promise<U>,
-				) => Effect.Effect<U, DatabaseError>,
-			) => Effect.Effect<T, E, R>,
-		) =>
+		<T, E, R>(execute: (tx: Transaction) => Effect.Effect<T, E, R>) =>
 			Effect.context<R>().pipe(
 				Effect.flatMap((context) =>
 					Effect.callback<T, E>((resume) => {
@@ -183,10 +181,3 @@ type Shape = Effect.Success<typeof makeService>;
 export class Database extends Context.Service<Database, Shape>()('Database') {}
 
 export const layer = Layer.effect(Database, makeService);
-
-const oldClient = createClient({
-	url: Env.DATABASE_URL,
-	authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value),
-});
-
-export const db = drizzle(oldClient, { schema: DbSchema });

@@ -95,6 +95,26 @@ export const petFoodTable = sqliteTable(
 	}),
 );
 
+export type PetFoodSchedulingOutboxID = string &
+	Brand.Brand<'PetFoodSchedulingOutboxID'>;
+
+export const petFoodSchedulingOutboxTable = sqliteTable(
+	'pet_food_scheduling_outbox',
+	{
+		id: text('id').primaryKey().$type<PetFoodSchedulingOutboxID>(),
+		action: text('action', { enum: ['schedule', 'remove'] }).notNull(),
+		petFoodID: text('pet_food_id').notNull().$type<PetFoodID>(),
+		petID: text('pet_id').$type<PetID>(),
+		runAt: integer('run_at', { mode: 'timestamp' }),
+		createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+	},
+	(self) => ({
+		createdAtIdx: index('petFoodSchedulingOutboxCreatedAtIdx').on(
+			self.createdAt,
+		),
+	}),
+);
+
 export type ConfigID = string & Brand.Brand<'ConfigID'>;
 
 export const configsTable = sqliteTable(

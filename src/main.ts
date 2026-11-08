@@ -9,6 +9,7 @@ import { type AppServices, runtime } from './app/layer.js';
 import { Env } from './common/env.js';
 import { Database } from './lib/database/db.js';
 import { syncDatabaseSchema } from './lib/database/sync-schema.js';
+import { PetFoodService } from './lib/services/pet-food.js';
 
 const waitForShutdown = Effect.callback<void>((resume) => {
 	const stop = () => resume(Effect.void);
@@ -24,13 +25,14 @@ const waitForShutdown = Effect.callback<void>((resume) => {
 
 const app = Effect.scoped(
 	Effect.gen(function* () {
-		yield* Effect.tryPromise(() => syncDatabaseSchema());
+		yield* syncDatabaseSchema();
 
 		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
 		const conversationPersistence = yield* ConversationPersistence;
 		const telegramBot = createBot(execute, conversationPersistence.storage);
 		const database = yield* Database;
 		const notificationQueue = yield* PetFoodNotificationQueue;
+		const petFoodService = yield* PetFoodService;
 		const readiness = Effect.all([
 			database.checkHealth(),
 			conversationPersistence.checkHealth,
@@ -42,6 +44,8 @@ const app = Effect.scoped(
 				attributes: { 'application.run.mode': Env.RUN_MODE },
 			}),
 		);
+		yield* readiness;
+		yield* petFoodService.reconcileNotifications();
 
 		yield* startHttpServer(telegramBot, execute, readiness);
 
