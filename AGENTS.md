@@ -15,8 +15,8 @@ conventions below when making changes.
 ## Build, lint, test commands
 
 - Install deps: `bun install` (lockfile is `bun.lock`).
-- Dev server: `bun run dev` (nodemon watches `src`).
-- Start app: `bun run start` (runs `src/main.ts`).
+- Dev server: `bun run dev` (nodemon watches `src/*`).
+- Start app: `bun run start` (runs `src/index.ts`).
 - Build/check types: `bun run build:dev` (tsc, no emit).
 - Tests: `bun run test` (TZ=UTC, Vitest).
 
@@ -39,9 +39,8 @@ conventions below when making changes.
 
 ## Project layout
 
-- `src/main.ts`: Effect-owned application lifecycle and process entry.
-- `src/adapters/http/server.ts`: Hono HTTP entry and webhook wiring.
-- `src/adapters/telegram/bot.ts`: bot wiring, middleware, commands, and polling.
+- `src/index.ts`: Hono HTTP entry, webhook/polling startup.
+- `src/bot.ts`: bot wiring, middleware, modules, commands.
 - `src/common`: shared types, env parsing, response helpers, errors.
 - `src/lib`: data access, services, queues, entities.
 - `src/modules`: feature modules, command handlers.

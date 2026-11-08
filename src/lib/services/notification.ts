@@ -11,21 +11,17 @@ import {
 	pipe,
 	String,
 } from 'effect';
+import type { Bot } from 'grammy';
 
-import { NotificationSender } from '../../adapters/telegram/notification-sender.js';
 import type { NotifyParams } from '../../api/types/notify-params.js';
+import { matchBotError } from '../../common/error.js';
+import type { Context } from '../../common/types/context.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
+import { getUserFromApiKey, type User } from '../../lib/entities/user.js';
 import { NotificationRepository } from '../repositories/notification.js';
-import { type User, UserRepository } from '../repositories/user.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
 	variables: string[];
-}> {}
-
-export class NotificationDeliveryError extends Data.TaggedError(
-	'NotificationDeliveryError',
-)<{
-	attempted: number;
 }> {}
 
 const parseMessage = (message: string, variables: NotifyParams['variables']) =>
@@ -63,41 +59,45 @@ const parseMessage = (message: string, variables: NotifyParams['variables']) =>
 	}).pipe(Effect.withSpan('parseMessage'));
 
 interface SendNotificationAndLog {
+	bot: Bot<Context>;
 	user: User;
 	notificationID?: NotificationID;
 	petID?: PetID;
 	messageText: string;
 }
 
-export const makeNotificationService = Effect.gen(function* () {
+const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
-	const userRepository = yield* UserRepository;
-	const notificationSender = yield* NotificationSender;
 
 	const sendNotificationAndLog = Effect.fn(
 		'NotificationService.sendNotificationAndLog',
 	)(function* ({
+		bot,
 		user,
 		messageText,
 		notificationID,
 		petID,
 	}: SendNotificationAndLog) {
-		const message = yield* notificationSender.sendMessage(
-			user.telegramID,
-			messageText,
-		);
+		const message = yield* Effect.tryPromise({
+			try: () => bot.api.sendMessage(user.telegramID, messageText),
+			catch: (cause) => {
+				const error = matchBotError(cause);
+				if (error) return error;
+				throw cause;
+			},
+		}).pipe(Effect.withSpan('bot.api.sendMessage'));
 
 		yield* notificationRepository.createNotificationHistory({
 			notificationID: notificationID ?? null,
 			petID: petID ?? null,
 			userID: user.id,
-			messageID: message.messageID,
+			messageID: message.message_id,
 		});
 	});
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
-		function* (params: NotifyParams) {
-			const user = yield* userRepository.getUserFromApiKey(params.apiKey);
+		function* (bot: Bot<Context>, params: NotifyParams) {
+			const user = yield* getUserFromApiKey(params.apiKey);
 
 			const { notification, usersToNotify } =
 				yield* notificationRepository.getNotificationByOwnerAndKeyword(
@@ -110,15 +110,17 @@ export const makeNotificationService = Effect.gen(function* () {
 				params.variables,
 			);
 
-			const outcomes = yield* Effect.forEach(
+			yield* Effect.forEach(
 				[
 					sendNotificationAndLog({
+						bot,
 						user,
 						notificationID: notification.id,
 						messageText,
 					}),
 					...usersToNotify.map((user) =>
 						sendNotificationAndLog({
+							bot,
 							user,
 							notificationID: notification.id,
 							messageText,
@@ -127,24 +129,12 @@ export const makeNotificationService = Effect.gen(function* () {
 				],
 				(v) =>
 					v.pipe(
-						Effect.as(true),
 						Effect.catch(() =>
-							Console.error('Error when sending notification to user').pipe(
-								Effect.as(false),
-							),
+							Console.error('Error when sending notification to user'),
 						),
 					),
 				{ concurrency: 'unbounded' },
 			);
-
-			const delivered = outcomes.filter(Boolean).length;
-			if (delivered === 0) {
-				return yield* new NotificationDeliveryError({
-					attempted: outcomes.length,
-				});
-			}
-
-			return { delivered, failed: outcomes.length - delivered };
 		},
 	);
 
@@ -165,5 +155,7 @@ export class NotificationService extends EffectContext.Service<
 		typeof makeNotificationService
 	>['sendNotification'];
 
-	static readonly layer = Layer.effect(this, makeNotificationService);
+	static readonly layer = Layer.effect(this, makeNotificationService).pipe(
+		Layer.provide(NotificationRepository.layer),
+	);
 }

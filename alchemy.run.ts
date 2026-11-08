@@ -29,7 +29,6 @@ export default Alchemy.Stack(
 			context: '.',
 			dockerfilePath: 'Dockerfile',
 			port: 3000,
-			healthcheck: '/api/readyz',
 			env: {
 				...config.environment,
 				DATABASE_URL: 'file:/data/carneloot.db',
