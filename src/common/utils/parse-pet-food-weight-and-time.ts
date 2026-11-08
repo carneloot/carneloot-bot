@@ -81,7 +81,7 @@ export const parsePetFoodWeightAndTime = Effect.fn('parsePetFoodWeightAndTime')(
 			messageMatch.match(RELATIVE_TIME_REGEX) ??
 			messageMatch.match(MESSAGE_REGEX);
 
-		if (!match) {
+		if (!match || /^\d{1,2}:\d{1,2}$/.test(messageMatch.trim())) {
 			return yield* new ParsePetFoodError({
 				message:
 					'Por favor, informe a quantidade de ração e o tempo decorrido desde a última refeição (o tempo é opcional).',
