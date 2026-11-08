@@ -10,6 +10,7 @@ import {
 	type LibSQLTransaction,
 } from 'drizzle-orm/libsql';
 import {
+	Cause,
 	Context,
 	Data,
 	Effect,
@@ -55,6 +56,10 @@ const matchError = (cause: unknown) => {
 
 	return null;
 };
+
+class TransactionFailure<E> {
+	public constructor(public readonly cause: Cause.Cause<E>) {}
+}
 
 const makeService = Effect.gen(function* () {
 	const client = yield* Effect.acquireRelease(
@@ -107,37 +112,45 @@ const makeService = Effect.gen(function* () {
 		<T, E, R>(execute: (tx: Transaction) => Effect.Effect<T, E, R>) =>
 			Effect.context<R>().pipe(
 				Effect.flatMap((context) =>
-					Effect.callback<T, E>((resume) => {
-						void db
-							.transaction(async (tx) => {
-								const txWrapper = <U>(
-									fn: (client: TransactionClient) => Promise<U>,
-								) =>
-									Effect.tryPromise({
-										try: () => fn(tx),
-										catch: (cause) => {
-											const error = matchError(cause);
-											if (Predicate.isNotNull(error)) {
-												return error;
-											}
-											throw cause;
-										},
-									});
-
-								const result = await Effect.runPromiseExitWith(context)(
-									execute(txWrapper),
-								);
-
-								Exit.match(result, {
-									onSuccess: (value) => {
-										resume(Effect.succeed(value));
-									},
-									onFailure: (cause) => {
-										resume(Effect.failCause(cause));
+					Effect.callback<T, E>((resume, signal) => {
+						const transaction = db.transaction(async (tx) => {
+							const txWrapper = <U>(
+								fn: (client: TransactionClient) => Promise<U>,
+							) =>
+								Effect.tryPromise({
+									try: () => fn(tx),
+									catch: (cause) => {
+										const error = matchError(cause);
+										if (Predicate.isNotNull(error)) {
+											return error;
+										}
+										throw cause;
 									},
 								});
-							})
-							.catch((cause) => resume(Effect.die(cause)));
+
+							const result = await Effect.runPromiseExitWith(context)(
+								execute(txWrapper),
+								{ signal },
+							);
+
+							return Exit.match(result, {
+								onSuccess: (value) => value,
+								onFailure: (cause) =>
+									Promise.reject(new TransactionFailure(cause)),
+							});
+						});
+
+						const completion = transaction.then(
+							(value) => resume(Effect.succeed(value)),
+							(cause) =>
+								resume(
+									cause instanceof TransactionFailure
+										? Effect.failCause(cause.cause)
+										: Effect.die(cause),
+								),
+						);
+
+						return Effect.promise(() => completion);
 					}),
 				),
 			),
