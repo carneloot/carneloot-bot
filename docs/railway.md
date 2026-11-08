@@ -67,11 +67,17 @@ to `polling`; the other supported optional variables are:
 Run `bunx alchemy plan --stage production` to review infrastructure changes
 without applying them.
 
+The deploy workflow runs on pushes to `main` only when an application build or
+Railway configuration input changes: `src/`, `public/`, `package.json`,
+`bun.lock`, the Dockerfile/build context rules, the Alchemy stack, production
+Fnox configuration, or the workflow itself. Documentation-only changes do not
+build or deploy the service. A manual workflow run always remains available.
+
 ## GitHub Actions deployment
 
-The `Deploy` workflow deploys every push to `main` and can be run manually from
-the Actions tab on any branch that contains the workflow. Manual runs offer an
-`adopt` option for importing existing Railway resources into a fresh state
+The `Deploy` workflow deploys eligible pushes to `main` and can be run manually
+from the Actions tab on any branch that contains the workflow. Manual runs offer
+an `adopt` option for importing existing Railway resources into a fresh state
 store and a `plan` option that previews changes without applying them. It uses
 the GitHub `production` environment, so configure the following environment
 secrets before its first run:
