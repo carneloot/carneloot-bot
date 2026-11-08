@@ -47,7 +47,8 @@ Deploy one application process for either `RUN_MODE=polling` or
 multiple webhook processes, route updates for each chat to one process in FIFO
 order. The bot only preserves chat ordering inside one process.
 
-Before a rollout, wait for `GET /api/readyz` to return `200`. During a rollback,
+Railway uses `GET /api/readyz` as its deployment healthcheck and waits for a
+`200` response before switching traffic to a new deployment. During a rollback,
 keep Redis conversation prefixes and use an application release that can read
 the active conversation storage version. Read [the operations runbook](runbook.md)
 for shutdown, alerts, queue failures, retries, and corrupt conversation state.
@@ -66,11 +67,19 @@ to `polling`; the other supported optional variables are:
 Run `bunx alchemy plan --stage production` to review infrastructure changes
 without applying them.
 
+The deploy workflow runs on pushes to `main` only when an application build or
+Railway configuration input changes: `src/`, `public/`, `package.json`,
+`bun.lock`, the Dockerfile/build context rules, the Alchemy stack, production
+Fnox configuration. Documentation and workflow-only changes do not build or
+deploy the service. When the workflow runs, Alchemy hashes the complete local
+Docker build context and queues a Railway build only when that hash differs from
+the persisted stack state. A manual workflow run always remains available.
+
 ## GitHub Actions deployment
 
-The `Deploy` workflow deploys every push to `main` and can be run manually from
-the Actions tab on any branch that contains the workflow. Manual runs offer an
-`adopt` option for importing existing Railway resources into a fresh state
+The `Deploy` workflow deploys eligible pushes to `main` and can be run manually
+from the Actions tab on any branch that contains the workflow. Manual runs offer
+an `adopt` option for importing existing Railway resources into a fresh state
 store and a `plan` option that previews changes without applying them. It uses
 the GitHub `production` environment, so configure the following environment
 secrets before its first run:
