@@ -70,8 +70,10 @@ without applying them.
 The deploy workflow runs on pushes to `main` only when an application build or
 Railway configuration input changes: `src/`, `public/`, `package.json`,
 `bun.lock`, the Dockerfile/build context rules, the Alchemy stack, production
-Fnox configuration, or the workflow itself. Documentation-only changes do not
-build or deploy the service. A manual workflow run always remains available.
+Fnox configuration. Documentation and workflow-only changes do not build or
+deploy the service. When the workflow runs, Alchemy hashes the complete local
+Docker build context and queues a Railway build only when that hash differs from
+the persisted stack state. A manual workflow run always remains available.
 
 ## GitHub Actions deployment
 

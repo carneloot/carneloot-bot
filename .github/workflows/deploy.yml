@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - '.dockerignore'
-      - '.github/workflows/deploy.yml'
       - 'Dockerfile'
       - 'alchemy.run.ts'
       - 'bun.lock'
