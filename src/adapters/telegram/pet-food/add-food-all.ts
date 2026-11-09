@@ -107,7 +107,7 @@ export const createAddFoodAllCommand =
 						time: timeChanged ? time : undefined,
 					})(ctx);
 				}),
-				{ concurrency: 'unbounded' },
+				{ concurrency: 1 },
 			);
 
 			yield* Effect.all(
