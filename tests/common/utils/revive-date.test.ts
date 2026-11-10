@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { reviveDate } from './revive-date.js';
+import { reviveDate } from '../../../src/common/utils/revive-date.js';
 
 describe('reviveDate', () => {
 	it('revives a date serialized through JSON', () => {

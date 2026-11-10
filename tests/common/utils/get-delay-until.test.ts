@@ -1,7 +1,7 @@
 import { DateTime, Duration } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { getDelayUntil } from './get-delay-until.js';
+import { getDelayUntil } from '../../../src/common/utils/get-delay-until.js';
 
 describe('getDelayUntil', () => {
 	const now = DateTime.makeUnsafe(new Date('2026-11-06T12:00:00.000Z'));

@@ -1,7 +1,7 @@
 import { Array as A, Duration, pipe, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { DurationFromParts } from './schema.js';
+import { DurationFromParts } from '../../src/common/schema.js';
 
 describe('DurationFromParts', () => {
 	it('decoded value should equal the encoded one back', () => {
