@@ -1,8 +1,22 @@
 # Notification API
 
-Both endpoints require `Authorization: Bearer <apiKey>` and `Content-Type: application/json`.
+All endpoints require `Authorization: Bearer <apiKey>` and `Content-Type: application/json`.
 The API no longer accepts an `apiKey` in the JSON body for authentication.
 Existing hooks must move their key into the header when this change is deployed.
+
+## Create a template
+
+`POST /api/notifications` creates a template owned by the API key's user, with no additional recipients.
+The body contains a nonempty `keyword` without whitespace and a non-whitespace `message` of at most 4096 UTF-16 code units.
+Success returns `201`. An existing keyword for the same owner returns `409` without changing the template.
+Different owners can use the same keyword.
+
+```sh
+curl --request POST "$BOT_URL/api/notifications" \
+	--header "Authorization: Bearer $BOT_API_KEY" \
+	--header 'Content-Type: application/json' \
+	--data '{"keyword":"claude_done","message":"✅ {{project}}\n🏷️ {{title}}\n💬 {{message}}"}'
+```
 
 ## Send a notification
 

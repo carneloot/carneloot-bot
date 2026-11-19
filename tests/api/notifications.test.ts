@@ -54,6 +54,18 @@ const patch = (
 		},
 		body: JSON.stringify(body),
 	});
+const post = (
+	body: unknown,
+	authorization: string | null = 'Bearer test-owner-key',
+) =>
+	app.request('/api/notifications', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(authorization === null ? {} : { Authorization: authorization }),
+		},
+		body: JSON.stringify(body),
+	});
 const getTemplate = (owner = 'owner-1', keyword = 'claude_done') =>
 	runtime.runPromise(
 		Effect.gen(function* () {
@@ -65,7 +77,7 @@ const getTemplate = (owner = 'owner-1', keyword = 'claude_done') =>
 		}),
 	);
 
-describe('PATCH /api/notifications', () => {
+describe('/api/notifications', () => {
 	beforeAll(async () => {
 		await runtime.runPromise(
 			Effect.gen(function* () {
@@ -239,6 +251,107 @@ describe('PATCH /api/notifications', () => {
 				message: 'Invalid request body',
 			});
 			expect((await getTemplate()).notification.message).toBe('Original');
+		},
+	);
+
+	it('POST creates a template for the authenticated owner without copying another owner’s recipients', async () => {
+		const response = await post({
+			keyword: 'private_template',
+			message: '✅ {{title}}',
+			ownerID: 'owner-2',
+		});
+		expect(response.status).toBe(201);
+		expect(await response.json()).toEqual({
+			message: 'Notification template created successfully!',
+		});
+		const result = await getTemplate('owner-1', 'private_template');
+		expect(result.notification).toMatchObject({
+			ownerID: 'owner-1',
+			keyword: 'private_template',
+			message: '✅ {{title}}',
+		});
+		expect(result.usersToNotify).toEqual([]);
+		expect(
+			(await getTemplate('owner-2', 'private_template')).notification.message,
+		).toBe('Private');
+	});
+
+	it('POST rejects an existing keyword without overwriting its message or recipients', async () => {
+		const response = await post({
+			keyword: 'claude_done',
+			message: 'Replacement',
+		});
+		expect(response.status).toBe(409);
+		expect(await response.json()).toEqual({
+			message: 'Notification template already exists for user and keyword',
+		});
+		const result = await getTemplate();
+		expect(result.notification.message).toBe('Original');
+		expect(result.usersToNotify.map((user) => user.id)).toEqual(['owner-2']);
+	});
+
+	it('POST handles concurrent requests for the same keyword without duplicate creation', async () => {
+		const responses = await Promise.all(
+			['First', 'Second'].map((message) =>
+				post({ keyword: 'new_keyword', message }),
+			),
+		);
+		expect(responses.map((response) => response.status).sort()).toEqual([
+			201, 409,
+		]);
+		const winner = responses.findIndex((response) => response.status === 201);
+		expect(
+			(await getTemplate('owner-1', 'new_keyword')).notification.message,
+		).toBe(['First', 'Second'][winner]);
+	});
+
+	it.each([
+		{ authorization: null, status: 401 },
+		{ authorization: 'Bearer wrong-key', status: 401 },
+		{ authorization: 'Basic test-owner-key', status: 400 },
+	])(
+		'POST requires bearer authentication',
+		async ({ authorization, status }) => {
+			const response = await post(
+				{
+					keyword: 'new_keyword',
+					message: 'Message',
+					apiKey: 'test-owner-key',
+				},
+				authorization,
+			);
+			expect(response.status).toBe(status);
+			expect(JSON.stringify(await response.json())).not.toContain(
+				'test-owner-key',
+			);
+			await expect(getTemplate('owner-1', 'new_keyword')).rejects.toMatchObject(
+				{ _tag: 'NotificationNotFoundError' },
+			);
+		},
+	);
+
+	it.each([
+		{ message: 'Message' },
+		{ keyword: 'new_keyword' },
+		...['', 'two words', ' \n '].map((keyword) => ({
+			keyword,
+			message: 'Message',
+		})),
+		...['', ' \n ', 'x'.repeat(4097)].map((message) => ({
+			keyword: 'new_keyword',
+			message,
+		})),
+	])(
+		'POST rejects invalid input without exposing request data or creating a template',
+		async (body) => {
+			const response = await post({ ...body, apiKey: 'test-owner-key' });
+			expect(response.status).toBe(400);
+			expect(await response.json()).toEqual({
+				message: 'Invalid request body',
+			});
+			await expect(getTemplate('owner-1', 'new_keyword')).rejects.toMatchObject(
+				{ _tag: 'NotificationNotFoundError' },
+			);
 		},
 	);
 });
