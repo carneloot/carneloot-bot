@@ -42,10 +42,16 @@ import { NotificationRepository } from '../../src/lib/repositories/notification.
 import { runtime } from '../../src/runtime.js';
 
 const app = new Hono().route('/api', notificationsApi);
-const patch = (body: unknown) =>
+const patch = (
+	body: unknown,
+	authorization: string | null = 'Bearer test-owner-key',
+) =>
 	app.request('/api/notifications', {
 		method: 'PATCH',
-		headers: { 'Content-Type': 'application/json' },
+		headers: {
+			'Content-Type': 'application/json',
+			...(authorization === null ? {} : { Authorization: authorization }),
+		},
 		body: JSON.stringify(body),
 	});
 const getTemplate = (owner = 'owner-1', keyword = 'claude_done') =>
@@ -112,7 +118,6 @@ describe('PATCH /api/notifications', () => {
 		'updates a message without changing its identity, keyword, recipients, or another owner',
 		async (message) => {
 			const body = {
-				apiKey: 'test-owner-key',
 				keyword: 'claude_done',
 				message,
 			};
@@ -138,23 +143,70 @@ describe('PATCH /api/notifications', () => {
 	);
 
 	it('rejects an invalid API key without modifying the template', async () => {
-		const response = await patch({
-			apiKey: 'wrong-key',
-			keyword: 'claude_done',
+		const response = await patch(
+			{
+				apiKey: 'test-owner-key',
+				keyword: 'claude_done',
+				message: 'Unauthorized',
+			},
+			'Bearer wrong-key',
+		);
+		expect(response.status).toBe(401);
+		expect(await response.json()).toEqual({
 			message: 'Unauthorized',
 		});
-		expect(response.status).toBe(404);
-		expect(await response.json()).toEqual({
-			message: 'User not found for apiKey',
-		});
 		expect((await getTemplate()).notification.message).toBe('Original');
+	});
+
+	it.each([
+		{ authorization: null, status: 401, message: 'Unauthorized' },
+		{ authorization: '', status: 401, message: 'Unauthorized' },
+		...['Basic test-owner-key', 'Bearer', 'Bearer key extra'].map(
+			(authorization) => ({
+				authorization,
+				status: 400,
+				message: 'Malformed Authorization header',
+			}),
+		),
+	])(
+		'rejects missing or malformed authorization even with a valid body API key',
+		async ({ authorization, status, message }) => {
+			const response = await patch(
+				{
+					apiKey: 'test-owner-key',
+					keyword: 'claude_done',
+					message: 'Unauthorized',
+				},
+				authorization,
+			);
+			expect(response.status).toBe(status);
+			expect(response.headers.get('WWW-Authenticate')).toMatch(/^Bearer /);
+			expect(await response.json()).toEqual({
+				message,
+			});
+			expect((await getTemplate()).notification.message).toBe('Original');
+		},
+	);
+
+	it('ignores a body API key when a header API key is provided', async () => {
+		const response = await patch(
+			{
+				apiKey: 'wrong-body-key',
+				keyword: 'claude_done',
+				message: 'Authenticated by header',
+			},
+			'Bearer test-owner-key',
+		);
+		expect(response.status).toBe(200);
+		expect((await getTemplate()).notification.message).toBe(
+			'Authenticated by header',
+		);
 	});
 
 	it.each(['missing_template', 'private_template'])(
 		'does not create or modify inaccessible templates',
 		async (keyword) => {
 			const response = await patch({
-				apiKey: 'test-owner-key',
 				keyword,
 				message: 'Unauthorized',
 			});
@@ -172,11 +224,9 @@ describe('PATCH /api/notifications', () => {
 	);
 
 	it.each([
-		{ keyword: 'claude_done', message: 'Message' },
-		{ apiKey: 'test-owner-key', message: 'Message' },
-		{ apiKey: 'test-owner-key', keyword: 'claude_done' },
+		{ message: 'Message' },
+		{ keyword: 'claude_done' },
 		...['', ' \n\t ', 'x'.repeat(4097), null, 42].map((message) => ({
-			apiKey: 'test-owner-key',
 			keyword: 'claude_done',
 			message,
 		})),
@@ -185,6 +235,9 @@ describe('PATCH /api/notifications', () => {
 		async (body) => {
 			const response = await patch(body);
 			expect(response.status).toBe(400);
+			expect(await response.json()).toEqual({
+				message: 'Invalid request body',
+			});
 			expect((await getTemplate()).notification.message).toBe('Original');
 		},
 	);

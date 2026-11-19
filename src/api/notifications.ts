@@ -4,25 +4,24 @@ import { Hono } from 'hono';
 
 import { NotificationService } from '../lib/services/notification.js';
 import { runtime } from '../runtime.js';
+import { apiKeyAuth } from './auth.js';
 import { UpdateNotificationParams } from './types/update-notification-params.js';
+import { validationErrorHook } from './validation-error.js';
 
 export const notificationsApi = new Hono().patch(
 	'/notifications',
-	sValidator('json', UpdateNotificationParams),
+	apiKeyAuth,
+	sValidator('json', UpdateNotificationParams, validationErrorHook),
 	(c) =>
 		Effect.gen(function* () {
 			const service = yield* NotificationService;
 			return yield* service
-				.updateNotificationTemplate(c.req.valid('json'))
+				.updateNotificationTemplate(c.get('user'), c.req.valid('json'))
 				.pipe(
 					Effect.map(() =>
 						c.json({ message: 'Notification template updated successfully!' }),
 					),
 					Effect.catchTags({
-						UserNotFoundError: () =>
-							Effect.succeed(
-								c.json({ message: 'User not found for apiKey' }, 404),
-							),
 						NotificationNotFoundError: () =>
 							Effect.succeed(
 								c.json(

@@ -5,8 +5,10 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 
+import { apiKeyAuth } from './api/auth.js';
 import { notificationsApi } from './api/notifications.js';
 import { NotifyParams } from './api/types/notify-params.js';
+import { validationErrorHook } from './api/validation-error.js';
 import { createBot } from './bot.js';
 import { Env } from './common/env.js';
 import { syncDatabaseSchema } from './lib/database/sync-schema.js';
@@ -28,36 +30,45 @@ const api = new Hono();
 
 api.route('/', notificationsApi);
 
-api.post('notify', sValidator('json', NotifyParams), (c) =>
-	Effect.gen(function* () {
-		const body = c.req.valid('json');
+api.post(
+	'notify',
+	apiKeyAuth,
+	sValidator('json', NotifyParams, validationErrorHook),
+	(c) =>
+		Effect.gen(function* () {
+			const body = c.req.valid('json');
 
-		const notificationService = yield* NotificationService;
+			const notificationService = yield* NotificationService;
 
-		return yield* notificationService.sendNotification(bot, body).pipe(
-			Effect.map(() => c.json({ message: 'Notification sent successfully!' })),
-			Effect.catchTags({
-				UserNotFoundError: () =>
-					Effect.succeed(c.json({ message: 'User not found for apiKey' }, 404)),
-				MissingVariablesError: (err) =>
-					Effect.succeed(
-						c.json(
-							{ message: 'Missing used variables', variables: err.variables },
-							422,
-						),
+			return yield* notificationService
+				.sendNotification(bot, c.get('user'), body)
+				.pipe(
+					Effect.map(() =>
+						c.json({ message: 'Notification sent successfully!' }),
 					),
-				NotificationNotFoundError: () =>
-					Effect.succeed(
-						c.json(
-							{ message: 'Notification not found for user and keyword' },
-							404,
-						),
-					),
-				DatabaseError: () =>
-					Effect.succeed(c.json({ message: 'Database error' }, 500)),
-			}),
-		);
-	}).pipe(Effect.withSpan('/api/post/notify'), runtime.runPromise),
+					Effect.catchTags({
+						MissingVariablesError: (err) =>
+							Effect.succeed(
+								c.json(
+									{
+										message: 'Missing used variables',
+										variables: err.variables,
+									},
+									422,
+								),
+							),
+						NotificationNotFoundError: () =>
+							Effect.succeed(
+								c.json(
+									{ message: 'Notification not found for user and keyword' },
+									404,
+								),
+							),
+						DatabaseError: () =>
+							Effect.succeed(c.json({ message: 'Database error' }, 500)),
+					}),
+				);
+		}).pipe(Effect.withSpan('/api/post/notify'), runtime.runPromise),
 );
 
 if (Env.RUN_MODE === 'webhook') {

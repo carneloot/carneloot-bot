@@ -1,7 +1,6 @@
 import { Schema } from 'effect';
 
 export const UpdateNotificationParamsSchema = Schema.Struct({
-	apiKey: Schema.String.check(Schema.isMinLength(1)),
 	keyword: Schema.String.check(Schema.isMinLength(1)),
 	message: Schema.String.check(
 		Schema.isPattern(/\S/u),

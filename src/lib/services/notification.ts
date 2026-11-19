@@ -18,7 +18,7 @@ import type { UpdateNotificationParams } from '../../api/types/update-notificati
 import { matchBotError } from '../../common/error.js';
 import type { Context } from '../../common/types/context.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
-import { getUserFromApiKey, type User } from '../../lib/entities/user.js';
+import type { User } from '../../lib/entities/user.js';
 import {
 	NotificationNotFoundError,
 	NotificationRepository,
@@ -75,8 +75,7 @@ const makeNotificationService = Effect.gen(function* () {
 
 	const updateNotificationTemplate = Effect.fn(
 		'NotificationService.updateNotificationTemplate',
-	)(function* (params: UpdateNotificationParams) {
-		const user = yield* getUserFromApiKey(params.apiKey);
+	)(function* (user: User, params: UpdateNotificationParams) {
 		const { notification } =
 			yield* notificationRepository.getNotificationByOwnerAndKeyword(
 				user.id,
@@ -117,9 +116,7 @@ const makeNotificationService = Effect.gen(function* () {
 	});
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
-		function* (bot: Bot<Context>, params: NotifyParams) {
-			const user = yield* getUserFromApiKey(params.apiKey);
-
+		function* (bot: Bot<Context>, user: User, params: NotifyParams) {
 			const { notification, usersToNotify } =
 				yield* notificationRepository.getNotificationByOwnerAndKeyword(
 					user.id,
