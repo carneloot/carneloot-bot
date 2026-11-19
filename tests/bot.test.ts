@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { Effect } from 'effect';
 import type { Update, UserFromGetMe } from 'grammy/types';
 import {
@@ -16,7 +17,8 @@ import { createGrammyRunner } from './support/grammy-runner.js';
 
 vi.hoisted(() => {
 	process.env.BOT_TOKEN = 'test-token';
-	process.env.DATABASE_URL = 'file::memory:';
+	// LibSQL opens a new connection after each transaction.
+	process.env.DATABASE_URL = 'file::memory:?cache=shared';
 	process.env.REDIS_URL = 'redis://localhost:6379';
 });
 
@@ -116,6 +118,24 @@ const createRunner = () => {
 	return createGrammyRunner(bot);
 };
 
+const callbackUpdate = (updateId: number, data: string) =>
+	({
+		update_id: updateId,
+		callback_query: {
+			id: `callback-${updateId}`,
+			from: { id: 1, is_bot: false, first_name: 'Test' },
+			chat_instance: 'test-chat',
+			data,
+			message: {
+				message_id: 1,
+				date: 0,
+				chat: { id: 1, type: 'private', first_name: 'Test' },
+				from: { id: 1, is_bot: true, first_name: 'Test bot' },
+				text: 'Escolha uma notificação',
+			},
+		},
+	}) satisfies Update;
+
 describe('grammY regression runner', () => {
 	beforeAll(async () => {
 		await runtime.runPromise(
@@ -123,12 +143,18 @@ describe('grammY regression runner', () => {
 				const db = yield* Database;
 				yield* db.execute((client) =>
 					client.$client.executeMultiple(`
+				PRAGMA foreign_keys = ON;
 				CREATE TABLE users (id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL,
 					first_name TEXT NOT NULL, last_name TEXT, username TEXT);
 				CREATE TABLE notifications (id TEXT PRIMARY KEY, keyword TEXT NOT NULL,
 					message TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES users(id),
 					UNIQUE(keyword, owner_id));
-				CREATE TABLE users_to_notify (id TEXT PRIMARY KEY, notification_id TEXT, user_id TEXT);
+				CREATE TABLE users_to_notify (id TEXT PRIMARY KEY,
+					notification_id TEXT REFERENCES notifications(id), user_id TEXT REFERENCES users(id));
+				CREATE TABLE notification_history (id TEXT PRIMARY KEY,
+					notification_id TEXT REFERENCES notifications(id), pet_id TEXT,
+					user_id TEXT REFERENCES users(id), message_id INTEGER UNIQUE, sent_at INTEGER,
+					UNIQUE(notification_id, user_id));
 				INSERT INTO users (id, telegram_id, first_name) VALUES
 					('owner-1', '1', 'Test'), ('owner-2', '2', 'Other');
 			`),
@@ -139,7 +165,19 @@ describe('grammY regression runner', () => {
 
 	afterAll(() => runtime.dispose());
 
-	beforeEach(() => mocks.registeredUsers.clear());
+	beforeEach(async () => {
+		mocks.registeredUsers.clear();
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const db = yield* Database;
+				yield* db.execute((client) =>
+					client.$client.executeMultiple(
+						'DELETE FROM notification_history; DELETE FROM users_to_notify; DELETE FROM notifications;',
+					),
+				);
+			}),
+		);
+	});
 
 	const getNotification = (owner: number, keyword: string) =>
 		runtime.runPromise(
@@ -169,9 +207,14 @@ describe('grammY regression runner', () => {
 		return runner;
 	};
 
-	it('requires registration to create a notification template', async () => {
+	it.each([
+		'/criar_notificacao',
+		'/listar_notificacoes',
+		'/editar_notificacao',
+		'/deletar_notificacao',
+	])('requires registration for %s', async (command) => {
 		const runner = createRunner();
-		await runner.dispatch(commandUpdate(90, '/criar_notificacao'));
+		await runner.dispatch(commandUpdate(90, command));
 		expect(runner.calls).toContainEqual({
 			method: 'sendMessage',
 			payload: {
@@ -179,6 +222,238 @@ describe('grammY regression runner', () => {
 				text: 'Por favor cadastre-se primeiro utilizando /cadastrar',
 			},
 		});
+	});
+
+	it.each([
+		'/listar_notificacoes',
+		'/editar_notificacao',
+		'/deletar_notificacao',
+	])('reports an empty list for %s', async (command) => {
+		mocks.registeredUsers.add(1);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(91, command));
+		expect(runner.calls.at(-1)).toMatchObject({
+			payload: {
+				text: 'Você não tem notificações cadastradas. Use /criar_notificacao para criar uma.',
+			},
+		});
+	});
+
+	it('lists only the current owner templates, including their full messages', async () => {
+		const message = '✅ {{project}}\n{{title}}';
+		await submitTemplate('claude_done', message);
+		await submitTemplate('secret', 'Other owner private message', 2);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(300, '/listar_notificacoes'));
+		expect(
+			runner.calls
+				.filter((call) => call.method === 'sendMessage')
+				.map((call) => call.payload),
+		).toEqual([
+			{
+				chat_id: 1,
+				text: 'Suas notificações, com a palavra-chave seguida da mensagem:',
+			},
+			{ chat_id: 1, text: 'claude_done' },
+			{ chat_id: 1, text: message },
+		]);
+	});
+
+	it('edits the selected message, rejecting blank input without changing the keyword or another owner', async () => {
+		await submitTemplate('another_template', 'Keep this message');
+		await submitTemplate('claude_done', 'Original');
+		await submitTemplate('claude_done', 'Other owner', 2);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(310, '/editar_notificacao'));
+		await runner.dispatch(callbackUpdate(311, 'values-1'));
+		await runner.dispatch(commandUpdate(312, '  \n'));
+		const message = '✅ {{project}}\n🏷️ {{title}}';
+		await runner.dispatch(commandUpdate(313, message));
+		expect((await getNotification(1, 'claude_done')).notification.message).toBe(
+			message,
+		);
+		expect(
+			(await getNotification(1, 'another_template')).notification.message,
+		).toBe('Keep this message');
+		expect((await getNotification(2, 'claude_done')).notification.message).toBe(
+			'Other owner',
+		);
+		expect(runner.calls.at(-1)).toMatchObject({
+			payload: {
+				text: 'Notificação atualizada! A palavra-chave continua a mesma.',
+			},
+		});
+	});
+
+	it('keeps the original message when editing is cancelled', async () => {
+		await submitTemplate('claude_done', 'Original');
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(320, '/editar_notificacao'));
+		await runner.dispatch(callbackUpdate(321, 'values-0'));
+		await runner.dispatch(commandUpdate(322, '/cancelar'));
+		await runner.dispatch(commandUpdate(323, 'Do not save'));
+		expect((await getNotification(1, 'claude_done')).notification.message).toBe(
+			'Original',
+		);
+	});
+
+	it('keeps a template when deletion is declined or selection is cancelled', async () => {
+		await submitTemplate('claude_done', 'Original');
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(330, '/deletar_notificacao'));
+		await runner.dispatch(callbackUpdate(331, 'Cancelar'));
+		await runner.dispatch(commandUpdate(332, '/deletar_notificacao'));
+		await runner.dispatch(callbackUpdate(333, 'values-0'));
+		await runner.dispatch(callbackUpdate(334, 'values-1'));
+		expect((await getNotification(1, 'claude_done')).notification.message).toBe(
+			'Original',
+		);
+		expect(runner.calls.at(-1)).toMatchObject({
+			payload: {
+				text: 'Operação cancelada. A notificação foi mantida.',
+			},
+		});
+	});
+
+	it('deletes a confirmed template and its dependent records without affecting another owner', async () => {
+		await submitTemplate('claude_done', 'Original');
+		await submitTemplate('keep_me', 'Keep this template');
+		await submitTemplate('claude_done', 'Other owner', 2);
+		const { notification } = await getNotification(1, 'claude_done');
+		const other = (await getNotification(2, 'claude_done')).notification;
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const db = yield* Database;
+				yield* db.execute((client) =>
+					client.run(sql`INSERT INTO users_to_notify (id, notification_id, user_id)
+				VALUES ('recipient-1', ${notification.id}, 'owner-2'), ('recipient-2', ${other.id}, 'owner-1')`),
+				);
+				const repository = yield* NotificationRepository;
+				yield* repository.createNotificationHistory({
+					notificationID: notification.id,
+					petID: null,
+					userID: 'owner-1' as UserID,
+					messageID: 1000,
+				});
+				yield* repository.createNotificationHistory({
+					notificationID: other.id,
+					petID: null,
+					userID: 'owner-2' as UserID,
+					messageID: 1001,
+				});
+				// Even a direct repository call cannot mutate a different owner's template.
+				expect(
+					yield* repository.updateNotification(
+						'owner-2' as UserID,
+						notification.id,
+						'Unauthorized',
+					),
+				).toBe(false);
+				expect(
+					yield* repository.deleteNotification(
+						'owner-2' as UserID,
+						notification.id,
+					),
+				).toBe(false);
+			}),
+		);
+		expect(
+			(await getNotification(1, 'claude_done')).usersToNotify,
+		).toHaveLength(1);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(340, '/deletar_notificacao'));
+		await runner.dispatch(callbackUpdate(341, 'values-0'));
+		await runner.dispatch(callbackUpdate(342, 'values-0'));
+		await expect(getNotification(1, 'claude_done')).rejects.toMatchObject({
+			_tag: 'NotificationNotFoundError',
+		});
+		expect((await getNotification(1, 'keep_me')).notification.message).toBe(
+			'Keep this template',
+		);
+		expect(
+			(await getNotification(2, 'claude_done')).usersToNotify,
+		).toHaveLength(1);
+		const history = await runtime.runPromise(
+			Effect.gen(function* () {
+				const db = yield* Database;
+				return yield* db.execute((client) =>
+					client.$client.execute(
+						'SELECT notification_id FROM notification_history',
+					),
+				);
+			}),
+		);
+		expect(history.rows.map((row) => row.notification_id)).toEqual([other.id]);
+		expect(runner.calls.at(-1)).toMatchObject({
+			payload: { text: 'Notificação deletada!' },
+		});
+	});
+
+	it('rolls back recipient and history deletion if removing the template fails', async () => {
+		await submitTemplate('claude_done', 'Original');
+		const { notification } = await getNotification(1, 'claude_done');
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const db = yield* Database;
+				yield* db.execute((client) =>
+					client.run(sql`INSERT INTO users_to_notify (id, notification_id, user_id)
+				VALUES ('recipient-1', ${notification.id}, 'owner-2')`),
+				);
+				const repository = yield* NotificationRepository;
+				yield* repository.createNotificationHistory({
+					notificationID: notification.id,
+					petID: null,
+					userID: 'owner-1' as UserID,
+					messageID: 1000,
+				});
+				yield* db.execute((client) =>
+					client.$client.executeMultiple(`
+				CREATE TRIGGER block_notification_delete BEFORE DELETE ON notifications
+				BEGIN SELECT RAISE(ABORT, 'blocked for rollback test'); END;
+			`),
+				);
+			}),
+		);
+		try {
+			await expect(
+				runtime.runPromise(
+					Effect.gen(function* () {
+						const repository = yield* NotificationRepository;
+						return yield* repository.deleteNotification(
+							'owner-1' as UserID,
+							notification.id,
+						);
+					}),
+				),
+			).rejects.toBeDefined();
+			expect(
+				(await getNotification(1, 'claude_done')).usersToNotify,
+			).toHaveLength(1);
+			const history = await runtime.runPromise(
+				Effect.gen(function* () {
+					const db = yield* Database;
+					return yield* db.execute((client) =>
+						client.$client.execute(
+							'SELECT notification_id FROM notification_history',
+						),
+					);
+				}),
+			);
+			expect(history.rows.map((row) => row.notification_id)).toEqual([
+				notification.id,
+			]);
+		} finally {
+			await runtime.runPromise(
+				Effect.gen(function* () {
+					const db = yield* Database;
+					yield* db.execute((client) =>
+						client.$client.executeMultiple(
+							'DROP TRIGGER block_notification_delete;',
+						),
+					);
+				}),
+			);
+		}
 	});
 
 	it('creates an owner-scoped template, preserving placeholders and line breaks', async () => {
