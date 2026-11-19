@@ -28,6 +28,32 @@ type CreateNotificationHistory = {
 const makeNotificationRepository = Effect.gen(function* () {
 	const db = yield* Database.Database;
 
+	const createNotification = Effect.fn(
+		'NotificationRepository.createNotification',
+	)(function* (
+		ownerID: Notification['ownerID'],
+		keyword: Notification['keyword'],
+		message: Notification['message'],
+	) {
+		const result = yield* db.execute((client) =>
+			client
+				.insert(notificationsTable)
+				.values({
+					id: createId() as Notification['id'],
+					ownerID,
+					keyword,
+					message,
+				})
+				.onConflictDoNothing({
+					target: [notificationsTable.keyword, notificationsTable.ownerID],
+				})
+				.returning({ id: notificationsTable.id })
+				.get(),
+		);
+
+		return result !== undefined;
+	});
+
 	const getNotificationByOwnerAndKeyword = Effect.fn(
 		'NotificationRepository.getNotificationByOwnerAndKeyword',
 	)(function* (
@@ -150,6 +176,7 @@ const makeNotificationRepository = Effect.gen(function* () {
 	});
 
 	return {
+		createNotification,
 		getNotificationByOwnerAndKeyword,
 		getNotificationFromHistory,
 		createNotificationHistory,
@@ -160,6 +187,9 @@ export class NotificationRepository extends Context.Service<
 	NotificationRepository,
 	Effect.Success<typeof makeNotificationRepository>
 >()('app/NotificationRepository') {
+	declare readonly createNotification: Effect.Success<
+		typeof makeNotificationRepository
+	>['createNotification'];
 	declare readonly getNotificationByOwnerAndKeyword: Effect.Success<
 		typeof makeNotificationRepository
 	>['getNotificationByOwnerAndKeyword'];
