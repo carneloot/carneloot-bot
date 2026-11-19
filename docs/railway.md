@@ -54,6 +54,22 @@ to `polling`; the other supported optional variables are:
 Run `bunx alchemy plan --stage production` to review infrastructure changes
 without applying them.
 
+## Custom domain and Cloudflare DNS
+
+The stack attaches `bot.carneloot.com` to the Railway bot service on port 3000.
+Alchemy publishes Railway's routing and verification records in the existing
+Cloudflare zone `carneloot.com`. These records are DNS-only, with Cloudflare
+proxying disabled so Railway can verify the domain and issue its TLS certificate.
+
+Add these zone permissions to the `CLOUDFLARE_API_TOKEN` stored in 1Password:
+
+- **Zone > Zone > Read**, to find the zone by name.
+- **Zone > DNS > Edit**, to read, create, update, and delete the managed records.
+
+Scope both permissions to the `carneloot.com` zone. Keep the account permissions
+required by the [Cloudflare state store](#cloudflare-state-store).
+The same token manages deployment state and DNS.
+
 ## GitHub Actions deployment
 
 The `Deploy` workflow deploys every push to `main` and can be run manually from
