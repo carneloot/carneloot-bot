@@ -21,6 +21,7 @@ import { GenericErrorMiddleware } from './middlewares/generic-error.middleware.j
 import { replyMiddleware } from './middlewares/reply.middleware.js';
 import { UserMiddleware } from './middlewares/user.middleware.js';
 import { AuthModule } from './modules/auth/auth-module.js';
+import { NotificationModule } from './modules/notification/notification.module.js';
 import { PetFoodModule } from './modules/pet-food/pet-food.module.js';
 import { PetModule } from './modules/pet/pet.module.js';
 
@@ -59,6 +60,7 @@ export const createBot = () => {
 	bot.use(AuthModule);
 	bot.use(PetModule);
 	bot.use(PetFoodModule);
+	bot.use(NotificationModule);
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(
