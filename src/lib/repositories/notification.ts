@@ -14,7 +14,7 @@ import {
 type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
-class NotificationNotFoundError extends Data.TaggedError(
+export class NotificationNotFoundError extends Data.TaggedError(
 	'NotificationNotFoundError',
 ) {}
 

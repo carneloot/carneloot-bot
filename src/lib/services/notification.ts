@@ -14,11 +14,15 @@ import {
 import type { Bot } from 'grammy';
 
 import type { NotifyParams } from '../../api/types/notify-params.js';
+import type { UpdateNotificationParams } from '../../api/types/update-notification-params.js';
 import { matchBotError } from '../../common/error.js';
 import type { Context } from '../../common/types/context.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
 import { getUserFromApiKey, type User } from '../../lib/entities/user.js';
-import { NotificationRepository } from '../repositories/notification.js';
+import {
+	NotificationNotFoundError,
+	NotificationRepository,
+} from '../repositories/notification.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
 	variables: string[];
@@ -68,6 +72,23 @@ interface SendNotificationAndLog {
 
 const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
+
+	const updateNotificationTemplate = Effect.fn(
+		'NotificationService.updateNotificationTemplate',
+	)(function* (params: UpdateNotificationParams) {
+		const user = yield* getUserFromApiKey(params.apiKey);
+		const { notification } =
+			yield* notificationRepository.getNotificationByOwnerAndKeyword(
+				user.id,
+				params.keyword,
+			);
+		const updated = yield* notificationRepository.updateNotification(
+			user.id,
+			notification.id,
+			params.message,
+		);
+		if (!updated) return yield* new NotificationNotFoundError();
+	});
 
 	const sendNotificationAndLog = Effect.fn(
 		'NotificationService.sendNotificationAndLog',
@@ -139,6 +160,7 @@ const makeNotificationService = Effect.gen(function* () {
 	);
 
 	return {
+		updateNotificationTemplate,
 		sendNotificationAndLog,
 		sendNotification,
 	} as const;
@@ -148,6 +170,9 @@ export class NotificationService extends EffectContext.Service<
 	NotificationService,
 	Effect.Success<typeof makeNotificationService>
 >()('app/NotificationService') {
+	declare readonly updateNotificationTemplate: Effect.Success<
+		typeof makeNotificationService
+	>['updateNotificationTemplate'];
 	declare readonly sendNotificationAndLog: Effect.Success<
 		typeof makeNotificationService
 	>['sendNotificationAndLog'];

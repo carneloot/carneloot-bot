@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 
+import { notificationsApi } from './api/notifications.js';
 import { NotifyParams } from './api/types/notify-params.js';
 import { createBot } from './bot.js';
 import { Env } from './common/env.js';
@@ -24,6 +25,8 @@ const app = new Hono();
 app.use(logger());
 
 const api = new Hono();
+
+api.route('/', notificationsApi);
 
 api.post('notify', sValidator('json', NotifyParams), (c) =>
 	Effect.gen(function* () {
