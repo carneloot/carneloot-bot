@@ -270,8 +270,9 @@ describe('grammY regression runner', () => {
 	});
 
 	it('lists only the current owner templates, including their full messages', async () => {
-		const message = '✅ {{project}}\n{{title}}';
+		const message = '🎉 {{project}}\n<b>{{title}}</b> & `details`';
 		await submitTemplate('claude_done', message);
+		await submitTemplate('deploy_🎉', 'Deploy concluído!');
 		await submitTemplate('secret', 'Other owner private message', 2);
 		const runner = createRunner();
 		await runner.dispatch(commandUpdate(300, '/listar_notificacoes'));
@@ -282,11 +283,92 @@ describe('grammY regression runner', () => {
 		).toEqual([
 			{
 				chat_id: 1,
-				text: 'Suas notificações, com a palavra-chave seguida da mensagem:',
+				text: `Suas notificações (2)\n\nclaude_done\n${message}\n\ndeploy_🎉\nDeploy concluído!`,
+				entities: [
+					{ type: 'bold', offset: 0, length: 21 },
+					{ type: 'code', offset: 23, length: 11 },
+					{ type: 'pre', offset: 35, length: message.length },
+					{ type: 'code', offset: 37 + message.length, length: 9 },
+					{ type: 'pre', offset: 47 + message.length, length: 17 },
+				],
+				link_preview_options: { is_disabled: true },
 			},
-			{ chat_id: 1, text: 'claude_done' },
-			{ chat_id: 1, text: message },
 		]);
+	});
+
+	it('keeps notification blocks together when the list exceeds the Telegram limit', async () => {
+		await submitTemplate('first', 'a'.repeat(2500));
+		const secondMessage = `${'b'.repeat(1000)}\n\n${'c'.repeat(998)}`;
+		await submitTemplate('second', secondMessage);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(301, '/listar_notificacoes'));
+		expect(
+			runner.calls
+				.filter((call) => call.method === 'sendMessage')
+				.map((call) => call.payload),
+		).toEqual([
+			{
+				chat_id: 1,
+				text: `Suas notificações (2)\n\nfirst\n${'a'.repeat(2500)}\n\n`,
+				entities: [
+					{ type: 'bold', offset: 0, length: 21 },
+					{ type: 'code', offset: 23, length: 5 },
+					{ type: 'pre', offset: 29, length: 2500 },
+				],
+				link_preview_options: { is_disabled: true },
+			},
+			{
+				chat_id: 1,
+				text: `second\n${secondMessage}`,
+				entities: [
+					{ type: 'code', offset: 0, length: 6 },
+					{ type: 'pre', offset: 7, length: 2000 },
+				],
+				link_preview_options: { is_disabled: true },
+			},
+		]);
+	});
+
+	it('preserves oversized templates and emoji when splitting messages', async () => {
+		const message = `${'a'.repeat(4089)}🎉${'b'.repeat(100)}`;
+		await submitTemplate('large', message);
+		const runner = createRunner();
+		await runner.dispatch(commandUpdate(302, '/listar_notificacoes'));
+		const replies = runner.calls
+			.filter((call) => call.method === 'sendMessage')
+			.map(
+				(call) =>
+					call.payload as {
+						text: string;
+						entities: { type: string; offset: number; length: number }[];
+					},
+			);
+		expect(replies.map((reply) => reply.text).join('')).toBe(
+			`Suas notificações (1)\n\nlarge\n${message}`,
+		);
+		expect(replies).toHaveLength(3);
+		for (const reply of replies) {
+			expect(reply.text.length).toBeLessThanOrEqual(4096);
+			expect(reply.text).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/u);
+			for (const entity of reply.entities) {
+				expect(entity.offset).toBeGreaterThanOrEqual(0);
+				expect(entity.length).toBeGreaterThan(0);
+				expect(entity.offset + entity.length).toBeLessThanOrEqual(
+					reply.text.length,
+				);
+			}
+		}
+		expect(
+			replies
+				.flatMap((reply) =>
+					reply.entities
+						.filter((entity) => entity.type === 'pre')
+						.map((entity) =>
+							reply.text.slice(entity.offset, entity.offset + entity.length),
+						),
+				)
+				.join(''),
+		).toBe(message);
 	});
 
 	it('edits the selected message, rejecting blank input without changing the keyword or another owner', async () => {
