@@ -14,8 +14,12 @@ import {
 
 import { NotificationSender } from '../../adapters/telegram/notification-sender.js';
 import type { NotifyParams } from '../../api/types/notify-params.js';
+import type { UpdateNotificationParams } from '../../api/types/update-notification-params.js';
 import type { NotificationID, PetID } from '../../lib/database/schema.js';
-import { NotificationRepository } from '../repositories/notification.js';
+import {
+	NotificationNotFoundError,
+	NotificationRepository,
+} from '../repositories/notification.js';
 import { type User, UserRepository } from '../repositories/user.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
@@ -74,6 +78,22 @@ export const makeNotificationService = Effect.gen(function* () {
 	const userRepository = yield* UserRepository;
 	const notificationSender = yield* NotificationSender;
 
+	const updateNotificationTemplate = Effect.fn(
+		'NotificationService.updateNotificationTemplate',
+	)(function* (user: User, params: UpdateNotificationParams) {
+		const { notification } =
+			yield* notificationRepository.getNotificationByOwnerAndKeyword(
+				user.id,
+				params.keyword,
+			);
+		const updated = yield* notificationRepository.updateNotification(
+			user.id,
+			notification.id,
+			params.message,
+		);
+		if (!updated) return yield* new NotificationNotFoundError();
+	});
+
 	const sendNotificationAndLog = Effect.fn(
 		'NotificationService.sendNotificationAndLog',
 	)(function* ({
@@ -96,7 +116,7 @@ export const makeNotificationService = Effect.gen(function* () {
 	});
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
-		function* (params: NotifyParams) {
+		function* (params: NotifyParams & { apiKey: string }) {
 			const user = yield* userRepository.getUserFromApiKey(params.apiKey);
 
 			const { notification, usersToNotify } =
@@ -149,6 +169,7 @@ export const makeNotificationService = Effect.gen(function* () {
 	);
 
 	return {
+		updateNotificationTemplate,
 		sendNotificationAndLog,
 		sendNotification,
 	} as const;
@@ -158,6 +179,9 @@ export class NotificationService extends EffectContext.Service<
 	NotificationService,
 	Effect.Success<typeof makeNotificationService>
 >()('app/NotificationService') {
+	declare readonly updateNotificationTemplate: Effect.Success<
+		typeof makeNotificationService
+	>['updateNotificationTemplate'];
 	declare readonly sendNotificationAndLog: Effect.Success<
 		typeof makeNotificationService
 	>['sendNotificationAndLog'];

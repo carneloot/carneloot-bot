@@ -3,7 +3,11 @@ import { Effect, Schema } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { AppServices } from '../../../app/layer.js';
-import type { Context, ConversationFn } from '../../../common/types/context.js';
+import type {
+	Context,
+	ConversationContext,
+	ConversationFn,
+} from '../../../common/types/context.js';
 import { getUserDisplay } from '../../../common/utils/get-user-display.js';
 import { showOptionsKeyboard } from '../../../common/utils/show-options-keyboard.js';
 import { showYesOrNoQuestion } from '../../../common/utils/show-yes-or-no-question.js';
@@ -33,13 +37,21 @@ const Null = Schema.Null;
 const userId = (user: Schema.Schema.Type<typeof UserDto>) =>
 	Number(user.telegramID);
 
-const getConversationUser = (
+const getConversationUser = async (
 	cvs: Parameters<ConversationFn>[0],
 	execute: Execute<AppServices>,
-) =>
-	conversationExternal(cvs, execute, UserDto, (context) =>
-		Effect.succeed(context.user!),
+	ctx: ConversationContext,
+) => {
+	const user = await conversationExternal(
+		cvs,
+		execute,
+		Schema.NullOr(UserDto),
+		(context) => Effect.succeed(context.user ?? null),
 	);
+	if (!user)
+		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
+	return user;
+};
 
 const getTextFromUser = async (
 	cvs: Parameters<ConversationFn>[0],
@@ -54,7 +66,8 @@ const getTextFromUser = async (
 
 export const createPetConversations = (execute: Execute<AppServices>) => {
 	const addPetConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 
 		await ctx.reply('Qual o nome do seu pet?');
 		const petName = await getTextFromUser(
@@ -70,7 +83,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const deletePetConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -95,7 +109,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const addCarerConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -170,7 +185,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const listCarersConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -210,7 +226,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const removeCarerConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -265,7 +282,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const petInvitesConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const invites = await conversationExternal(
 			cvs,
 			execute,
@@ -309,7 +327,8 @@ export const createPetConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const stopCaringConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,

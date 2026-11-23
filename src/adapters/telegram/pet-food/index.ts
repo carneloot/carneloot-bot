@@ -69,17 +69,26 @@ const requireUser = async (ctx: Context) => {
 	return user;
 };
 
-const getConversationUser = (
+const getConversationUser = async (
 	cvs: Parameters<ConversationFn>[0],
 	execute: Execute<AppServices>,
-) =>
-	conversationExternal(cvs, execute, UserDto, (context) =>
-		Effect.succeed(context.user!),
+	ctx: ConversationContext,
+) => {
+	const user = await conversationExternal(
+		cvs,
+		execute,
+		Schema.NullOr(UserDto),
+		(context) => Effect.succeed(context.user ?? null),
 	);
+	if (!user)
+		await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
+	return user;
+};
 
 export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 	const setDayStartConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -133,7 +142,8 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const setNotificationDelayConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,
@@ -267,7 +277,8 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 	};
 
 	const deleteFoodConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const selection = await getFoodSelection(cvs, ctx, user);
 		if (!selection) return;
 		if (!selection.foods.length)
@@ -289,7 +300,8 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const correctFoodConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const selection = await getFoodSelection(cvs, ctx, user);
 		if (!selection) return;
 		if (!selection.foods.length)
@@ -340,7 +352,8 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 	}) satisfies ConversationFn;
 
 	const addFoodConversation = (async (cvs, ctx) => {
-		const user = await getConversationUser(cvs, execute);
+		const user = await getConversationUser(cvs, execute, ctx);
+		if (!user) return;
 		const pets = await conversationExternal(
 			cvs,
 			execute,

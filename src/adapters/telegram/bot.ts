@@ -28,6 +28,7 @@ import { createWhatsCommand } from './commands/whats.js';
 import type { ConversationStorage } from './conversation-storage.js';
 import { installGrammyDebugLogger } from './debug.js';
 import { createListPetsCommand } from './list-pets.js';
+import { createNotificationModule } from './notifications/index.js';
 import { createAddFoodAllCommand } from './pet-food/add-food-all.js';
 import { createFoodStatusCommand } from './pet-food/food-status.js';
 import {
@@ -203,6 +204,7 @@ export const createBot = (
 		createAddFoodAllCommand(execute),
 	);
 	bot.use(petFoodModule);
+	bot.use(createNotificationModule(execute, userMiddleware));
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(
@@ -284,7 +286,8 @@ export const createBot = (
 				...Module.getCommandList(),
 			];
 
-			await bot.api.setMyCommands(commands, { language_code: 'pt' });
+			await bot.api.setMyCommands(commands);
+			await bot.api.deleteMyCommands({ language_code: 'pt' });
 		},
 	};
 };

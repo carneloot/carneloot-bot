@@ -5,7 +5,10 @@ import { Hono } from 'hono';
 import { serveStatic } from 'hono/bun';
 import { logger } from 'hono/logger';
 
+import { type AuthVariables, createApiKeyAuth } from '../../api/auth.js';
+import { createNotificationsApi } from '../../api/notifications.js';
 import { NotifyParams } from '../../api/types/notify-params.js';
+import { validationErrorHook } from '../../api/validation-error.js';
 import type { AppServices } from '../../app/layer.js';
 import { Env } from '../../common/env.js';
 import { NotificationService } from '../../lib/services/notification.js';
@@ -21,7 +24,7 @@ export const createHttpApp = (
 	readiness: Readiness,
 ) => {
 	const app = new Hono();
-	const api = new Hono();
+	const api = new Hono<AuthVariables>();
 	const handleWebhook = webhookCallback(telegramBot.bot, 'hono');
 
 	app.use(logger());
@@ -33,65 +36,75 @@ export const createHttpApp = (
 		),
 	);
 
-	api.post('notify', sValidator('json', NotifyParams), (context) =>
-		execute(
-			Effect.gen(function* () {
-				const body = context.req.valid('json');
-				const notificationService = yield* NotificationService;
+	api.route('/', createNotificationsApi(execute));
 
-				return yield* notificationService.sendNotification(body).pipe(
-					Effect.map((outcome) =>
-						outcome.failed === 0
-							? context.json({ message: 'Notification sent successfully!' })
-							: context.json(
-									{
-										message: 'Notification partially delivered',
-										delivered: outcome.delivered,
-										failed: outcome.failed,
-									},
-									207,
-								),
-					),
-					Effect.catchTags({
-						NotificationDeliveryError: (error) =>
-							Effect.succeed(
-								context.json(
-									{
-										message: 'Notification delivery failed',
-										failed: error.attempted,
-									},
-									502,
-								),
+	api.post(
+		'notify',
+		createApiKeyAuth(execute),
+		sValidator('json', NotifyParams, validationErrorHook),
+		(context) =>
+			execute(
+				Effect.gen(function* () {
+					const body = context.req.valid('json');
+					const notificationService = yield* NotificationService;
+
+					return yield* notificationService
+						.sendNotification({ ...body, apiKey: context.get('apiKey') })
+						.pipe(
+							Effect.map((outcome) =>
+								outcome.failed === 0
+									? context.json({ message: 'Notification sent successfully!' })
+									: context.json(
+											{
+												message: 'Notification partially delivered',
+												delivered: outcome.delivered,
+												failed: outcome.failed,
+											},
+											207,
+										),
 							),
-						UserNotFoundError: () =>
-							Effect.succeed(
-								context.json({ message: 'User not found for apiKey' }, 404),
-							),
-						MissingVariablesError: (error) =>
-							Effect.succeed(
-								context.json(
-									{
-										message: 'Missing used variables',
-										variables: error.variables,
-									},
-									422,
-								),
-							),
-						NotificationNotFoundError: () =>
-							Effect.succeed(
-								context.json(
-									{
-										message: 'Notification not found for user and keyword',
-									},
-									404,
-								),
-							),
-						DatabaseError: () =>
-							Effect.succeed(context.json({ message: 'Database error' }, 500)),
-					}),
-				);
-			}).pipe(Effect.withSpan('/api/post/notify')),
-		),
+							Effect.catchTags({
+								NotificationDeliveryError: (error) =>
+									Effect.succeed(
+										context.json(
+											{
+												message: 'Notification delivery failed',
+												failed: error.attempted,
+											},
+											502,
+										),
+									),
+								UserNotFoundError: () =>
+									Effect.succeed(
+										context.json({ message: 'User not found for apiKey' }, 404),
+									),
+								MissingVariablesError: (error) =>
+									Effect.succeed(
+										context.json(
+											{
+												message: 'Missing used variables',
+												variables: error.variables,
+											},
+											422,
+										),
+									),
+								NotificationNotFoundError: () =>
+									Effect.succeed(
+										context.json(
+											{
+												message: 'Notification not found for user and keyword',
+											},
+											404,
+										),
+									),
+								DatabaseError: () =>
+									Effect.succeed(
+										context.json({ message: 'Database error' }, 500),
+									),
+							}),
+						);
+				}).pipe(Effect.withSpan('/api/post/notify')),
+			),
 	);
 
 	if (Env.RUN_MODE === 'webhook') {

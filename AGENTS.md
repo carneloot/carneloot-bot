@@ -22,7 +22,7 @@ conventions below when making changes.
 
 ## Run a single test
 
-- By file: `bun run test -- src/common/utils/get-relative-time.test.ts`.
+- By file: `bun run test -- tests/common/utils/get-relative-time.test.ts`.
 - By name: `bun run test -- -t "parse pet food"`.
 - Watch mode: `bun run test -- --watch`.
 
@@ -112,7 +112,8 @@ import { runtime } from '../runtime.js';
 
 ## Testing patterns
 
-- Tests live alongside utils under `src/**` with `.test.ts` suffix.
+- Tests live under the root `tests/` directory with `.test.ts` suffix,
+  mirroring the source directory structure.
 - Use `@effect/vitest` when tests are effectful.
 - Keep tests deterministic; TZ is forced to UTC.
 
