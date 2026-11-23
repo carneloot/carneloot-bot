@@ -8,4 +8,13 @@ describe('parseMessageForMarkdown', () => {
 			'Ração\\_\\(manhã\\)\\|1\\.5g',
 		);
 	});
+
+	it('escapes all reserved characters, including existing backslashes', () => {
+		expect(parseMessageForMarkdown('_*[]()~`>#+-=|{}.!\\')).toBe(
+			'\\_\\*\\[\\]\\(\\)\\~\\`\\>\\#\\+\\-\\=\\|\\{\\}\\.\\!\\\\',
+		);
+		expect(parseMessageForMarkdown('palavra-chave \\*')).toBe(
+			'palavra\\-chave \\\\\\*',
+		);
+	});
 });

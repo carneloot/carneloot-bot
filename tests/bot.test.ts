@@ -476,6 +476,13 @@ describe('grammY regression runner', () => {
 		await runner.dispatch(commandUpdate(340, '/deletar_notificacao'));
 		await runner.dispatch(callbackUpdate(341, 'values-0'));
 		await runner.dispatch(callbackUpdate(342, 'values-0'));
+		expect(runner.calls).toContainEqual({
+			method: 'editMessageText',
+			payload: expect.objectContaining({
+				text: 'Deletar a notificação claude\\_done? Seus destinatários e histórico também serão removidos\\. Chamadas da API com essa palavra\\-chave deixarão de funcionar\\.\n>>Sim',
+				parse_mode: 'MarkdownV2',
+			}),
+		});
 		await expect(getNotification(1, 'claude_done')).rejects.toMatchObject({
 			_tag: 'NotificationNotFoundError',
 		});
