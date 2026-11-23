@@ -88,9 +88,6 @@ const botInfo = {
 	can_connect_to_business: false,
 	has_main_web_app: false,
 	has_topics_enabled: false,
-	allows_users_to_create_topics: false,
-	can_manage_bots: false,
-	supports_join_request_queries: false,
 } satisfies UserFromGetMe;
 
 const commandUpdate = (updateId: number, text: string) =>
@@ -206,6 +203,39 @@ describe('grammY regression runner', () => {
 		}
 		return runner;
 	};
+
+	it('publishes only the default menu and removes the Portuguese override', async () => {
+		const { bot, setCommands } = createBot();
+		const runner = createGrammyRunner(bot);
+
+		await setCommands();
+
+		expect(runner.calls).toEqual([
+			{
+				method: 'setMyCommands',
+				payload: {
+					commands: expect.arrayContaining(
+						[
+							'ping',
+							'criar_notificacao',
+							'listar_notificacoes',
+							'editar_notificacao',
+							'deletar_notificacao',
+						].map((command) =>
+							expect.objectContaining({
+								command,
+								description: expect.any(String),
+							}),
+						),
+					),
+				},
+			},
+			{
+				method: 'deleteMyCommands',
+				payload: { language_code: 'pt' },
+			},
+		]);
+	});
 
 	it.each([
 		'/criar_notificacao',

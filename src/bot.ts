@@ -108,7 +108,8 @@ export const createBot = () => {
 				...Module.getCommandList(),
 			];
 
-			await bot.api.setMyCommands(commands, { language_code: 'pt' });
+			await bot.api.setMyCommands(commands);
+			await bot.api.deleteMyCommands({ language_code: 'pt' });
 		},
 	};
 };
