@@ -1,0 +1,114 @@
+import { fromUnixTime } from 'date-fns';
+import { Array, DateTime, Effect, Option, pipe } from 'effect';
+import Qty from 'js-quantities';
+import invariant from 'tiny-invariant';
+
+import type { AppServices } from '../../../app/layer.js';
+import type { Context } from '../../../common/types/context.js';
+import { getDailyFromTo } from '../../../common/utils/get-daily-from-to.js';
+import { getRelativeTime } from '../../../common/utils/get-relative-time.js';
+import { ConfigService } from '../../../lib/entities/config.js';
+import { PetFoodRepository } from '../../../lib/repositories/pet-food.js';
+import { type Pet, PetRepository } from '../../../lib/repositories/pet.js';
+import type { Execute } from '../../execute.js';
+
+const getPetMessage = Effect.fn('getPetMessage')(function* (
+	pet: Pick<Pet, 'id' | 'name'>,
+	now: DateTime.DateTime,
+) {
+	const petFoodRepository = yield* PetFoodRepository;
+	const config = yield* ConfigService;
+
+	const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
+
+	yield* Effect.annotateCurrentSpan('pet', pet.id);
+
+	const { from, to } = getDailyFromTo(now, dayStart);
+
+	const dailyFoodConsumption = yield* petFoodRepository.getDailyFoodConsumption(
+		{
+			petID: pet.id,
+			from,
+			to,
+		},
+	);
+
+	const qty = pipe(
+		dailyFoodConsumption,
+		Option.map((v) => v.total),
+		Option.getOrElse(() => 0),
+		(quantity) => Qty(quantity, 'g'),
+	);
+
+	const timeSinceLast = pipe(
+		dailyFoodConsumption,
+		Option.map((v) => fromUnixTime(v.lastTime)),
+		Option.map((v) =>
+			getRelativeTime(v, DateTime.toDate(now), {
+				units: ['years', 'months', 'weeks', 'days', 'hours', 'minutes'],
+			}),
+		),
+		Option.map((v) => (v.length === 0 ? 'menos de um minuto' : v)),
+	);
+
+	return pipe(
+		[
+			Option.some(`\\- ${pet.name}: ${qty}`),
+			Option.map(timeSinceLast, (v) => `última vez há ${v}`),
+		],
+		Array.getSomes,
+		Array.join(' '),
+	);
+});
+
+export const createFoodStatusCommand =
+	(execute: Execute<AppServices>) => (ctx: Context) =>
+		Effect.gen(function* () {
+			const user = ctx.user;
+
+			if (!user) {
+				yield* Effect.tryPromise(() =>
+					ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar'),
+				);
+				return;
+			}
+
+			invariant(ctx.message, 'Message object not found.');
+
+			const now = DateTime.makeUnsafe(ctx.message.date * 1000);
+			const petRepository = yield* PetRepository;
+
+			const allPets = yield* Effect.all(
+				[
+					petRepository.getUserOwnedPets(user.id),
+					petRepository.getUserCaredPets(user.id),
+				],
+				{ concurrency: 'unbounded' },
+			).pipe(Effect.map(Array.flatten));
+
+			const petMessages = yield* Effect.forEach(
+				allPets,
+				(pet) =>
+					getPetMessage(pet, now).pipe(
+						Effect.asSome,
+						Effect.catchTag('MissingConfigError', () =>
+							Effect.tryPromise(() =>
+								ctx.reply(
+									`Você não configurou o inicio do dia para o pet ${pet.name}.`,
+								),
+							).pipe(
+								Effect.withSpan('ctx.reply'),
+								Effect.ignore({ log: 'Unhandled' }),
+								Effect.andThen(() => Effect.succeed(Option.none())),
+							),
+						),
+					),
+				{ concurrency: 'unbounded' },
+			);
+
+			yield* Effect.tryPromise(() =>
+				ctx.reply(Array.getSomes(petMessages).join('\n'), {
+					parse_mode: 'MarkdownV2',
+				}),
+			).pipe(Effect.withSpan('ctx.reply'));
+		}).pipe(Effect.withSpan('FoodStatusCommand'), execute);

@@ -29,6 +29,7 @@ export default Alchemy.Stack(
 			context: '.',
 			dockerfilePath: 'Dockerfile',
 			port: 3000,
+			healthcheck: '/api/readyz',
 			env: {
 				...config.environment,
 				DATABASE_URL: 'file:/data/carneloot.db',
@@ -40,23 +41,11 @@ export default Alchemy.Stack(
 			service: bot,
 			mountPath: '/data',
 		});
-		const domain = yield* Railway.CustomDomain('BotDomain', {
-			service: bot,
-			environment: project,
-			domain: 'bot.carneloot.com',
-			targetPort: 3000,
-		});
-		yield* Cloudflare.DNS.RecordList('BotDomainDns', {
-			zone: 'carneloot.com',
-			records: domain.dnsRecords,
-		});
 
 		return {
 			projectUrl: project.url,
 			serviceUrl: bot.url,
 			volumeId: database.volumeId,
-			customDomainUrl: domain.url,
-			customDomainDnsRecords: domain.dnsRecords,
 		};
 	}).pipe(Effect.provide(RailwayEnvironment.layer)),
 );

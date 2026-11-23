@@ -1,2 +1,7 @@
 export const parseMessageForMarkdown = (message: string) =>
-	message.replaceAll(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+	message
+		.replaceAll('.', '\\.')
+		.replaceAll('|', '\\|')
+		.replaceAll('(', '\\(')
+		.replaceAll(')', '\\)')
+		.replaceAll('_', '\\_');

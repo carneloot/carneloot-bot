@@ -10,6 +10,7 @@ import {
 	type LibSQLTransaction,
 } from 'drizzle-orm/libsql';
 import {
+	Cause,
 	Context,
 	Data,
 	Effect,
@@ -27,10 +28,14 @@ type Client = LibSQLDatabase<typeof DbSchema> & {
 	$client: LibSQLClient;
 };
 
-type TransactionClient = LibSQLTransaction<
+export type TransactionClient = LibSQLTransaction<
 	typeof DbSchema,
 	ExtractTablesWithRelations<typeof DbSchema>
 >;
+
+export type Transaction = <T>(
+	fn: (client: TransactionClient) => Promise<T>,
+) => Effect.Effect<T, DatabaseError>;
 
 export class DatabaseError extends Data.TaggedError('DatabaseError')<{
 	cause: LibsqlError;
@@ -51,6 +56,10 @@ const matchError = (cause: unknown) => {
 
 	return null;
 };
+
+class TransactionFailure<E> {
+	public constructor(public readonly cause: Cause.Cause<E>) {}
+}
 
 const makeService = Effect.gen(function* () {
 	const client = yield* Effect.acquireRelease(
@@ -100,46 +109,48 @@ const makeService = Effect.gen(function* () {
 	);
 
 	const transaction = Effect.fn('Database.transaction')(
-		<T, E, R>(
-			execute: (
-				tx: <U>(
-					fn: (client: TransactionClient) => Promise<U>,
-				) => Effect.Effect<U, DatabaseError>,
-			) => Effect.Effect<T, E, R>,
-		) =>
+		<T, E, R>(execute: (tx: Transaction) => Effect.Effect<T, E, R>) =>
 			Effect.context<R>().pipe(
 				Effect.flatMap((context) =>
-					Effect.callback<T, E>((resume) => {
-						void db
-							.transaction(async (tx) => {
-								const txWrapper = <U>(
-									fn: (client: TransactionClient) => Promise<U>,
-								) =>
-									Effect.tryPromise({
-										try: () => fn(tx),
-										catch: (cause) => {
-											const error = matchError(cause);
-											if (Predicate.isNotNull(error)) {
-												return error;
-											}
-											throw cause;
-										},
-									});
-
-								const result = await Effect.runPromiseExitWith(context)(
-									execute(txWrapper),
-								);
-
-								Exit.match(result, {
-									onSuccess: (value) => {
-										resume(Effect.succeed(value));
-									},
-									onFailure: (cause) => {
-										resume(Effect.failCause(cause));
+					Effect.callback<T, E>((resume, signal) => {
+						const transaction = db.transaction(async (tx) => {
+							const txWrapper = <U>(
+								fn: (client: TransactionClient) => Promise<U>,
+							) =>
+								Effect.tryPromise({
+									try: () => fn(tx),
+									catch: (cause) => {
+										const error = matchError(cause);
+										if (Predicate.isNotNull(error)) {
+											return error;
+										}
+										throw cause;
 									},
 								});
-							})
-							.catch((cause) => resume(Effect.die(cause)));
+
+							const result = await Effect.runPromiseExitWith(context)(
+								execute(txWrapper),
+								{ signal },
+							);
+
+							return Exit.match(result, {
+								onSuccess: (value) => value,
+								onFailure: (cause) =>
+									Promise.reject(new TransactionFailure(cause)),
+							});
+						});
+
+						const completion = transaction.then(
+							(value) => resume(Effect.succeed(value)),
+							(cause) =>
+								resume(
+									cause instanceof TransactionFailure
+										? Effect.failCause(cause.cause)
+										: Effect.die(cause),
+								),
+						);
+
+						return Effect.promise(() => completion);
 					}),
 				),
 			),
@@ -163,10 +174,18 @@ const makeService = Effect.gen(function* () {
 		};
 	};
 
+	const checkHealth = Effect.fn('Database.checkHealth')(() =>
+		Effect.tryPromise({
+			try: () => client.execute('SELECT 1'),
+			catch: (cause) => matchError(cause) ?? cause,
+		}).pipe(Effect.asVoid, Effect.withSpan('database.health')),
+	);
+
 	return {
 		execute,
 		transaction,
 		makeQuery,
+		checkHealth,
 	} as const;
 });
 
@@ -175,10 +194,3 @@ type Shape = Effect.Success<typeof makeService>;
 export class Database extends Context.Service<Database, Shape>()('Database') {}
 
 export const layer = Layer.effect(Database, makeService);
-
-const oldClient = createClient({
-	url: Env.DATABASE_URL,
-	authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value),
-});
-
-export const db = drizzle(oldClient, { schema: DbSchema });

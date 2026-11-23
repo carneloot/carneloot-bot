@@ -14,7 +14,7 @@ import {
 type Notification = typeof notificationsTable.$inferSelect;
 type NotificationHistory = typeof notificationHistoryTable.$inferSelect;
 
-export class NotificationNotFoundError extends Data.TaggedError(
+class NotificationNotFoundError extends Data.TaggedError(
 	'NotificationNotFoundError',
 ) {}
 
@@ -27,98 +27,6 @@ type CreateNotificationHistory = {
 
 const makeNotificationRepository = Effect.gen(function* () {
 	const db = yield* Database.Database;
-
-	const createNotification = Effect.fn(
-		'NotificationRepository.createNotification',
-	)(function* (
-		ownerID: Notification['ownerID'],
-		keyword: Notification['keyword'],
-		message: Notification['message'],
-	) {
-		const result = yield* db.execute((client) =>
-			client
-				.insert(notificationsTable)
-				.values({
-					id: createId() as Notification['id'],
-					ownerID,
-					keyword,
-					message,
-				})
-				.onConflictDoNothing({
-					target: [notificationsTable.keyword, notificationsTable.ownerID],
-				})
-				.returning({ id: notificationsTable.id })
-				.get(),
-		);
-
-		return result !== undefined;
-	});
-
-	const getNotificationsByOwner = Effect.fn(
-		'NotificationRepository.getNotificationsByOwner',
-	)(function* (ownerID: Notification['ownerID']) {
-		return yield* db.execute((client) =>
-			client
-				.select()
-				.from(notificationsTable)
-				.where(eq(notificationsTable.ownerID, ownerID))
-				.orderBy(notificationsTable.keyword)
-				.all(),
-		);
-	});
-
-	const updateNotification = Effect.fn(
-		'NotificationRepository.updateNotification',
-	)(function* (
-		ownerID: Notification['ownerID'],
-		id: Notification['id'],
-		message: string,
-	) {
-		const result = yield* db.execute((client) =>
-			client
-				.update(notificationsTable)
-				.set({ message })
-				.where(
-					and(
-						eq(notificationsTable.ownerID, ownerID),
-						eq(notificationsTable.id, id),
-					),
-				)
-				.returning({ id: notificationsTable.id })
-				.get(),
-		);
-		return result !== undefined;
-	});
-
-	const deleteNotification = Effect.fn(
-		'NotificationRepository.deleteNotification',
-	)(function* (ownerID: Notification['ownerID'], id: Notification['id']) {
-		return yield* db.execute((client) =>
-			client.transaction(async (tx) => {
-				const where = and(
-					eq(notificationsTable.ownerID, ownerID),
-					eq(notificationsTable.id, id),
-				);
-				const notification = await tx
-					.select({ id: notificationsTable.id })
-					.from(notificationsTable)
-					.where(where)
-					.get();
-				if (!notification) return false;
-
-				await tx
-					.delete(notificationHistoryTable)
-					.where(eq(notificationHistoryTable.notificationID, id))
-					.run();
-				await tx
-					.delete(usersToNotifyTable)
-					.where(eq(usersToNotifyTable.notificationID, id))
-					.run();
-				await tx.delete(notificationsTable).where(where).run();
-				return true;
-			}),
-		);
-	});
 
 	const getNotificationByOwnerAndKeyword = Effect.fn(
 		'NotificationRepository.getNotificationByOwnerAndKeyword',
@@ -242,10 +150,6 @@ const makeNotificationRepository = Effect.gen(function* () {
 	});
 
 	return {
-		createNotification,
-		getNotificationsByOwner,
-		updateNotification,
-		deleteNotification,
 		getNotificationByOwnerAndKeyword,
 		getNotificationFromHistory,
 		createNotificationHistory,
@@ -256,18 +160,6 @@ export class NotificationRepository extends Context.Service<
 	NotificationRepository,
 	Effect.Success<typeof makeNotificationRepository>
 >()('app/NotificationRepository') {
-	declare readonly getNotificationsByOwner: Effect.Success<
-		typeof makeNotificationRepository
-	>['getNotificationsByOwner'];
-	declare readonly updateNotification: Effect.Success<
-		typeof makeNotificationRepository
-	>['updateNotification'];
-	declare readonly deleteNotification: Effect.Success<
-		typeof makeNotificationRepository
-	>['deleteNotification'];
-	declare readonly createNotification: Effect.Success<
-		typeof makeNotificationRepository
-	>['createNotification'];
 	declare readonly getNotificationByOwnerAndKeyword: Effect.Success<
 		typeof makeNotificationRepository
 	>['getNotificationByOwnerAndKeyword'];
@@ -278,7 +170,5 @@ export class NotificationRepository extends Context.Service<
 		typeof makeNotificationRepository
 	>['createNotificationHistory'];
 
-	static readonly layer = Layer.effect(this, makeNotificationRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeNotificationRepository);
 }
