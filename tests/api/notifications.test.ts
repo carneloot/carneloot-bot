@@ -1,6 +1,5 @@
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { Hono } from 'hono';
-import { mkdirSync, rmSync } from 'node:fs';
 import {
 	afterAll,
 	beforeAll,
@@ -11,14 +10,11 @@ import {
 	vi,
 } from 'vitest';
 
-const databasePath = vi.hoisted(() => {
-	const path = `.amp/in/orb-backup/notifications-${process.pid}-${Date.now()}.db`;
+vi.hoisted(() => {
 	process.env.BOT_TOKEN = 'test-token';
-	// LibSQL opens a fresh connection after a transaction. An in-memory database
-	// would lose its schema, so transaction regression tests need a file database.
-	process.env.DATABASE_URL = `file:${path}`;
+	// Share the in-memory database across LibSQL transaction connections.
+	process.env.DATABASE_URL = 'file::memory:?cache=shared';
 	process.env.REDIS_URL = 'redis://localhost:6379';
-	return path;
 });
 
 import type { Execute } from '../../src/adapters/execute.js';
@@ -87,7 +83,6 @@ const getTemplate = (owner = 'owner-1', keyword = 'claude_done') =>
 
 describe('/api/notifications', () => {
 	beforeAll(async () => {
-		mkdirSync('.amp/in/orb-backup', { recursive: true });
 		await runtime.runPromise(
 			Effect.gen(function* () {
 				const db = yield* Database;
@@ -119,7 +114,6 @@ describe('/api/notifications', () => {
 	});
 	afterAll(async () => {
 		await runtime.dispose();
-		rmSync(databasePath, { force: true });
 	});
 	beforeEach(async () => {
 		await runtime.runPromise(

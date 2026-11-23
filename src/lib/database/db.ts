@@ -19,6 +19,7 @@ import {
 	Predicate,
 	Redacted,
 	Schedule,
+	Semaphore,
 } from 'effect';
 
 import { Env } from '../../common/env.js';
@@ -93,6 +94,9 @@ const makeService = Effect.gen(function* () {
 	);
 
 	const db = drizzle(client, { schema: DbSchema });
+	// LibSQL opens a separate connection for a transaction. Keep other queries
+	// off the shared database until commit or rollback has completed.
+	const access = Semaphore.makeUnsafe(1);
 
 	const execute = Effect.fn('Database.execute')(
 		<T>(fn: (client: typeof db) => Promise<T>) =>
@@ -105,7 +109,7 @@ const makeService = Effect.gen(function* () {
 					}
 					throw cause;
 				},
-			}),
+			}).pipe(access.withPermit),
 	);
 
 	const transaction = Effect.fn('Database.transaction')(
@@ -153,6 +157,7 @@ const makeService = Effect.gen(function* () {
 						return Effect.promise(() => completion);
 					}),
 				),
+				access.withPermit,
 			),
 	);
 
@@ -178,7 +183,11 @@ const makeService = Effect.gen(function* () {
 		Effect.tryPromise({
 			try: () => client.execute('SELECT 1'),
 			catch: (cause) => matchError(cause) ?? cause,
-		}).pipe(Effect.asVoid, Effect.withSpan('database.health')),
+		}).pipe(
+			access.withPermit,
+			Effect.asVoid,
+			Effect.withSpan('database.health'),
+		),
 	);
 
 	return {
