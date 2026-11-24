@@ -1,16 +1,19 @@
 import { run } from '@grammyjs/runner';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 
-import type { TelegramBot } from './bot.js';
+import { TelegramBot } from './bot.js';
 
-export const startPolling = (telegramBot: TelegramBot) =>
+export const TelegramPollingLive = Layer.effectDiscard(
 	Effect.gen(function* () {
+		const telegramBot = yield* TelegramBot;
 		yield* Effect.tryPromise(() => telegramBot.setCommands());
 		yield* Effect.tryPromise(() =>
 			telegramBot.bot.api.deleteWebhook({ drop_pending_updates: true }),
 		);
 
-		const handle = run(telegramBot.bot);
-
-		yield* Effect.addFinalizer(() => Effect.promise(() => handle.stop()));
-	});
+		yield* Effect.acquireRelease(
+			Effect.sync(() => run(telegramBot.bot)),
+			(handle) => Effect.promise(() => handle.stop()),
+		);
+	}),
+);

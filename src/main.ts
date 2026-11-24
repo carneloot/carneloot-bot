@@ -1,13 +1,13 @@
 import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
-import { Effect, FiberSet, Layer } from 'effect';
+import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/http';
 
 import { HttpLive } from './adapters/http/server.js';
 import { PetFoodNotificationQueue } from './adapters/queue/pet-food-notification.js';
-import { createBot, TelegramBot } from './adapters/telegram/bot.js';
+import { TelegramBot } from './adapters/telegram/bot.js';
 import { ConversationPersistence } from './adapters/telegram/conversation-storage.js';
-import { startPolling } from './adapters/telegram/polling.js';
-import { type AppServices, runtime } from './app/layer.js';
+import { TelegramPollingLive } from './adapters/telegram/polling.js';
+import { runtime } from './app/layer.js';
 import { Env } from './common/env.js';
 import { Database } from './lib/database/db.js';
 import { syncDatabaseSchema } from './lib/database/sync-schema.js';
@@ -29,9 +29,8 @@ const app = Effect.scoped(
 	Effect.gen(function* () {
 		yield* Effect.scoped(syncDatabaseSchema());
 
-		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
 		const conversationPersistence = yield* ConversationPersistence;
-		const telegramBot = createBot(execute, conversationPersistence.storage);
+		const telegramBot = yield* TelegramBot;
 		const database = yield* Database;
 		const notificationQueue = yield* PetFoodNotificationQueue;
 		const petFoodService = yield* PetFoodService;
@@ -52,12 +51,11 @@ const app = Effect.scoped(
 		yield* Layer.build(
 			HttpRouter.serve(HttpLive).pipe(
 				Layer.provide(BunHttpServer.layer({ port: Env.PORT })),
-				Layer.provide(Layer.succeed(TelegramBot, telegramBot)),
 			),
 		);
 
 		if (Env.RUN_MODE === 'polling') {
-			yield* startPolling(telegramBot);
+			yield* Layer.build(TelegramPollingLive);
 		}
 
 		yield* waitForShutdown;

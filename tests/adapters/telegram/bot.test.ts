@@ -1,3 +1,4 @@
+import debug from 'debug';
 import { Effect, Layer, ManagedRuntime, Option, Schema } from 'effect';
 import type { Update, UserFromGetMe } from 'grammy/types';
 import {
@@ -13,14 +14,25 @@ import {
 } from 'vitest';
 
 import type { Execute } from '../../../src/adapters/execute.js';
+import { PetFoodNotificationQueue } from '../../../src/adapters/queue/pet-food-notification.js';
 import type { ConversationStorage } from '../../../src/adapters/telegram/conversation-storage.js';
+import { ConversationPersistenceLive } from '../../../src/adapters/telegram/conversation-storage.js';
+import { NotificationSender } from '../../../src/adapters/telegram/notification-sender.js';
 import type { AppServices } from '../../../src/app/layer.js';
 import {
 	Database,
 	layer as databaseLayer,
 } from '../../../src/lib/database/db.js';
+import { ConfigService } from '../../../src/lib/entities/config.js';
+import { NotificationRepository } from '../../../src/lib/repositories/notification.js';
+import { PetFoodSchedulingOutboxRepository } from '../../../src/lib/repositories/pet-food-scheduling-outbox.js';
+import { PetFoodRepository } from '../../../src/lib/repositories/pet-food.js';
+import { PetRepository } from '../../../src/lib/repositories/pet.js';
 import { UserRepository } from '../../../src/lib/repositories/user.js';
+import { NotificationService } from '../../../src/lib/services/notification.js';
+import { PetFoodService } from '../../../src/lib/services/pet-food.js';
 import { createGrammyRunner } from '../../support/grammy-runner.js';
+import { createTestRedis } from '../../support/test-redis.js';
 
 vi.hoisted(() => {
 	process.env.BOT_TOKEN = 'test-token';
@@ -28,7 +40,11 @@ vi.hoisted(() => {
 	process.env.REDIS_URL = 'redis://localhost:6379';
 });
 
-import { createBot } from '../../../src/adapters/telegram/bot.js';
+import {
+	createBot,
+	TelegramBot,
+	TelegramBotLive,
+} from '../../../src/adapters/telegram/bot.js';
 
 const runtime = ManagedRuntime.make(
 	UserRepository.layer.pipe(Layer.provideMerge(databaseLayer)),
@@ -179,6 +195,47 @@ describe('registered bot command regressions', () => {
 			},
 			{ method: 'deleteMyCommands', payload: { language_code: 'pt' } },
 		]);
+	});
+
+	it('builds a scoped bot without a delivery mode and captures its application services', async () => {
+		const originalLog = debug.log;
+		const originalFormatArgs = debug.formatArgs;
+		const dependencies = Layer.mergeAll(
+			ConversationPersistenceLive.pipe(
+				Layer.provideMerge(createTestRedis().layer),
+			),
+			Layer.mock(PetFoodNotificationQueue, {}),
+			Layer.mock(NotificationSender, {}),
+			Layer.mock(NotificationService, {}),
+			Layer.mock(NotificationRepository, {}),
+			Layer.mock(PetRepository, {}),
+			Layer.mock(PetFoodRepository, {}),
+			Layer.mock(PetFoodSchedulingOutboxRepository, {}),
+			Layer.mock(PetFoodService, {}),
+			Layer.mock(ConfigService, {}),
+		);
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const telegram = yield* TelegramBot;
+				telegram.bot.botInfo = botInfo;
+				const runner = createGrammyRunner(telegram.bot);
+				expect(telegram.bot.isRunning()).toBe(false);
+				expect(runner.calls).toEqual([]);
+				yield* Effect.promise(() =>
+					runner.dispatch(commandUpdate(1, '/cadastrar')),
+				);
+				const users = yield* UserRepository;
+				expect(Option.isSome(yield* users.getUserByTelegramID(1))).toBe(true);
+				expect(runner.calls).toContainEqual({
+					method: 'sendMessage',
+					payload: { chat_id: 1, text: 'Usuário cadastrado com sucesso!' },
+				});
+			}).pipe(
+				Effect.provide(TelegramBotLive.pipe(Layer.provide(dependencies))),
+			),
+		);
+		expect(debug.log).toBe(originalLog);
+		expect(debug.formatArgs).toBe(originalFormatArgs);
 	});
 
 	it.each(['Yes', 'No'] as const)(

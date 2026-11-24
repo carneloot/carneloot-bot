@@ -4,6 +4,7 @@ import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { Layer, ManagedRuntime, Redacted } from 'effect';
 
 import { PetFoodNotificationQueue } from '../adapters/queue/pet-food-notification.js';
+import { TelegramBotLive } from '../adapters/telegram/bot.js';
 import {
 	ConversationPersistence,
 	ConversationPersistenceLive,
@@ -69,7 +70,9 @@ const AppServicesLive = Layer.mergeAll(
 	PetFoodService.layer.pipe(Layer.provideMerge(QueueServicesLive)),
 );
 
-export const appLayer = AppServicesLive;
+export const appLayer = TelegramBotLive.pipe(
+	Layer.provideMerge(AppServicesLive),
+);
 
 export type AppServices =
 	| Database.Database

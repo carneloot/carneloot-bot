@@ -1,7 +1,13 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { sequentialize } from '@grammyjs/runner';
-import { Context as EffectContext, Effect, Redacted } from 'effect';
+import {
+	Context as EffectContext,
+	Effect,
+	FiberSet,
+	Layer,
+	Redacted,
+} from 'effect';
 import { Bot } from 'grammy';
 
 import type { AppServices } from '../../app/layer.js';
@@ -25,7 +31,10 @@ import { createCafeInvCommand } from './commands/cafe-inv.js';
 import { createCafeCommand } from './commands/cafe.js';
 import { createPingCommand } from './commands/ping.js';
 import { createWhatsCommand } from './commands/whats.js';
-import type { ConversationStorage } from './conversation-storage.js';
+import {
+	ConversationPersistence,
+	type ConversationStorage,
+} from './conversation-storage.js';
 import { installGrammyDebugLogger } from './debug.js';
 import { createListPetsCommand } from './list-pets.js';
 import { createNotificationModule } from './notifications/index.js';
@@ -56,7 +65,6 @@ export const createBot = (
 	execute: Execute<AppServices>,
 	conversationStorage: ConversationStorage,
 ): TelegramBot => {
-	installGrammyDebugLogger(execute);
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
 	const userMiddleware = createUserMiddleware(execute);
@@ -312,3 +320,16 @@ export const createBot = (
 		},
 	};
 };
+
+export const TelegramBotLive = Layer.effect(
+	TelegramBot,
+	Effect.gen(function* () {
+		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
+		const conversationPersistence = yield* ConversationPersistence;
+		yield* Effect.acquireRelease(
+			Effect.sync(() => installGrammyDebugLogger(execute)),
+			(restore) => Effect.sync(restore),
+		);
+		return TelegramBot.of(createBot(execute, conversationPersistence.storage));
+	}),
+);
