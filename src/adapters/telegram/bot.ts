@@ -1,7 +1,7 @@
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { sequentialize } from '@grammyjs/runner';
-import { Effect, Redacted } from 'effect';
+import { Context as EffectContext, Effect, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
 import type { AppServices } from '../../app/layer.js';
@@ -48,6 +48,9 @@ export type TelegramBot = {
 	readonly setWebhook: (url: string) => Promise<unknown>;
 	readonly setCommands: () => Promise<void>;
 };
+
+export const TelegramBot =
+	EffectContext.Service<TelegramBot>('app/TelegramBot');
 
 export const createBot = (
 	execute: Execute<AppServices>,

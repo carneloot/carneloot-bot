@@ -10,6 +10,3 @@ export const CreateNotificationParamsSchema = Schema.Struct({
 export type CreateNotificationParams = Schema.Schema.Type<
 	typeof CreateNotificationParamsSchema
 >;
-export const CreateNotificationParams = Schema.toStandardSchemaV1(
-	CreateNotificationParamsSchema,
-);

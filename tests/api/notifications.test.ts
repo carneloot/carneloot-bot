@@ -1,5 +1,5 @@
 import { Effect, Layer, ManagedRuntime } from 'effect';
-import { Hono } from 'hono';
+import { HttpApiBuilder } from 'effect/http-api';
 import {
 	afterAll,
 	beforeAll,
@@ -17,16 +17,18 @@ vi.hoisted(() => {
 	process.env.REDIS_URL = 'redis://localhost:6379';
 });
 
-import type { Execute } from '../../src/adapters/execute.js';
 import { NotificationSender } from '../../src/adapters/telegram/notification-sender.js';
-import { createNotificationsApi } from '../../src/api/notifications.js';
-import type { AppServices } from '../../src/app/layer.js';
+import {
+	NotificationsApi,
+	NotificationsLive,
+} from '../../src/api/notifications.js';
 import { hashString } from '../../src/common/utils/hash-string.js';
 import { Database, layer as databaseLayer } from '../../src/lib/database/db.js';
 import type { NotificationID, UserID } from '../../src/lib/database/schema.js';
 import { NotificationRepository } from '../../src/lib/repositories/notification.js';
 import { UserRepository } from '../../src/lib/repositories/user.js';
 import { NotificationService } from '../../src/lib/services/notification.js';
+import { createTestHttp } from '../support/http.js';
 
 const persistenceLayer = Layer.mergeAll(
 	NotificationRepository.layer,
@@ -44,8 +46,11 @@ const testLayer = NotificationService.layer.pipe(
 	),
 );
 const runtime = ManagedRuntime.make(testLayer);
-const execute = runtime.runPromise as Execute<AppServices>;
-const app = new Hono().route('/api', createNotificationsApi(execute));
+const httpLayer = HttpApiBuilder.layer(NotificationsApi).pipe(
+	Layer.provide(NotificationsLive),
+	Layer.provide(Layer.effectContext(Effect.promise(() => runtime.context()))),
+);
+let app: ReturnType<typeof createTestHttp>;
 const patch = (
 	body: unknown,
 	authorization: string | null = 'Bearer test-owner-key',
@@ -116,6 +121,7 @@ describe('/api/notifications', () => {
 		await runtime.dispose();
 	});
 	beforeEach(async () => {
+		app = createTestHttp(httpLayer);
 		await runtime.runPromise(
 			Effect.gen(function* () {
 				const db = yield* Database;
@@ -364,6 +370,44 @@ describe('/api/notifications', () => {
 			);
 		},
 	);
+
+	it.each(['missing_template', 'private_template'])(
+		'notify returns 404 for missing or inaccessible templates: %s',
+		async (keyword) => {
+			const response = await app.request('/api/notify', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: 'Bearer test-owner-key',
+				},
+				body: JSON.stringify({ keyword, variables: {} }),
+			});
+			expect(response.status).toBe(404);
+			expect(await response.json()).toEqual({
+				message: 'Notification not found for user and keyword',
+			});
+		},
+	);
+
+	it('notify returns 422 and only missing variable names before attempting delivery', async () => {
+		await patch({ keyword: 'claude_done', message: '{{title}} {{count}}' });
+		const response = await app.request('/api/notify', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: 'Bearer test-owner-key',
+			},
+			body: JSON.stringify({
+				keyword: 'claude_done',
+				variables: { title: 'Finished' },
+			}),
+		});
+		expect(response.status).toBe(422);
+		expect(await response.json()).toEqual({
+			message: 'Missing used variables',
+			variables: ['count'],
+		});
+	});
 
 	it('repository lists only the owner templates in keyword order', async () => {
 		await runtime.runPromise(

@@ -8,4 +8,3 @@ export const NotifyParamsSchema = Schema.Struct({
 });
 
 export type NotifyParams = Schema.Schema.Type<typeof NotifyParamsSchema>;
-export const NotifyParams = Schema.toStandardSchemaV1(NotifyParamsSchema);

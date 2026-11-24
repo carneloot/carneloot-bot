@@ -1,8 +1,10 @@
-import { Effect, FiberSet } from 'effect';
+import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
+import { Effect, FiberSet, Layer } from 'effect';
+import { HttpRouter } from 'effect/http';
 
-import { startHttpServer } from './adapters/http/server.js';
+import { HttpLive } from './adapters/http/server.js';
 import { PetFoodNotificationQueue } from './adapters/queue/pet-food-notification.js';
-import { createBot } from './adapters/telegram/bot.js';
+import { createBot, TelegramBot } from './adapters/telegram/bot.js';
 import { ConversationPersistence } from './adapters/telegram/conversation-storage.js';
 import { startPolling } from './adapters/telegram/polling.js';
 import { type AppServices, runtime } from './app/layer.js';
@@ -47,7 +49,12 @@ const app = Effect.scoped(
 		yield* readiness;
 		yield* petFoodService.reconcileNotifications();
 
-		yield* startHttpServer(telegramBot, execute, readiness);
+		yield* Layer.build(
+			HttpRouter.serve(HttpLive).pipe(
+				Layer.provide(BunHttpServer.layer({ port: Env.PORT })),
+				Layer.provide(Layer.succeed(TelegramBot, telegramBot)),
+			),
+		);
 
 		if (Env.RUN_MODE === 'polling') {
 			yield* startPolling(telegramBot);

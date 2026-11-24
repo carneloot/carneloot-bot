@@ -18,9 +18,11 @@ vi.hoisted(() => {
 });
 
 import type { Execute } from '../../../../src/adapters/execute.js';
-import { createHealthApp } from '../../../../src/adapters/http/health.js';
-import { PetFoodNotificationQueue } from '../../../../src/adapters/queue/pet-food-notification.js';
-import { createBot } from '../../../../src/adapters/telegram/bot.js';
+import { HealthLive } from '../../../../src/adapters/http/health.js';
+import {
+	createBot,
+	TelegramBot,
+} from '../../../../src/adapters/telegram/bot.js';
 import {
 	ConversationPersistence,
 	ConversationPersistenceLive,
@@ -42,6 +44,7 @@ import { PetRepository } from '../../../../src/lib/repositories/pet.js';
 import { UserRepository } from '../../../../src/lib/repositories/user.js';
 import { PetFoodService } from '../../../../src/lib/services/pet-food.js';
 import { createGrammyRunner } from '../../../support/grammy-runner.js';
+import { createTestHttp } from '../../../support/http.js';
 import { createTestRedis } from '../../../support/test-redis.js';
 
 const botInfo = {
@@ -137,7 +140,7 @@ const setup = async () => {
 		const { storage } = await runtime.runPromise(ConversationPersistence);
 		const telegram = createBot(execute, storage);
 		telegram.bot.botInfo = botInfo;
-		return createGrammyRunner(telegram.bot);
+		return { ...createGrammyRunner(telegram.bot), telegramBot: telegram };
 	};
 	let updateID = 1;
 	const message = (text: string, owner = 1, time = now) =>
@@ -208,6 +211,7 @@ const setup = async () => {
 		redis,
 		sql,
 		run,
+		context: () => runtime.context(),
 		restart: async () => {
 			await runtime.dispose();
 			runtime = makeRuntime();
@@ -443,24 +447,19 @@ describe('registered food flows with SQLite and test Redis', () => {
 	});
 
 	it('reports unavailable dependencies through readiness while preserving liveness', async () => {
-		const health = createHealthApp(() =>
-			app.run(
-				Effect.gen(function* () {
-					const db = yield* Database.Database;
-					const storage = yield* ConversationPersistence;
-					const queue = yield* PetFoodNotificationQueue;
-					yield* db.checkHealth();
-					yield* storage.checkHealth;
-					yield* queue.checkHealth;
-				}),
+		const { telegramBot } = await app.runner();
+		const health = createTestHttp(
+			HealthLive.pipe(
+				Layer.provide(Layer.effectContext(Effect.promise(() => app.context()))),
+				Layer.provide(Layer.succeed(TelegramBot, telegramBot)),
 			),
 		);
-		expect((await health.request('/readyz')).status).toBe(200);
+		expect((await health.request('/api/readyz')).status).toBe(200);
 		app.redis.setAvailable(false);
-		expect((await health.request('/readyz')).status).toBe(503);
-		expect((await health.request('/healthz')).status).toBe(200);
+		expect((await health.request('/api/readyz')).status).toBe(503);
+		expect((await health.request('/api/healthz')).status).toBe(200);
 		app.redis.setAvailable(true);
-		expect((await health.request('/readyz')).status).toBe(200);
+		expect((await health.request('/api/readyz')).status).toBe(200);
 	});
 
 	it('rolls back interrupted SQLite transactions before a waiting read or write proceeds', async () => {
