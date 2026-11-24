@@ -1,10 +1,25 @@
-import { Effect } from 'effect';
+import { Effect, Layer, ManagedRuntime, Option, Schema } from 'effect';
 import type { Update, UserFromGetMe } from 'grammy/types';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+	afterAll,
+	afterEach,
+	assert,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
 
 import type { Execute } from '../../../src/adapters/execute.js';
 import type { ConversationStorage } from '../../../src/adapters/telegram/conversation-storage.js';
 import type { AppServices } from '../../../src/app/layer.js';
+import {
+	Database,
+	layer as databaseLayer,
+} from '../../../src/lib/database/db.js';
+import { UserRepository } from '../../../src/lib/repositories/user.js';
 import { createGrammyRunner } from '../../support/grammy-runner.js';
 
 vi.hoisted(() => {
@@ -13,26 +28,54 @@ vi.hoisted(() => {
 	process.env.REDIS_URL = 'redis://localhost:6379';
 });
 
-vi.mock('../../../src/middlewares/generic-error.middleware.js', () => ({
-	createGenericErrorMiddleware:
-		() => async (_ctx: unknown, next: () => Promise<unknown>) =>
-			next(),
-}));
-vi.mock('../../../src/adapters/telegram/reply.js', () => ({
-	createReplyMiddleware:
-		() => async (_ctx: unknown, next: () => Promise<unknown>) =>
-			next(),
-}));
-vi.mock('../../../src/middlewares/user.middleware.js', () => ({
-	createUserMiddleware:
-		() => async (_ctx: unknown, next: () => Promise<unknown>) =>
-			next(),
-}));
-
 import { createBot } from '../../../src/adapters/telegram/bot.js';
 
+const runtime = ManagedRuntime.make(
+	UserRepository.layer.pipe(Layer.provideMerge(databaseLayer)),
+);
+
+beforeAll(async () => {
+	await runtime.runPromise(
+		Effect.gen(function* () {
+			const db = yield* Database;
+			yield* db.execute((client) =>
+				client.$client.executeMultiple(`
+			CREATE TABLE users (
+				id TEXT PRIMARY KEY NOT NULL,
+				telegram_id TEXT NOT NULL UNIQUE,
+				first_name TEXT NOT NULL,
+				last_name TEXT,
+				username TEXT
+			);
+			CREATE TABLE api_keys (
+				id TEXT PRIMARY KEY NOT NULL,
+				user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+				key TEXT NOT NULL UNIQUE,
+				created_at INTEGER NOT NULL
+			);
+		`),
+			);
+		}),
+	);
+});
+
+beforeEach(async () => {
+	await runtime.runPromise(
+		Effect.gen(function* () {
+			const db = yield* Database;
+			yield* db.execute((client) =>
+				client.$client.executeMultiple(
+					'DELETE FROM api_keys; DELETE FROM users;',
+				),
+			);
+		}),
+	);
+});
+
+afterAll(() => runtime.dispose());
+
 const botInfo = {
-	id: 1,
+	id: 999,
 	is_bot: true,
 	first_name: 'Test bot',
 	username: 'test_bot',
@@ -77,9 +120,9 @@ const createRunner = () => {
 			write: () => Promise.resolve(),
 		},
 	};
-	// These commands use no application services. A missing service fails the test.
+	// Use real user persistence; any unexpected application service access fails.
 	const telegram = createBot(
-		Effect.runPromise as Execute<AppServices>,
+		runtime.runPromise as Execute<AppServices>,
 		storage,
 	);
 	telegram.bot.botInfo = botInfo;
@@ -99,6 +142,28 @@ describe('registered bot command regressions', () => {
 					commands: expect.arrayContaining(
 						[
 							'ping',
+							'whats',
+							'cafe',
+							'cafe_inv',
+							'cancelar',
+							'cadastrar',
+							'gerar_chave',
+							'adicionar_pet',
+							'deletar_pet',
+							'listar_pets',
+							'adicionar_cuidador',
+							'remover_cuidador',
+							'listar_cuidadores',
+							'convites_pet',
+							'parar_de_cuidar_pet',
+							'configurar_inicio_dia',
+							'configurar_atraso_notificacao',
+							'status_racao',
+							'colocar_racao',
+							'colocar_racao_todos',
+							'todos',
+							'deletar_racao',
+							'corrigir_racao',
 							'criar_notificacao',
 							'listar_notificacoes',
 							'editar_notificacao',
@@ -115,6 +180,104 @@ describe('registered bot command regressions', () => {
 			{ method: 'deleteMyCommands', payload: { language_code: 'pt' } },
 		]);
 	});
+
+	it.each(['Yes', 'No'] as const)(
+		'handles API key confirmation %s through a fresh callback update',
+		async (answer) => {
+			const oldKey = await runtime.runPromise(
+				Effect.gen(function* () {
+					const users = yield* UserRepository;
+					yield* users.createUser({ id: 1, is_bot: false, first_name: 'Test' });
+					const user = yield* users.getUserByTelegramID(1);
+					assert(Option.isSome(user));
+					return yield* users.generateApiKeyForUser(user.value.id);
+				}),
+			);
+			const runner = createRunner();
+			await runner.dispatch(commandUpdate(1, '/gerar_chave'));
+			const prompt = runner.calls.find((call) => call.method === 'sendMessage');
+			assert(prompt);
+			const { text, reply_markup } = Schema.decodeUnknownSync(
+				Schema.Struct({
+					text: Schema.String,
+					reply_markup: Schema.Struct({
+						inline_keyboard: Schema.Array(
+							Schema.Array(
+								Schema.Struct({
+									text: Schema.String,
+									callback_data: Schema.String,
+								}),
+							),
+						),
+					}),
+				}),
+			)(prompt.payload);
+			const button = reply_markup.inline_keyboard
+				.flat()
+				.find((button) => button.text === answer);
+			assert(button);
+			await runner.dispatch({
+				update_id: 2,
+				callback_query: {
+					id: 'key-confirmation',
+					from: { id: 1, is_bot: false, first_name: 'Test' },
+					chat_instance: 'test-chat',
+					data: button.callback_data,
+					message: {
+						message_id: 10,
+						date: 0,
+						chat: { id: 1, type: 'private', first_name: 'Test' },
+						from: botInfo,
+						text,
+						reply_markup: {
+							inline_keyboard: reply_markup.inline_keyboard.map((row) => [
+								...row,
+							]),
+						},
+					},
+				},
+			});
+			const oldKeyUser = await runtime.runPromise(
+				UserRepository.pipe(
+					Effect.flatMap((users) => users.getUserFromApiKey(oldKey)),
+					Effect.option,
+				),
+			);
+			if (answer === 'Yes') {
+				expect(Option.isNone(oldKeyUser)).toBe(true);
+				const reply = runner.calls
+					.filter((call) => call.method === 'sendMessage')
+					.at(-1);
+				assert(reply);
+				const body = Schema.decodeUnknownSync(
+					Schema.Struct({ text: Schema.String }),
+				)(reply.payload);
+				const newKey = /^Aqui está: <pre>([^<]+)<\/pre>$/.exec(body.text)?.[1];
+				assert(newKey);
+				expect(newKey).not.toBe(oldKey);
+				const owner = await runtime.runPromise(
+					UserRepository.pipe(
+						Effect.flatMap((users) => users.getUserFromApiKey(newKey)),
+					),
+				);
+				expect(owner.telegramID).toBe('1');
+			} else {
+				expect(Option.isSome(oldKeyUser)).toBe(true);
+				expect(runner.calls).toContainEqual({
+					method: 'sendMessage',
+					payload: { chat_id: 1, text: 'Okay!' },
+				});
+			}
+			expect(runner.calls).toContainEqual({
+				method: 'editMessageReplyMarkup',
+				payload: {
+					chat_id: 1,
+					message_id: 10,
+					reply_markup: undefined,
+				},
+			});
+		},
+	);
 
 	it('dispatches a real update through the registered bot and records its reply', async () => {
 		const runner = createRunner();

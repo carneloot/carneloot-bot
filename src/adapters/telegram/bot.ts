@@ -123,42 +123,64 @@ export const createBot = (
 	bot.command(cafeCommand.command, cafeCommand);
 	bot.command(cafeInvCommand.command, cafeInvCommand);
 
-	bot.use(apiKeyConfirmationMenu);
 	bot.command('cadastrar', createSignupCommand(execute));
+	bot.use(userMiddleware, apiKeyConfirmationMenu);
 	bot.command(
 		'gerar_chave',
 		userMiddleware,
 		createGenerateApiKeyCommand(execute, apiKeyConfirmationMenu),
 	);
-	bot.command('listar_pets', userMiddleware, createListPetsCommand(execute));
-	bot.use(...registerPetConversations(execute));
-	bot.command('adicionar_pet', userMiddleware, createPetCommand('addPet'));
-	bot.command('deletar_pet', userMiddleware, createPetCommand('deletePet'));
-	bot.command(
+	const petModule = new Module<Context>('', 'Opções de gerenciamento de pet');
+	petModule.use(...registerPetConversations(execute));
+	petModule.setCommand(
+		'adicionar_pet',
+		'Adiciona um pet ao seu usuário',
+		userMiddleware,
+		createPetCommand('addPet'),
+	);
+	petModule.setCommand(
+		'deletar_pet',
+		'Deleta um pet do seu usuário',
+		userMiddleware,
+		createPetCommand('deletePet'),
+	);
+	petModule.setCommand(
+		'listar_pets',
+		'Lista os seus pets',
+		userMiddleware,
+		createListPetsCommand(execute),
+	);
+	petModule.setCommand(
 		'adicionar_cuidador',
+		'Adiciona um cuidador para um pet',
 		userMiddleware,
 		createPetCommand('addCarer', { overwrite: true }),
 	);
-	bot.command(
+	petModule.setCommand(
 		'remover_cuidador',
+		'Remove um cuidador de um pet',
 		userMiddleware,
 		createPetCommand('removeCarer', { overwrite: true }),
 	);
-	bot.command(
+	petModule.setCommand(
 		'listar_cuidadores',
+		'Lista os cuidadores de um pet',
 		userMiddleware,
 		createPetCommand('listCarers', { overwrite: true }),
 	);
-	bot.command(
+	petModule.setCommand(
 		'convites_pet',
+		'Lista os convites para cuidar de um pet',
 		userMiddleware,
 		createPetCommand('petInvites', { overwrite: true }),
 	);
-	bot.command(
+	petModule.setCommand(
 		'parar_de_cuidar_pet',
+		'Para de cuidar de um pet',
 		userMiddleware,
 		createPetCommand('stopCaring'),
 	);
+	bot.use(petModule);
 	bot.use(...registerPetFoodConversations(execute));
 	const petFoodModule = new Module<Context>(
 		'',
@@ -281,10 +303,6 @@ export const createBot = (
 				{
 					command: 'gerar_chave',
 					description: 'Gera uma nova api-key para o usuario',
-				},
-				{
-					command: 'listar_pets',
-					description: 'Lista os seus pets',
 				},
 				...Module.getCommandList(),
 			];
