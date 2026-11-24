@@ -148,6 +148,23 @@ const createRunner = () => {
 describe('registered bot command regressions', () => {
 	afterEach(() => vi.restoreAllMocks());
 
+	it('registers a webhook with a separate Telegram secret token', async () => {
+		const runner = createRunner();
+		await runner.setWebhook(
+			'https://test.example/api/webhook',
+			'independent-secret',
+		);
+		expect(runner.calls).toEqual([
+			{
+				method: 'setWebhook',
+				payload: {
+					url: 'https://test.example/api/webhook',
+					secret_token: 'independent-secret',
+				},
+			},
+		]);
+	});
+
 	it('publishes only the default menu and removes the Portuguese override', async () => {
 		const runner = createRunner();
 		await runner.setCommands();

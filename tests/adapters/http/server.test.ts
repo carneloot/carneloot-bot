@@ -1,7 +1,15 @@
 import type { ConversationData, VersionedState } from '@grammyjs/conversations';
 import { Effect, Layer } from 'effect';
 import { Bot, MemorySessionStorage } from 'grammy';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
 
 vi.hoisted(() => {
 	process.env.BOT_TOKEN = 'test-token';
@@ -24,15 +32,44 @@ import {
 	NotificationService,
 } from '../../../src/lib/services/notification.js';
 import { createTestHttp } from '../../support/http.js';
+import { createTestRedis } from '../../support/test-redis.js';
 
 const originalEnv = { ...Env };
 
-const telegramBot: TelegramBot = {
-	bot: new Bot<Context>('123:test'),
-	checkHealth: async () => undefined,
-	setWebhook: vi.fn(async () => true),
-	setCommands: vi.fn(async () => undefined),
+let telegramBot: TelegramBot;
+let redis: ReturnType<typeof createTestRedis>;
+
+const storedSecret = () => {
+	const secret = [...redis.values.values()][0];
+	assert(secret);
+	return secret;
 };
+
+beforeEach(() => {
+	redis = createTestRedis();
+	Object.assign(Env, { RUN_MODE: 'polling', WEBHOOK_URL: 'test.example' });
+	telegramBot = {
+		bot: new Bot<Context>('123:test'),
+		checkHealth: async () => undefined,
+		setWebhook: vi.fn(async () => true),
+		setCommands: vi.fn(async () => undefined),
+	};
+	telegramBot.bot.botInfo = {
+		id: 123,
+		is_bot: true,
+		first_name: 'Test',
+		username: 'test_bot',
+		can_join_groups: true,
+		can_read_all_group_messages: false,
+		supports_inline_queries: false,
+		can_connect_to_business: false,
+		has_main_web_app: false,
+		has_topics_enabled: false,
+		allows_users_to_create_topics: false,
+		can_manage_bots: false,
+		supports_join_request_queries: false,
+	};
+});
 
 const createApp = (
 	sendNotification: NotificationService['Service']['sendNotification'] = () =>
@@ -41,6 +78,7 @@ const createApp = (
 	createTestHttp(
 		HttpLive.pipe(
 			Layer.provide([
+				redis.layer,
 				Layer.succeed(TelegramBot, telegramBot),
 				Layer.mock(Database, {
 					checkHealth: () => Effect.void,
@@ -92,6 +130,7 @@ const notify = (
 
 afterEach(() => {
 	Object.assign(Env, originalEnv);
+	redis.close();
 	vi.restoreAllMocks();
 });
 
@@ -275,12 +314,15 @@ describe('HTTP route composition', () => {
 	});
 
 	it('does not register webhook endpoints in polling mode', async () => {
-		Object.assign(Env, { RUN_MODE: 'polling' });
+		redis.setAvailable(false);
 		const app = createApp();
+		expect((await app.request('/api/healthz')).status).toBe(200);
 		expect((await app.request('/api/set-webhook')).status).toBe(404);
-		expect(
-			(await app.request('/api/webhook/secret', { method: 'POST' })).status,
-		).toBe(404);
+		expect((await app.request('/api/webhook', { method: 'POST' })).status).toBe(
+			404,
+		);
+		expect(telegramBot.setWebhook).not.toHaveBeenCalled();
+		expect(redis.values.size).toBe(0);
 	});
 
 	it('returns the existing error when webhook mode has no webhook URL', async () => {
@@ -296,39 +338,148 @@ describe('HTTP route composition', () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ message: 'Done!' });
 		expect(telegramBot.setWebhook).toHaveBeenCalledWith(
-			expect.stringMatching(/^https:\/\/test\.example\/api\/webhook\//),
+			'https://test.example/api/webhook',
+			storedSecret(),
 		);
 		expect(telegramBot.setCommands).toHaveBeenCalled();
 	});
 
+	it('generates and stores a secret and registers automatically at startup', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		expect((await createApp().request('/api/healthz')).status).toBe(200);
+		expect(storedSecret()).toMatch(/^[0-9a-f]{64}$/);
+		expect(redis.values.size).toBe(1);
+		expect(telegramBot.setWebhook).toHaveBeenCalledExactlyOnceWith(
+			'https://test.example/api/webhook',
+			storedSecret(),
+		);
+		expect(telegramBot.setCommands).toHaveBeenCalledOnce();
+	});
+
+	it('shares one secret across concurrent starts and subsequent restarts', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		const responses = await Promise.all([
+			createApp().request('/api/healthz'),
+			createApp().request('/api/healthz'),
+		]);
+		expect(responses.map((response) => response.status)).toEqual([200, 200]);
+		const secret = storedSecret();
+		expect((await createApp().request('/api/healthz')).status).toBe(200);
+		expect(redis.values.size).toBe(1);
+		expect(storedSecret()).toBe(secret);
+		expect(vi.mocked(telegramBot.setWebhook).mock.calls).toEqual([
+			['https://test.example/api/webhook', secret],
+			['https://test.example/api/webhook', secret],
+			['https://test.example/api/webhook', secret],
+		]);
+	});
+
+	it('keeps different bots isolated in shared Redis', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		await createApp().request('/api/healthz');
+		const firstSecret = storedSecret();
+		telegramBot.bot.botInfo = { ...telegramBot.bot.botInfo, id: 456 };
+		await createApp().request('/api/healthz');
+		expect(redis.values.size).toBe(2);
+		const secrets = [...redis.values.values()];
+		expect(secrets[0]).toBe(firstSecret);
+		expect(secrets[1]).toMatch(/^[0-9a-f]{64}$/);
+		expect(secrets[1]).not.toBe(firstSecret);
+	});
+
+	it('fails startup rather than registering when Redis is unavailable', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		redis.setAvailable(false);
+		await expect(createApp().request('/api/healthz')).rejects.toThrow();
+		expect(telegramBot.setWebhook).not.toHaveBeenCalled();
+	});
+
+	it.each(['', 'malformed-private-value'])(
+		'rejects an invalid persisted secret without exposing it: %s',
+		async (value) => {
+			Object.assign(Env, { RUN_MODE: 'webhook' });
+			await createApp().request('/api/healthz');
+			const [key] = redis.values.keys();
+			assert(key);
+			redis.values.set(key, value);
+			vi.mocked(telegramBot.setWebhook).mockClear();
+			const error = await createApp()
+				.request('/api/healthz')
+				.catch((cause: unknown) => cause);
+			expect(error).toBeInstanceOf(Error);
+			if (value) expect(String(error)).not.toContain(value);
+			expect(telegramBot.setWebhook).not.toHaveBeenCalled();
+		},
+	);
+
+	it('fails startup if Telegram rejects webhook registration', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		vi.mocked(telegramBot.setWebhook).mockRejectedValueOnce(
+			new Error('Telegram unavailable'),
+		);
+		await expect(createApp().request('/api/healthz')).rejects.toThrow();
+	});
+
 	it('passes webhook JSON through the native request bridge to grammY', async () => {
 		Object.assign(Env, { RUN_MODE: 'webhook' });
-		telegramBot.bot.botInfo = {
-			id: 123,
-			is_bot: true,
-			first_name: 'Test',
-			username: 'test_bot',
-			can_join_groups: true,
-			can_read_all_group_messages: false,
-			supports_inline_queries: false,
-			can_connect_to_business: false,
-			has_main_web_app: false,
-			has_topics_enabled: false,
-			allows_users_to_create_topics: false,
-			can_manage_bots: false,
-			supports_join_request_queries: false,
-		};
 		const received = vi.fn();
 		telegramBot.bot.use(async (context) => {
 			received(context.update);
 		});
 		const update = { update_id: 1234 };
-		const response = await createApp().request('/api/webhook/test-secret', {
+		const app = createApp();
+		await app.request('/api/healthz');
+		const response = await app.request('/api/webhook', {
 			method: 'POST',
-			headers: { 'content-type': 'application/json' },
+			headers: {
+				'content-type': 'application/json',
+				'X-Telegram-Bot-Api-Secret-Token': storedSecret(),
+			},
 			body: JSON.stringify(update),
 		});
 		expect(response.status).toBe(200);
 		expect(received).toHaveBeenCalledWith(update);
+	});
+
+	it.each(['missing', 'incorrect', 'bot token'])(
+		'rejects webhook requests with a missing or invalid secret: %s',
+		async (kind) => {
+			Object.assign(Env, { RUN_MODE: 'webhook' });
+			const received = vi.fn();
+			telegramBot.bot.use(async (context) => {
+				received(context.update);
+			});
+			const app = createApp();
+			await app.request('/api/healthz');
+			const stored = storedSecret();
+			const secret =
+				kind === 'missing'
+					? undefined
+					: kind === 'bot token'
+						? 'test-token'
+						: `${stored.slice(0, -1)}${stored.endsWith('0') ? '1' : '0'}`;
+			const response = await app.request('/api/webhook', {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					...(secret === undefined
+						? {}
+						: { 'X-Telegram-Bot-Api-Secret-Token': secret }),
+				},
+				body: JSON.stringify({ update_id: 5678 }),
+			});
+			expect(response.status).toBe(401);
+			expect(received).not.toHaveBeenCalled();
+		},
+	);
+
+	it('does not expose the old secret-in-path webhook endpoint', async () => {
+		Object.assign(Env, { RUN_MODE: 'webhook' });
+		const response = await createApp().request('/api/webhook/test-token', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ update_id: 5678 }),
+		});
+		expect(response.status).toBe(404);
 	});
 });

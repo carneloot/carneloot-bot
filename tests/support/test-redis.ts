@@ -25,6 +25,13 @@ export const createTestRedis = () => {
 			case 'get':
 				return values.get(key) ?? null;
 			case 'set':
+				if (
+					command.args
+						.slice(2)
+						.some((arg) => String(arg).toUpperCase() === 'NX') &&
+					values.has(key)
+				)
+					return null;
 				values.set(key, String(command.args[1]));
 				return 'OK';
 			case 'del':

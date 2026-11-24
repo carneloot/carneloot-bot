@@ -64,6 +64,30 @@ to `polling`; the other supported optional variables are:
 - `SOURCE_COMMIT`
 - `OTLP_URL`, `OTLP_API_TOKEN`, `OTLP_DATASET`
 
+For webhook mode, set `WEBHOOK_URL` to the public hostname without a scheme or
+path. At startup, the webhook layer generates a 256-bit random secret and stores
+it under `telegram:webhook-secret:<bot-id>` in Redis with `SET NX` and no expiry.
+Concurrent instances and restarts reuse the stored secret. No separate secret
+environment variable is required.
+
+When `WEBHOOK_URL` is configured, startup registers
+`https://<hostname>/api/webhook` and the bot commands with Telegram. Registration
+passes the stored secret as Telegram's `secret_token`; Telegram sends it in the
+`X-Telegram-Bot-Api-Secret-Token` header with each update. The bot rejects missing
+or incorrect headers with `401`. The old secret-in-path endpoint is not served.
+`GET /api/set-webhook` remains available to repeat registration with the same
+secret, but no manual call is needed after deployment.
+
+Webhook startup fails if Redis is unavailable, the stored secret is invalid,
+or automatic registration fails. Without `WEBHOOK_URL`, automatic registration
+is skipped and the registration endpoint returns `400`.
+
+Keep the Redis key across deployments. Do not expire, evict, or delete it while
+instances are running. Retaining it across Redis restarts requires Redis
+persistence. If Redis loses the key, the next application start generates and
+registers a replacement, which no longer matches secrets cached by older
+instances. Polling mode does not create or register a webhook secret.
+
 Run `bunx alchemy plan --stage production` to review infrastructure changes
 without applying them.
 

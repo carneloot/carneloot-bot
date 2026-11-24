@@ -54,7 +54,7 @@ import { createReplyMiddleware } from './reply.js';
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
 	readonly checkHealth: () => Promise<void>;
-	readonly setWebhook: (url: string) => Promise<unknown>;
+	readonly setWebhook: (url: string, secretToken: string) => Promise<unknown>;
 	readonly setCommands: () => Promise<void>;
 };
 
@@ -281,7 +281,8 @@ export const createBot = (
 		checkHealth: async () => {
 			await bot.api.getMe();
 		},
-		setWebhook: (url) => bot.api.setWebhook(url),
+		setWebhook: (url, secretToken) =>
+			bot.api.setWebhook(url, { secret_token: secretToken }),
 		setCommands: async () => {
 			const commands = [
 				{
