@@ -7,10 +7,7 @@ import {
 	HttpApiSchema,
 } from 'effect/http-api';
 
-import { Database } from '../../lib/database/db.js';
-import { PetFoodNotificationQueue } from '../queue/pet-food-notification.js';
-import { TelegramBot } from '../telegram/bot.js';
-import { ConversationPersistence } from '../telegram/conversation-storage.js';
+import { makeReadinessCheck } from '../../app/readiness.js';
 
 export const HealthGroup = HttpApiGroup.make('health').add(
 	HttpApiEndpoint.get('liveness', '/api/healthz', {
@@ -30,19 +27,11 @@ export const HealthLive = HttpApiBuilder.layer(HealthApi).pipe(
 	Layer.provide(
 		HttpApiBuilder.group(HealthApi, 'health', (handlers) =>
 			Effect.gen(function* () {
-				const database = yield* Database;
-				const conversationPersistence = yield* ConversationPersistence;
-				const notificationQueue = yield* PetFoodNotificationQueue;
-				const telegramBot = yield* TelegramBot;
+				const checkReadiness = yield* makeReadinessCheck;
 				return handlers
 					.handle('liveness', () => Effect.succeed({ status: 'ok' as const }))
 					.handle('readiness', () =>
-						Effect.all([
-							database.checkHealth(),
-							conversationPersistence.checkHealth,
-							notificationQueue.checkHealth,
-							Effect.tryPromise(() => telegramBot.checkHealth()),
-						]).pipe(
+						checkReadiness.pipe(
 							Effect.withSpan('http.readiness'),
 							Effect.as({ status: 'ready' as const }),
 							Effect.catchCause(() =>
