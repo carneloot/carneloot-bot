@@ -98,7 +98,6 @@ export const createFoodStatusCommand =
 									`Você não configurou o inicio do dia para o pet ${pet.name}.`,
 								),
 							).pipe(
-								Effect.withSpan('ctx.reply'),
 								Effect.ignore({ log: 'Unhandled' }),
 								Effect.andThen(() => Effect.succeed(Option.none())),
 							),
@@ -111,7 +110,7 @@ export const createFoodStatusCommand =
 				ctx.reply(Array.getSomes(petMessages).join('\n'), {
 					parse_mode: 'MarkdownV2',
 				}),
-			).pipe(Effect.withSpan('ctx.reply'));
+			);
 		}).pipe(
 			Effect.withSpan('FoodStatusCommand'),
 			withTelegramSpan(ctx),

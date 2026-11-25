@@ -58,5 +58,5 @@ export const handlePetFoodReply = Effect.fn('handlePetFoodReply')(function* (
 
 	yield* Effect.tryPromise(() =>
 		ctx.reply('Rações atualizadas com sucesso!'),
-	).pipe(Effect.withSpan('ctx.reply'), Effect.ignore({ log: 'Unhandled' }));
+	).pipe(Effect.ignore({ log: 'Unhandled' }));
 });

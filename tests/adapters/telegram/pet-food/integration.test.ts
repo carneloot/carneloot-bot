@@ -1,4 +1,5 @@
 import { createClient } from '@libsql/client';
+import { trace } from '@opentelemetry/api';
 import {
 	Deferred,
 	Duration,
@@ -138,7 +139,7 @@ const setup = async () => {
 	);
 	const runner = async () => {
 		const { storage } = await runtime.runPromise(ConversationPersistence);
-		const telegram = createBot(execute, storage);
+		const telegram = createBot(execute, storage, trace.getTracer('test'));
 		telegram.bot.botInfo = botInfo;
 		return { ...createGrammyRunner(telegram.bot), telegramBot: telegram };
 	};

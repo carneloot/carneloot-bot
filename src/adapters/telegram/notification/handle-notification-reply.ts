@@ -24,7 +24,7 @@ export const handleNotificationReply = Effect.fn('handleNotificationReply')(
 		if (user.telegramID === ownerTelegramId) {
 			yield* Effect.tryPromise(() =>
 				ctx.reply('Você não pode responder a sua própria notificação.'),
-			).pipe(Effect.withSpan('ctx.reply'), Effect.ignore({ log: 'Unhandled' }));
+			).pipe(Effect.ignore({ log: 'Unhandled' }));
 			return;
 		}
 
@@ -35,9 +35,6 @@ export const handleNotificationReply = Effect.fn('handleNotificationReply')(
 			ctx.api.sendMessage(ownerTelegramId, message, {
 				reply_to_message_id: messageToReply,
 			}),
-		).pipe(
-			Effect.withSpan('bot.api.sendMessage'),
-			Effect.ignore({ log: 'Unhandled' }),
-		);
+		).pipe(Effect.ignore({ log: 'Unhandled' }));
 	},
 );

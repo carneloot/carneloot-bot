@@ -1,6 +1,8 @@
+import * as OtelTracer from '@effect/opentelemetry/OtelTracer';
 import { conversations } from '@grammyjs/conversations';
 import { emojiParser } from '@grammyjs/emoji';
 import { sequentialize } from '@grammyjs/runner';
+import type { Tracer } from '@opentelemetry/api';
 import {
 	Context as EffectContext,
 	Effect,
@@ -8,7 +10,7 @@ import {
 	Layer,
 	Redacted,
 } from 'effect';
-import { Bot } from 'grammy';
+import { Api, Bot } from 'grammy';
 
 import type { AppServices } from '../../app/layer.js';
 import { Env } from '../../common/env.js';
@@ -53,7 +55,11 @@ import {
 } from './pet-food/index.js';
 import { createPetCommand, registerPetConversations } from './pets/index.js';
 import { createReplyMiddleware } from './reply.js';
-import { nextWithSpan, withTelegramSpan } from './tracing.js';
+import {
+	createTelegramApiTracing,
+	nextWithSpan,
+	withTelegramSpan,
+} from './tracing.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -68,8 +74,11 @@ export const TelegramBot =
 export const createBot = (
 	execute: Execute<AppServices>,
 	conversationStorage: ConversationStorage,
+	tracer: Tracer,
 ): TelegramBot => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
+	const apiTracing = createTelegramApiTracing(tracer);
+	bot.api.config.use(apiTracing);
 	const myEmojiParser = emojiParser();
 	const apiKeyConfirmationMenu = createApiKeyConfirmationMenu(execute);
 	const pingCommand = createPingCommand(execute);
@@ -121,6 +130,14 @@ export const createBot = (
 					// Reconstructed conversation contexts use the live update's span,
 					// never a span persisted with the replay state.
 					inner.span = ctx.span;
+					// Put tracing inside the replay transformer, so cached API results
+					// do not produce spans for requests that were never sent.
+					const api = new Api(inner.api.token, inner.api.options);
+					api.config.use(
+						apiTracing,
+						...inner.api.config.installedTransformers(),
+					);
+					Object.defineProperty(inner, 'api', { value: api });
 					return next();
 				},
 			],
@@ -328,10 +345,13 @@ export const TelegramBotLive = Layer.effect(
 	Effect.gen(function* () {
 		const execute = yield* FiberSet.makeRuntimePromise<AppServices>();
 		const conversationPersistence = yield* ConversationPersistence;
+		const tracer = yield* OtelTracer.OtelTracer;
 		yield* Effect.acquireRelease(
 			Effect.sync(() => installGrammyDebugLogger(execute)),
 			(restore) => Effect.sync(restore),
 		);
-		return TelegramBot.of(createBot(execute, conversationPersistence.storage));
+		return TelegramBot.of(
+			createBot(execute, conversationPersistence.storage, tracer),
+		);
 	}),
 );

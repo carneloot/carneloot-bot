@@ -81,7 +81,6 @@ export const sendAddedFoodNotification =
 								error,
 							),
 						),
-						Effect.withSpan('bot.api.sendMessage'),
 					),
 				),
 				{

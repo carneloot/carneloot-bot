@@ -1,3 +1,5 @@
+import * as OtelTracer from '@effect/opentelemetry/OtelTracer';
+import { trace } from '@opentelemetry/api';
 import debug from 'debug';
 import { Effect, Layer, ManagedRuntime, Option, Schema } from 'effect';
 import type { Update, UserFromGetMe } from 'grammy/types';
@@ -140,6 +142,7 @@ const createRunner = () => {
 	const telegram = createBot(
 		runtime.runPromise as Execute<AppServices>,
 		storage,
+		trace.getTracer('test'),
 	);
 	telegram.bot.botInfo = botInfo;
 	return { ...createGrammyRunner(telegram.bot), ...telegram };
@@ -230,6 +233,7 @@ describe('registered bot command regressions', () => {
 			Layer.mock(PetFoodSchedulingOutboxRepository, {}),
 			Layer.mock(PetFoodService, {}),
 			Layer.mock(ConfigService, {}),
+			Layer.succeed(OtelTracer.OtelTracer, trace.getTracer('test')),
 		);
 		await runtime.runPromise(
 			Effect.gen(function* () {

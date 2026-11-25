@@ -44,16 +44,14 @@ export const createWhatsCommand = (
 				whatsUrl.push(`?text=${formatMessage(message)}`);
 			}
 
-			yield* Effect.tryPromise(() => ctx.reply(whatsUrl.join(''))).pipe(
-				Effect.withSpan('ctx.reply'),
-			);
+			yield* Effect.tryPromise(() => ctx.reply(whatsUrl.join('')));
 		}).pipe(
 			Effect.catchTag('ParsePhoneNumberError', () =>
 				Effect.tryPromise(() =>
 					ctx.reply(
 						'Envie uma mensagem no formato (00) 0 0000-0000 [mensagem]. A mensagem, os espaços e os algarismos não numéricos são opcionais',
 					),
-				).pipe(Effect.withSpan('ctx.reply')),
+				),
 			),
 			Effect.withSpan('WhatsCommand'),
 			withTelegramSpan(ctx),

@@ -1,12 +1,49 @@
 import { createConversation } from '@grammyjs/conversations';
+import {
+	context,
+	SpanKind,
+	SpanStatusCode,
+	trace,
+	type Tracer as OtelTracer,
+} from '@opentelemetry/api';
 import { Effect, Option, type Tracer } from 'effect';
-import type { NextFunction } from 'grammy';
+import type { NextFunction, Transformer } from 'grammy';
 
 import type {
 	Context,
 	ConversationContext,
 	ConversationFn,
 } from '../../common/types/context.js';
+
+export const createTelegramApiTracing =
+	(tracer: OtelTracer): Transformer =>
+	async (prev, method, payload, signal) => {
+		const span = tracer.startSpan(`telegram.api.${method}`, {
+			kind: SpanKind.CLIENT,
+			attributes: {
+				'telegram.api.method': method,
+				...('chat_id' in payload
+					? { 'telegram.chat.id': payload.chat_id }
+					: {}),
+			},
+		});
+		return context.with(trace.setSpan(context.active(), span), async () => {
+			try {
+				const response = await prev(method, payload, signal);
+				if (!response.ok) {
+					span.setAttribute('telegram.error.code', response.error_code);
+					span.setStatus({ code: SpanStatusCode.ERROR });
+				}
+				return response;
+			} catch (error) {
+				// Errors and URLs can contain bot tokens or message content.
+				span.setStatus({ code: SpanStatusCode.ERROR });
+				throw error;
+			} finally {
+				span.end();
+			}
+		});
+	};
 
 /** Restores the Telegram parent when a callback starts a new Effect fiber. */
 export const withTelegramSpan =

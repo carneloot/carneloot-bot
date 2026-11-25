@@ -1,4 +1,8 @@
+import * as OtelTracer from '@effect/opentelemetry/OtelTracer';
 import type { ConversationData, VersionedState } from '@grammyjs/conversations';
+import { context, createContextKey } from '@opentelemetry/api';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
+import { AbortController as GrammyAbortController } from 'abort-controller';
 import {
 	Deferred,
 	Effect,
@@ -8,11 +12,14 @@ import {
 	Option,
 	Schema,
 } from 'effect';
+import { Api, GrammyError, HttpError } from 'grammy';
 import { createServer } from 'node:http';
+import { setImmediate } from 'node:timers/promises';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Execute } from '../../src/adapters/execute.js';
 import { createBot } from '../../src/adapters/telegram/bot.js';
+import { createTelegramApiTracing } from '../../src/adapters/telegram/tracing.js';
 import type { AppServices } from '../../src/app/layer.js';
 import { TelemetryLive } from '../../src/app/telemetry.js';
 import type { UserID } from '../../src/lib/database/schema.js';
@@ -71,6 +78,157 @@ const startCollector = async () => {
 };
 
 describe('telemetry', () => {
+	it.each([false, true])(
+		'shares async context across scopes and preserves external ownership: %s',
+		async (external) => {
+			const manager = external
+				? new AsyncLocalStorageContextManager().enable()
+				: undefined;
+			if (manager) expect(context.setGlobalContextManager(manager)).toBe(true);
+			const first = ManagedRuntime.make(TelemetryLive);
+			const second = ManagedRuntime.make(TelemetryLive);
+			const key = createContextKey('telemetry-lifecycle-test');
+			const readAfterAwait = () =>
+				context.with(context.active().setValue(key, 'present'), async () => {
+					await setImmediate();
+					return context.active().getValue(key);
+				});
+			try {
+				await first.runPromise(Effect.void);
+				await second.runPromise(Effect.void);
+				expect(await readAfterAwait()).toBe('present');
+				await first.dispose();
+				expect(await readAfterAwait()).toBe('present');
+				await second.dispose();
+				expect(await readAfterAwait()).toBe(external ? 'present' : undefined);
+			} finally {
+				await first.dispose();
+				await second.dispose();
+				if (manager) context.disable();
+			}
+		},
+	);
+
+	it('traces API outcomes under the closest concurrent Effect parent without leaking private data', async () => {
+		const collector = await startCollector();
+		config.url = collector.url;
+		const runtime = ManagedRuntime.make(TelemetryLive);
+		const networkError = new Error('sensitive-network-error');
+		const aborted = new DOMException('sensitive-cancellation', 'AbortError');
+		const api = new Api('sensitive-bot-token', {
+			fetch: async (_url: string | URL | Request, init?: RequestInit) => {
+				await setImmediate();
+				if (init?.signal?.aborted) throw aborted;
+				const payload = JSON.parse(String(init?.body)) as { text: string };
+				if (payload.text === 'sensitive-network') throw networkError;
+				return new Response(
+					JSON.stringify(
+						payload.text === 'sensitive-rejected'
+							? {
+									ok: false,
+									error_code: 403,
+									description: 'sensitive-description',
+								}
+							: { ok: true, result: { message_id: 42 } },
+					),
+				);
+			},
+		});
+		try {
+			api.config.use(
+				createTelegramApiTracing(
+					await runtime.runPromise(OtelTracer.OtelTracer),
+				),
+			);
+			const parents = await runtime.runPromise(
+				Effect.forEach(
+					['success', 'rejected', 'network', 'aborted'],
+					(outcome) =>
+						Effect.gen(function* () {
+							const parent = yield* Effect.currentSpan;
+							yield* Effect.yieldNow;
+							yield* Effect.promise(async () => {
+								await setImmediate();
+								const controller = new GrammyAbortController();
+								if (outcome === 'aborted') controller.abort();
+								const request = api.sendMessage(
+									1,
+									`sensitive-${outcome}`,
+									{},
+									controller.signal,
+								);
+								if (outcome === 'success')
+									await expect(request).resolves.toEqual({ message_id: 42 });
+								else if (outcome === 'rejected')
+									await expect(request).rejects.toBeInstanceOf(GrammyError);
+								else {
+									const error = await request.catch((error: unknown) => error);
+									expect(error).toBeInstanceOf(HttpError);
+									if (error instanceof HttpError)
+										expect(error.error).toBe(
+											outcome === 'network' ? networkError : aborted,
+										);
+								}
+							});
+							return { outcome, spanId: parent.spanId };
+						}).pipe(
+							Effect.withSpan(`nested.${outcome}`),
+							Effect.withSpan(`request.${outcome}`, { root: true }),
+						),
+					{ concurrency: 'unbounded' },
+				),
+			);
+			await api.sendMessage(1, 'sensitive-outside');
+			await runtime.dispose();
+			const body = collector.requests.find(
+				(request) => request.path === '/v1/traces',
+			)?.body;
+			const payload = Schema.decodeUnknownSync(
+				Schema.Struct({
+					resourceSpans: Schema.Array(
+						Schema.Struct({
+							scopeSpans: Schema.Array(
+								Schema.Struct({
+									spans: Schema.Array(
+										Schema.Struct({
+											name: Schema.String,
+											parentSpanId: Schema.optional(Schema.String),
+											status: Schema.Struct({
+												code: Schema.optional(Schema.Number),
+											}),
+										}),
+									),
+								}),
+							),
+						}),
+					),
+				}),
+			)(body);
+			const spans = payload.resourceSpans.flatMap((resource) =>
+				resource.scopeSpans.flatMap((scope) => scope.spans),
+			);
+			const apiSpans = spans.filter(
+				(span) => span.name === 'telegram.api.sendMessage',
+			);
+			expect(apiSpans).toHaveLength(5);
+			for (const parent of parents) {
+				const children = apiSpans.filter(
+					(span) => span.parentSpanId === parent.spanId,
+				);
+				expect(children).toHaveLength(1);
+				expect(children[0]?.status.code ?? 0).toBe(
+					parent.outcome === 'success' ? 0 : 2,
+				);
+			}
+			expect(apiSpans.filter((span) => !span.parentSpanId)).toHaveLength(1);
+			expect(JSON.stringify(body)).not.toContain('sensitive-');
+		} finally {
+			await runtime.dispose();
+			await collector.close();
+			config.url = undefined;
+		}
+	});
+
 	it.each(['', '/v1/traces'])(
 		'exports correlated logs and traces from an OTLP URL ending in "%s"',
 		async (path) => {
@@ -223,21 +381,26 @@ describe('telemetry', () => {
 			).pipe(Layer.provideMerge(TelemetryLive)),
 		);
 		try {
+			const tracer = await runtime.runPromise(OtelTracer.OtelTracer);
 			const makeRunner = () => {
-				const { bot } = createBot(runtime.runPromise as Execute<AppServices>, {
-					type: 'key',
-					prefix: 'test:',
-					version: 0,
-					adapter: {
-						read: async (key) => stored.get(key),
-						write: async (key, value) => {
-							stored.set(key, structuredClone(value));
-						},
-						delete: async (key) => {
-							stored.delete(key);
+				const { bot } = createBot(
+					runtime.runPromise as Execute<AppServices>,
+					{
+						type: 'key',
+						prefix: 'test:',
+						version: 0,
+						adapter: {
+							read: async (key) => stored.get(key),
+							write: async (key, value) => {
+								stored.set(key, structuredClone(value));
+							},
+							delete: async (key) => {
+								stored.delete(key);
+							},
 						},
 					},
-				});
+					tracer,
+				);
 				bot.botInfo = {
 					id: 999,
 					is_bot: true,
@@ -376,6 +539,22 @@ describe('telemetry', () => {
 				expect(update).toBeDefined();
 				const trace = spans.filter((span) => span.traceId === update?.traceId);
 				expect(trace.filter((span) => !span.parentSpanId)).toHaveLength(1);
+				const apiSpans = trace.filter(
+					(span) => span.name === 'telegram.api.sendMessage',
+				);
+				// A resumed conversation reuses old responses without new API spans.
+				expect(apiSpans).toHaveLength(1);
+				expect(apiSpans[0]?.parentSpanId, `Update ${id}`).toBe(
+					trace.find(
+						(span) =>
+							span.name ===
+							(id <= 2
+								? 'FoodStatusCommand'
+								: id === 7
+									? 'PingCommand'
+									: 'replyMiddleware'),
+					)?.spanId ?? update?.spanId,
+				);
 				expect(
 					trace.filter(
 						(span) => span.name === 'UserRepository.getUserByTelegramID',

@@ -1,9 +1,11 @@
+import * as OtelTracer from '@effect/opentelemetry/OtelTracer';
 import { Context, Effect, Layer, Redacted } from 'effect';
 import { Bot } from 'grammy';
 
 import { Env } from '../../common/env.js';
 import { matchBotError } from '../../common/error.js';
 import type { Context as TelegramContext } from '../../common/types/context.js';
+import { createTelegramApiTracing } from './tracing.js';
 
 type NotificationSenderService = {
 	readonly sendMessage: (
@@ -19,8 +21,10 @@ export class NotificationSender extends Context.Service<
 
 export const NotificationSenderLive = Layer.effect(
 	NotificationSender,
-	Effect.sync(() => {
+	Effect.gen(function* () {
+		const tracer = yield* OtelTracer.OtelTracer;
 		const bot = new Bot<TelegramContext>(Env.BOT_TOKEN.pipe(Redacted.value));
+		bot.api.config.use(createTelegramApiTracing(tracer));
 
 		return NotificationSender.of({
 			sendMessage: (telegramID, message) =>
@@ -33,9 +37,6 @@ export const NotificationSenderLive = Layer.effect(
 					},
 				}).pipe(
 					Effect.map((sentMessage) => ({ messageID: sentMessage.message_id })),
-					Effect.withSpan('telegram.sendMessage', {
-						attributes: { 'telegram.chat.id': telegramID },
-					}),
 				),
 		});
 	}),

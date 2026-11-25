@@ -41,6 +41,6 @@ export const createPingCommand = (
 						message_id: message.message_id,
 					},
 				}),
-			).pipe(Effect.withSpan('ctx.reply'));
+			);
 		}).pipe(Effect.withSpan('PingCommand'), withTelegramSpan(ctx), execute),
 });

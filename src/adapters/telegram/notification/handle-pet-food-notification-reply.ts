@@ -29,7 +29,7 @@ export const handlePetFoodNotificationReply = Effect.fn(
 			ctx.reply(
 				'Pet não encontrado. Isso nunca é para acontecer, mas se acontecer, contate o dono do bot.',
 			),
-		).pipe(Effect.withSpan('ctx.reply'));
+		);
 		return;
 	}
 
@@ -55,12 +55,8 @@ export const handlePetFoodNotificationReply = Effect.fn(
 
 	yield* Effect.all(
 		[
-			Effect.tryPromise(() => ctx.reply(message)).pipe(
-				Effect.withSpan('ctx.reply'),
-			),
-			Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
-				Effect.withSpan('ctx.react'),
-			),
+			Effect.tryPromise(() => ctx.reply(message)),
+			Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)),
 			sendAddedFoodNotification({
 				id: petID,
 				quantity,

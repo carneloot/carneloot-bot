@@ -62,9 +62,7 @@ export const createAddFoodAllCommand =
 			).pipe(Effect.map(Array.flatten));
 
 			if (allPets.length === 0) {
-				yield* Effect.tryPromise(() =>
-					ctx.reply('Você não possui nenhum pet'),
-				).pipe(Effect.withSpan('ctx.reply'));
+				yield* Effect.tryPromise(() => ctx.reply('Você não possui nenhum pet'));
 				return;
 			}
 
@@ -117,10 +115,8 @@ export const createAddFoodAllCommand =
 						ctx.reply(
 							`Foram adicionados ${quantity} de ração para todos os seus pets`,
 						),
-					).pipe(Effect.withSpan('ctx.reply')),
-					Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)).pipe(
-						Effect.withSpan('ctx.react'),
 					),
+					Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)),
 				],
 				{ concurrency: 'unbounded', mode: 'result' },
 			);

@@ -1,4 +1,5 @@
 import type { ConversationData, VersionedState } from '@grammyjs/conversations';
+import { trace } from '@opentelemetry/api';
 import { sql } from 'drizzle-orm';
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { MemorySessionStorage } from 'grammy';
@@ -96,10 +97,14 @@ const callbackUpdate = (updateId: number, data: string) =>
 	}) satisfies Update;
 
 const createRunner = () => {
-	const { bot } = createBot(execute, {
-		type: 'key',
-		adapter: new MemorySessionStorage<VersionedState<ConversationData>>(),
-	});
+	const { bot } = createBot(
+		execute,
+		{
+			type: 'key',
+			adapter: new MemorySessionStorage<VersionedState<ConversationData>>(),
+		},
+		trace.getTracer('test'),
+	);
 	bot.botInfo = botInfo;
 	return createGrammyRunner(bot);
 };
