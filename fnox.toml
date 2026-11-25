@@ -23,6 +23,8 @@ vault = "Secrets"
 BOT_TOKEN = { provider = "op", value = "carneloot-bot/BOT_TOKEN" }
 TELEGRAM_FORWARD_USERNAMES = { provider = "op", value = "carneloot-bot/TELEGRAM_FORWARD_USERNAMES" }
 OWNER_TELEGRAM_ID = { provider = "op", value = "carneloot-bot/OWNER_TELEGRAM_ID" }
+OTLP_URL = { provider = "op", value = "carneloot-bot/OTLP_URL" }
+OTLP_API_TOKEN = { provider = "op", value = "carneloot-bot/OTLP_API_TOKEN" }
 RAILWAY_API_TOKEN = { provider = "op", value = "carneloot-bot/RAILWAY_API_TOKEN" }
 CLOUDFLARE_ACCOUNT_ID = { provider = "op", value = "carneloot-bot/CLOUDFLARE_ACCOUNT_ID" }
 CLOUDFLARE_API_TOKEN = { provider = "op", value = "carneloot-bot/CLOUDFLARE_API_TOKEN" }
