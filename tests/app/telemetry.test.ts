@@ -376,6 +376,11 @@ describe('telemetry', () => {
 				expect(update).toBeDefined();
 				const trace = spans.filter((span) => span.traceId === update?.traceId);
 				expect(trace.filter((span) => !span.parentSpanId)).toHaveLength(1);
+				expect(
+					trace.filter(
+						(span) => span.name === 'UserRepository.getUserByTelegramID',
+					),
+				).toHaveLength(1);
 				for (const span of trace.filter((span) => span !== update)) {
 					expect(trace.map((span) => span.spanId)).toContain(span.parentSpanId);
 				}

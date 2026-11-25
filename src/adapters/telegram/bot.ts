@@ -71,7 +71,6 @@ export const createBot = (
 ): TelegramBot => {
 	const bot = new Bot<Context>(Env.BOT_TOKEN.pipe(Redacted.value));
 	const myEmojiParser = emojiParser();
-	const userMiddleware = createUserMiddleware(execute);
 	const apiKeyConfirmationMenu = createApiKeyConfirmationMenu(execute);
 	const pingCommand = createPingCommand(execute);
 	const whatsCommand = createWhatsCommand(execute);
@@ -140,7 +139,8 @@ export const createBot = (
 	bot.use(createGenericErrorMiddleware(execute));
 
 	bot.command('start', (ctx) => ctx.reply('É nóis'));
-	bot.on('message', userMiddleware, createReplyMiddleware(execute));
+	bot.use(createUserMiddleware(execute));
+	bot.on('message', createReplyMiddleware(execute));
 
 	bot.command(pingCommand.command, pingCommand);
 	bot.command(whatsCommand.command, whatsCommand);
@@ -148,10 +148,9 @@ export const createBot = (
 	bot.command(cafeInvCommand.command, cafeInvCommand);
 
 	bot.command('cadastrar', createSignupCommand(execute));
-	bot.use(userMiddleware, apiKeyConfirmationMenu);
+	bot.use(apiKeyConfirmationMenu);
 	bot.command(
 		'gerar_chave',
-		userMiddleware,
 		createGenerateApiKeyCommand(execute, apiKeyConfirmationMenu),
 	);
 	const petModule = new Module<Context>('', 'Opções de gerenciamento de pet');
@@ -159,49 +158,41 @@ export const createBot = (
 	petModule.setCommand(
 		'adicionar_pet',
 		'Adiciona um pet ao seu usuário',
-		userMiddleware,
 		createPetCommand('addPet'),
 	);
 	petModule.setCommand(
 		'deletar_pet',
 		'Deleta um pet do seu usuário',
-		userMiddleware,
 		createPetCommand('deletePet'),
 	);
 	petModule.setCommand(
 		'listar_pets',
 		'Lista os seus pets',
-		userMiddleware,
 		createListPetsCommand(execute),
 	);
 	petModule.setCommand(
 		'adicionar_cuidador',
 		'Adiciona um cuidador para um pet',
-		userMiddleware,
 		createPetCommand('addCarer', { overwrite: true }),
 	);
 	petModule.setCommand(
 		'remover_cuidador',
 		'Remove um cuidador de um pet',
-		userMiddleware,
 		createPetCommand('removeCarer', { overwrite: true }),
 	);
 	petModule.setCommand(
 		'listar_cuidadores',
 		'Lista os cuidadores de um pet',
-		userMiddleware,
 		createPetCommand('listCarers', { overwrite: true }),
 	);
 	petModule.setCommand(
 		'convites_pet',
 		'Lista os convites para cuidar de um pet',
-		userMiddleware,
 		createPetCommand('petInvites', { overwrite: true }),
 	);
 	petModule.setCommand(
 		'parar_de_cuidar_pet',
 		'Para de cuidar de um pet',
-		userMiddleware,
 		createPetCommand('stopCaring'),
 	);
 	bot.use(petModule);
@@ -213,47 +204,40 @@ export const createBot = (
 	petFoodModule.setCommand(
 		'configurar_inicio_dia',
 		'Configura o horário de início do dia para rastreamento de ração',
-		userMiddleware,
 		SetDayStartCommand,
 	);
 	petFoodModule.setCommand(
 		'configurar_atraso_notificacao',
 		'Configura o atraso de notificação para rastreamento de ração',
-		userMiddleware,
 		SetNotificationDelayCommand,
 	);
 	petFoodModule.setCommand(
 		'colocar_racao',
 		'Adiciona ração ao rastreamento de ração',
-		userMiddleware,
 		AddFoodCommand,
 	);
 	petFoodModule.setCommand(
 		'deletar_racao',
 		'Deleta ração do rastreamento de ração',
-		userMiddleware,
 		DeleteFoodCommand,
 	);
 	petFoodModule.setCommand(
 		'corrigir_racao',
 		'Corrige o valor e tempo de um comando de ração mandado anteriormente',
-		userMiddleware,
 		CorrectFoodCommand,
 	);
 	petFoodModule.setCommand(
 		'status_racao',
 		'Exibe o status atual do rastreamento de ração',
-		userMiddleware,
 		createFoodStatusCommand(execute),
 	);
 	petFoodModule.setCommand(
 		['colocar_racao_todos', 'todos'],
 		'Adiciona ração ao rastreamento de ração para todos os seus pets de uma vez',
-		userMiddleware,
 		createAddFoodAllCommand(execute),
 	);
 	bot.use(petFoodModule);
-	bot.use(createNotificationModule(execute, userMiddleware));
+	bot.use(createNotificationModule(execute));
 
 	if (Env.TELEGRAM_FORWARD_USERNAMES && Env.OWNER_TELEGRAM_ID) {
 		bot.on(

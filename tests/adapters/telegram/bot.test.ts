@@ -267,8 +267,11 @@ describe('registered bot command regressions', () => {
 					return yield* users.generateApiKeyForUser(user.value.id);
 				}),
 			);
+			const users = await runtime.runPromise(UserRepository);
+			const lookup = vi.spyOn(users, 'getUserByTelegramID');
 			const runner = createRunner();
 			await runner.dispatch(commandUpdate(1, '/gerar_chave'));
+			expect(lookup).toHaveBeenCalledTimes(1);
 			const prompt = runner.calls.find((call) => call.method === 'sendMessage');
 			assert(prompt);
 			const { text, reply_markup } = Schema.decodeUnknownSync(
@@ -311,6 +314,7 @@ describe('registered bot command regressions', () => {
 					},
 				},
 			});
+			expect(lookup).toHaveBeenCalledTimes(2);
 			const oldKeyUser = await runtime.runPromise(
 				UserRepository.pipe(
 					Effect.flatMap((users) => users.getUserFromApiKey(oldKey)),
@@ -361,6 +365,46 @@ describe('registered bot command regressions', () => {
 			payload: { chat_id: 1, text: 'É nóis' },
 		});
 	});
+
+	it.each([
+		'/gerar_chave',
+		'/listar_pets',
+		'/adicionar_pet',
+		'/status_racao',
+		'/colocar_racao',
+		'/criar_notificacao',
+		'/listar_notificacoes',
+	])(
+		'loads the user once for %s and refreshes after registration',
+		async (command) => {
+			const users = await runtime.runPromise(UserRepository);
+			const lookup = vi.spyOn(users, 'getUserByTelegramID');
+			const runner = createRunner();
+
+			await runner.dispatch(commandUpdate(1, command));
+			expect(lookup).toHaveBeenCalledTimes(1);
+			expect(runner.calls).toContainEqual({
+				method: 'sendMessage',
+				payload: {
+					chat_id: 1,
+					text: 'Por favor cadastre-se primeiro utilizando /cadastrar',
+				},
+			});
+
+			await runner.dispatch(commandUpdate(2, '/cadastrar'));
+			expect(lookup).toHaveBeenCalledTimes(2);
+			await runner.dispatch(commandUpdate(3, '/gerar_chave'));
+			expect(lookup).toHaveBeenCalledTimes(3);
+			expect(runner.calls.at(-1)).toEqual({
+				method: 'sendMessage',
+				payload: {
+					chat_id: 1,
+					text: expect.stringMatching(/^Aqui está: <pre>[^<]+<\/pre>$/),
+					parse_mode: 'HTML',
+				},
+			});
+		},
+	);
 
 	it('runs /ping through command parsing and replies to its source message', async () => {
 		const runner = createRunner();

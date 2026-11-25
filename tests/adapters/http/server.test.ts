@@ -159,7 +159,7 @@ describe('POST /api/notify', () => {
 		});
 	});
 
-	it('returns 200 on complete delivery and uses only the header API key', async () => {
+	it('returns 200 on complete delivery and passes the authenticated user', async () => {
 		const sendNotification = vi.fn(() =>
 			Effect.succeed({ delivered: 2, failed: 0 }),
 		);
@@ -172,11 +172,16 @@ describe('POST /api/notify', () => {
 		expect(await response.json()).toEqual({
 			message: 'Notification sent successfully!',
 		});
-		expect(sendNotification).toHaveBeenCalledWith({
-			keyword: 'test',
-			variables: { count: 2 },
-			apiKey: 'header-api-key',
-		});
+		expect(sendNotification).toHaveBeenCalledWith(
+			{
+				id: 'owner',
+				telegramID: '1',
+				firstName: 'Test',
+				lastName: null,
+				username: null,
+			},
+			{ keyword: 'test', variables: { count: 2 } },
+		);
 	});
 
 	it.each([

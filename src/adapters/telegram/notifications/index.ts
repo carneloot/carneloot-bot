@@ -1,5 +1,5 @@
 import { Effect, Schema } from 'effect';
-import type { Middleware, MiddlewareFn } from 'grammy';
+import type { MiddlewareFn } from 'grammy';
 import type { MessageEntity } from 'grammy/types';
 import invariant from 'tiny-invariant';
 
@@ -38,7 +38,6 @@ const getNotifications = (ownerID: string) =>
 
 export const createNotificationModule = (
 	execute: Execute<AppServices>,
-	userMiddleware: Middleware<Context>,
 ): Module<Context> => {
 	const module = new Module<Context>('', 'Opções de notificações');
 
@@ -215,13 +214,11 @@ export const createNotificationModule = (
 	module.setCommand(
 		'criar_notificacao',
 		'Cria um modelo de notificação para usar pela API',
-		userMiddleware,
 		enter('createNotification'),
 	);
 	module.setCommand(
 		'listar_notificacoes',
 		'Lista seus modelos de notificação',
-		userMiddleware,
 		async (ctx) => {
 			if (!ctx.user) {
 				await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
@@ -292,13 +289,11 @@ export const createNotificationModule = (
 	module.setCommand(
 		'editar_notificacao',
 		'Edita a mensagem de um modelo de notificação',
-		userMiddleware,
 		enter('editNotification'),
 	);
 	module.setCommand(
 		'deletar_notificacao',
 		'Deleta um modelo de notificação',
-		userMiddleware,
 		enter('deleteNotification'),
 	);
 	return module;

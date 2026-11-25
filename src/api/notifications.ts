@@ -62,9 +62,6 @@ export const NotificationsGroup = HttpApiGroup.make('notifications')
 				DatabaseErrorResponse,
 				NotificationNotFound,
 				Schema.Struct({
-					message: Schema.Literal('User not found for apiKey'),
-				}).pipe(HttpApiSchema.status(404)),
-				Schema.Struct({
 					message: Schema.Literal('Missing used variables'),
 					variables: Schema.Array(Schema.String),
 				}).pipe(HttpApiSchema.status(422)),
@@ -133,11 +130,8 @@ export const NotificationsLive = HttpApiBuilder.group(
 				)
 				.handle('notify', ({ payload }) =>
 					Effect.gen(function* () {
-						const { apiKey } = yield* AuthenticatedUser;
-						const outcome = yield* service.sendNotification({
-							...payload,
-							apiKey,
-						});
+						const { user } = yield* AuthenticatedUser;
+						const outcome = yield* service.sendNotification(user, payload);
 						return outcome.failed === 0
 							? { message: 'Notification sent successfully!' as const }
 							: {
@@ -151,8 +145,6 @@ export const NotificationsLive = HttpApiBuilder.group(
 									message: 'Notification delivery failed' as const,
 									failed: error.attempted,
 								}),
-							UserNotFoundError: () =>
-								Effect.fail({ message: 'User not found for apiKey' as const }),
 							MissingVariablesError: (error) =>
 								Effect.fail({
 									message: 'Missing used variables' as const,

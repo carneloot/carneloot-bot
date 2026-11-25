@@ -20,7 +20,7 @@ import {
 	NotificationNotFoundError,
 	NotificationRepository,
 } from '../repositories/notification.js';
-import { type User, UserRepository } from '../repositories/user.js';
+import type { User } from '../repositories/user.js';
 
 class MissingVariablesError extends Data.TaggedError('MissingVariablesError')<{
 	variables: string[];
@@ -75,7 +75,6 @@ interface SendNotificationAndLog {
 
 export const makeNotificationService = Effect.gen(function* () {
 	const notificationRepository = yield* NotificationRepository;
-	const userRepository = yield* UserRepository;
 	const notificationSender = yield* NotificationSender;
 
 	const updateNotificationTemplate = Effect.fn(
@@ -116,9 +115,7 @@ export const makeNotificationService = Effect.gen(function* () {
 	});
 
 	const sendNotification = Effect.fn('NotificationService.sendNotification')(
-		function* (params: NotifyParams & { apiKey: string }) {
-			const user = yield* userRepository.getUserFromApiKey(params.apiKey);
-
+		function* (user: User, params: NotifyParams) {
 			const { notification, usersToNotify } =
 				yield* notificationRepository.getNotificationByOwnerAndKeyword(
 					user.id,

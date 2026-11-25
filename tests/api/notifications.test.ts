@@ -2,6 +2,7 @@ import { Effect, Layer, ManagedRuntime } from 'effect';
 import { HttpApiBuilder } from 'effect/http-api';
 import {
 	afterAll,
+	afterEach,
 	beforeAll,
 	beforeEach,
 	describe,
@@ -120,6 +121,7 @@ describe('/api/notifications', () => {
 	afterAll(async () => {
 		await runtime.dispose();
 	});
+	afterEach(() => vi.restoreAllMocks());
 	beforeEach(async () => {
 		app = createTestHttp(httpLayer);
 		await runtime.runPromise(
@@ -141,6 +143,43 @@ describe('/api/notifications', () => {
 			}),
 		);
 	});
+
+	it.each([
+		{
+			method: 'POST',
+			path: '/api/notifications',
+			body: { keyword: 'new_keyword', message: 'New template' },
+			status: 201,
+		},
+		{
+			method: 'PATCH',
+			path: '/api/notifications',
+			body: { keyword: 'claude_done', message: 'Updated' },
+			status: 200,
+		},
+		{
+			method: 'POST',
+			path: '/api/notify',
+			body: { keyword: 'missing_template', variables: {} },
+			status: 404,
+		},
+	])(
+		'loads the authenticated user once for $method $path',
+		async ({ method, path, body, status }) => {
+			const users = await runtime.runPromise(UserRepository);
+			const lookup = vi.spyOn(users, 'getUserFromApiKey');
+			const response = await app.request(path, {
+				method,
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: 'Bearer test-owner-key',
+				},
+				body: JSON.stringify(body),
+			});
+			expect(response.status).toBe(status);
+			expect(lookup).toHaveBeenCalledExactlyOnceWith('test-owner-key');
+		},
+	);
 
 	it.each(['✅ {{project}}\n🏷️ {{title}}\n\n💬 {{message}}', 'x'.repeat(4096)])(
 		'updates a message without changing its identity, keyword, recipients, or another owner',

@@ -10,10 +10,7 @@ vi.hoisted(() => {
 import { NotificationSender } from '../../../src/adapters/telegram/notification-sender.js';
 import type { NotificationID } from '../../../src/lib/database/schema.js';
 import { NotificationRepository } from '../../../src/lib/repositories/notification.js';
-import {
-	type User,
-	UserRepository,
-} from '../../../src/lib/repositories/user.js';
+import type { User } from '../../../src/lib/repositories/user.js';
 import { makeNotificationService } from '../../../src/lib/services/notification.js';
 
 const owner = {
@@ -41,18 +38,6 @@ const createServiceLayer = (
 ) =>
 	Layer.mergeAll(
 		Layer.succeed(NotificationSender, NotificationSender.of({ sendMessage })),
-		Layer.succeed(
-			UserRepository,
-			UserRepository.of({
-				createUser: () => Effect.die('not used'),
-				getUserByTelegramID: () => Effect.die('not used'),
-				getUserByID: () => Effect.die('not used'),
-				getUserByUsername: () => Effect.die('not used'),
-				userHasApiKey: () => Effect.die('not used'),
-				generateApiKeyForUser: () => Effect.die('not used'),
-				getUserFromApiKey: () => Effect.succeed(owner),
-			}),
-		),
 		Layer.succeed(
 			NotificationRepository,
 			NotificationRepository.of({
@@ -87,8 +72,7 @@ describe('NotificationService', () => {
 			Effect.exit(
 				Effect.gen(function* () {
 					const service = yield* makeNotificationService;
-					return yield* service.sendNotification({
-						apiKey: 'api-key',
+					return yield* service.sendNotification(owner, {
 						keyword: 'test',
 						variables: undefined,
 					});
@@ -116,8 +100,7 @@ describe('NotificationService', () => {
 		const result = await Effect.runPromise(
 			Effect.gen(function* () {
 				const service = yield* makeNotificationService;
-				return yield* service.sendNotification({
-					apiKey: 'api-key',
+				return yield* service.sendNotification(owner, {
 					keyword: 'test',
 					variables: undefined,
 				});

@@ -11,7 +11,7 @@ import { DatabaseErrorResponse } from './errors.js';
 
 export class AuthenticatedUser extends Context.Service<
 	AuthenticatedUser,
-	{ user: User; apiKey: string }
+	{ user: User }
 >()('api/AuthenticatedUser') {}
 
 export class ApiKeyAuth extends HttpApiMiddleware.Service<
@@ -65,7 +65,6 @@ export const ApiKeyAuthLive = Layer.effect(
 						Effect.flatMap((user) =>
 							Effect.provideService(httpEffect, AuthenticatedUser, {
 								user,
-								apiKey,
 							}),
 						),
 						Effect.catchTags({
