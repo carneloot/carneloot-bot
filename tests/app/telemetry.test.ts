@@ -116,9 +116,11 @@ describe('telemetry', () => {
 		const networkError = new Error('sensitive-network-error');
 		const aborted = new DOMException('sensitive-cancellation', 'AbortError');
 		const api = new Api('sensitive-bot-token', {
-			fetch: async (_url: string | URL | Request, init?: RequestInit) => {
+			fetch: async (url: string | URL | Request, init?: RequestInit) => {
 				await setImmediate();
 				if (init?.signal?.aborted) throw aborted;
+				if (String(url).endsWith('/getUpdates'))
+					return new Response(JSON.stringify({ ok: true, result: [] }));
 				const payload = JSON.parse(String(init?.body)) as { text: string };
 				if (payload.text === 'sensitive-network') throw networkError;
 				return new Response(
@@ -179,6 +181,7 @@ describe('telemetry', () => {
 				),
 			);
 			await api.sendMessage(1, 'sensitive-outside');
+			await expect(api.getUpdates({ timeout: 30 })).resolves.toEqual([]);
 			await runtime.dispose();
 			const body = collector.requests.find(
 				(request) => request.path === '/v1/traces',
@@ -207,6 +210,9 @@ describe('telemetry', () => {
 			const spans = payload.resourceSpans.flatMap((resource) =>
 				resource.scopeSpans.flatMap((scope) => scope.spans),
 			);
+			expect(
+				spans.some((span) => span.name === 'telegram.api.getUpdates'),
+			).toBe(false);
 			const apiSpans = spans.filter(
 				(span) => span.name === 'telegram.api.sendMessage',
 			);

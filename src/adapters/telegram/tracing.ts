@@ -18,6 +18,8 @@ import type {
 export const createTelegramApiTracing =
 	(tracer: OtelTracer): Transformer =>
 	async (prev, method, payload, signal) => {
+		if (method === 'getUpdates') return prev(method, payload, signal);
+
 		const span = tracer.startSpan(`telegram.api.${method}`, {
 			kind: SpanKind.CLIENT,
 			attributes: {
