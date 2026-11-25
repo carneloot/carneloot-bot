@@ -1,7 +1,4 @@
-import * as NodeSdk from '@effect/opentelemetry/NodeSdk';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { Layer, ManagedRuntime, Redacted } from 'effect';
+import { Layer, ManagedRuntime } from 'effect';
 
 import { PetFoodNotificationQueue } from '../adapters/queue/pet-food-notification.js';
 import { TelegramBotLive } from '../adapters/telegram/bot.js';
@@ -13,7 +10,6 @@ import {
 	NotificationSender,
 	NotificationSenderLive,
 } from '../adapters/telegram/notification-sender.js';
-import { Env } from '../common/env.js';
 import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
 import { Redis, RedisLive } from '../lib/redis/redis.js';
@@ -24,28 +20,7 @@ import { PetRepository } from '../lib/repositories/pet.js';
 import { UserRepository } from '../lib/repositories/user.js';
 import { NotificationService } from '../lib/services/notification.js';
 import { PetFoodService } from '../lib/services/pet-food.js';
-
-const traceExporter = new OTLPTraceExporter({
-	url: Env.OTLP_URL,
-	headers: {
-		Authorization: Env.OTLP_API_TOKEN
-			? `Bearer ${Env.OTLP_API_TOKEN.pipe(Redacted.value)}`
-			: '',
-		'X-Axiom-Dataset': Env.OTLP_DATASET ?? '',
-	},
-});
-
-const jeagerExporter = new OTLPTraceExporter();
-
-const NodeSdkLive = NodeSdk.layer(() => ({
-	resource: {
-		serviceName: 'carneloot-bot',
-		serviceVersion: Env.SOURCE_COMMIT?.slice(0, 6),
-	},
-	spanProcessor: new BatchSpanProcessor(
-		Env.OTLP_URL !== undefined ? traceExporter : jeagerExporter,
-	),
-}));
+import { TelemetryLive } from './telemetry.js';
 
 const PersistenceLive = Layer.mergeAll(
 	NotificationRepository.layer,
@@ -65,9 +40,9 @@ const QueueServicesLive = Layer.mergeAll(
 	PetFoodNotificationQueue.layer,
 ).pipe(Layer.provideMerge(Layer.mergeAll(NotificationServicesLive, RedisLive)));
 
-const AppServicesLive = Layer.mergeAll(
-	NodeSdkLive,
-	PetFoodService.layer.pipe(Layer.provideMerge(QueueServicesLive)),
+const AppServicesLive = PetFoodService.layer.pipe(
+	Layer.provideMerge(QueueServicesLive),
+	Layer.provideMerge(TelemetryLive),
 );
 
 export const appLayer = TelegramBotLive.pipe(

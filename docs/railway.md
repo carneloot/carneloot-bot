@@ -64,6 +64,13 @@ to `polling`; the other supported optional variables are:
 - `SOURCE_COMMIT`
 - `OTLP_URL`, `OTLP_API_TOKEN`, `OTLP_DATASET`
 
+For Maple, set `OTLP_URL` to its public HTTPS base URL without a path.
+The bot exports traces to `/v1/traces` and Effect logs to `/v1/logs`, using
+`OTLP_API_TOKEN` as the Bearer token for both. Use Maple's
+`MAPLE_LOCAL_INGEST_KEY` as the token; `OTLP_DATASET` is not required.
+Console logging remains enabled. The production fnox profile reads `OTLP_URL`
+and `OTLP_API_TOKEN` from the `carneloot-bot` item in the `Secrets` 1Password vault.
+
 For webhook mode, set `WEBHOOK_URL` to the public hostname without a scheme or
 path. At startup, the webhook layer generates a 256-bit random secret and stores
 it under `telegram:webhook-secret:<bot-id>` in Redis with `SET NX` and no expiry.

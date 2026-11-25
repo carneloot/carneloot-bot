@@ -39,7 +39,7 @@ const envSchema = Schema.Struct({
 
 	SOURCE_COMMIT: Schema.optional(Schema.String),
 
-	// Tracer
+	// Telemetry: OTLP_URL is the base HTTP URL for traces and logs.
 	OTLP_URL: Schema.optional(Schema.String),
 	OTLP_API_TOKEN: Schema.optional(Schema.RedactedFromValue(Schema.String)),
 	OTLP_DATASET: Schema.optional(Schema.String),
