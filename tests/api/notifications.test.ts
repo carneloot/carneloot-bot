@@ -1,5 +1,5 @@
-import { Effect } from 'effect';
-import { Hono } from 'hono';
+import { Effect, Layer, ManagedRuntime } from 'effect';
+import { HttpApiBuilder } from 'effect/http-api';
 import {
 	afterAll,
 	beforeAll,
@@ -12,36 +12,45 @@ import {
 
 vi.hoisted(() => {
 	process.env.BOT_TOKEN = 'test-token';
-	process.env.DATABASE_URL = 'file::memory:';
+	// Share the in-memory database across LibSQL transaction connections.
+	process.env.DATABASE_URL = 'file::memory:?cache=shared';
 	process.env.REDIS_URL = 'redis://localhost:6379';
 });
 
-vi.mock('../../src/runtime.js', async () => {
-	const { Layer, ManagedRuntime } = await import('effect');
-	const Database = await import('../../src/lib/database/db.js');
-	const { NotificationRepository } =
-		await import('../../src/lib/repositories/notification.js');
-	const { NotificationService } =
-		await import('../../src/lib/services/notification.js');
-	return {
-		runtime: ManagedRuntime.make(
-			Layer.mergeAll(
-				Database.layer,
-				NotificationRepository.layer,
-				NotificationService.layer,
+import { NotificationSender } from '../../src/adapters/telegram/notification-sender.js';
+import {
+	NotificationsApi,
+	NotificationsLive,
+} from '../../src/api/notifications.js';
+import { hashString } from '../../src/common/utils/hash-string.js';
+import { Database, layer as databaseLayer } from '../../src/lib/database/db.js';
+import type { NotificationID, UserID } from '../../src/lib/database/schema.js';
+import { NotificationRepository } from '../../src/lib/repositories/notification.js';
+import { UserRepository } from '../../src/lib/repositories/user.js';
+import { NotificationService } from '../../src/lib/services/notification.js';
+import { createTestHttp } from '../support/http.js';
+
+const persistenceLayer = Layer.mergeAll(
+	NotificationRepository.layer,
+	UserRepository.layer,
+).pipe(Layer.provideMerge(databaseLayer));
+const testLayer = NotificationService.layer.pipe(
+	Layer.provideMerge(
+		Layer.mergeAll(
+			persistenceLayer,
+			Layer.succeed(
+				NotificationSender,
+				NotificationSender.of({ sendMessage: () => Effect.die('not used') }),
 			),
 		),
-	};
-});
-
-import { notificationsApi } from '../../src/api/notifications.js';
-import { hashString } from '../../src/common/utils/hash-string.js';
-import { Database } from '../../src/lib/database/db.js';
-import type { UserID } from '../../src/lib/database/schema.js';
-import { NotificationRepository } from '../../src/lib/repositories/notification.js';
-import { runtime } from '../../src/runtime.js';
-
-const app = new Hono().route('/api', notificationsApi);
+	),
+);
+const runtime = ManagedRuntime.make(testLayer);
+const httpLayer = HttpApiBuilder.layer(NotificationsApi).pipe(
+	Layer.provide(NotificationsLive),
+	Layer.provide(Layer.effectContext(Effect.promise(() => runtime.context()))),
+);
+let app: ReturnType<typeof createTestHttp>;
 const patch = (
 	body: unknown,
 	authorization: string | null = 'Bearer test-owner-key',
@@ -93,6 +102,8 @@ describe('/api/notifications', () => {
 					message TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES users(id), UNIQUE(keyword, owner_id));
 				CREATE TABLE users_to_notify (id TEXT PRIMARY KEY, notification_id TEXT REFERENCES notifications(id),
 					user_id TEXT REFERENCES users(id));
+				CREATE TABLE notification_history (id TEXT PRIMARY KEY, notification_id TEXT REFERENCES notifications(id),
+					pet_id TEXT, user_id TEXT REFERENCES users(id), message_id INTEGER NOT NULL, sent_at INTEGER NOT NULL);
 				INSERT INTO users (id, telegram_id, first_name) VALUES
 					('owner-1', '1', 'Test'), ('owner-2', '2', 'Other');
 			`),
@@ -106,13 +117,18 @@ describe('/api/notifications', () => {
 			}),
 		);
 	});
-	afterAll(() => runtime.dispose());
+	afterAll(async () => {
+		await runtime.dispose();
+	});
 	beforeEach(async () => {
+		app = createTestHttp(httpLayer);
 		await runtime.runPromise(
 			Effect.gen(function* () {
 				const db = yield* Database;
 				yield* db.execute((client) =>
 					client.$client.executeMultiple(`
+				DROP TRIGGER IF EXISTS prevent_template_delete;
+				DELETE FROM notification_history;
 				DELETE FROM users_to_notify;
 				DELETE FROM notifications;
 				INSERT INTO notifications (id, keyword, message, owner_id) VALUES
@@ -351,6 +367,189 @@ describe('/api/notifications', () => {
 			});
 			await expect(getTemplate('owner-1', 'new_keyword')).rejects.toMatchObject(
 				{ _tag: 'NotificationNotFoundError' },
+			);
+		},
+	);
+
+	it.each(['missing_template', 'private_template'])(
+		'notify returns 404 for missing or inaccessible templates: %s',
+		async (keyword) => {
+			const response = await app.request('/api/notify', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: 'Bearer test-owner-key',
+				},
+				body: JSON.stringify({ keyword, variables: {} }),
+			});
+			expect(response.status).toBe(404);
+			expect(await response.json()).toEqual({
+				message: 'Notification not found for user and keyword',
+			});
+		},
+	);
+
+	it('notify returns 422 and only missing variable names before attempting delivery', async () => {
+		await patch({ keyword: 'claude_done', message: '{{title}} {{count}}' });
+		const response = await app.request('/api/notify', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: 'Bearer test-owner-key',
+			},
+			body: JSON.stringify({
+				keyword: 'claude_done',
+				variables: { title: 'Finished' },
+			}),
+		});
+		expect(response.status).toBe(422);
+		expect(await response.json()).toEqual({
+			message: 'Missing used variables',
+			variables: ['count'],
+		});
+	});
+
+	it('repository lists only the owner templates in keyword order', async () => {
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const repository = yield* NotificationRepository;
+				yield* repository.createNotification(
+					'owner-1' as UserID,
+					'zebra',
+					'Last',
+				);
+				yield* repository.createNotification(
+					'owner-1' as UserID,
+					'alpha',
+					'First',
+				);
+				const rows = yield* repository.getNotificationsByOwner(
+					'owner-1' as UserID,
+				);
+				expect(rows.map((row) => row.keyword)).toEqual([
+					'alpha',
+					'claude_done',
+					'zebra',
+				]);
+				expect(rows.every((row) => row.ownerID === 'owner-1')).toBe(true);
+				expect(
+					yield* repository.getNotificationsByOwner('missing' as UserID),
+				).toEqual([]);
+			}),
+		);
+	});
+
+	it('repository updates by owner and id without touching inaccessible templates', async () => {
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const repository = yield* NotificationRepository;
+				expect(
+					yield* repository.updateNotification(
+						'owner-1' as UserID,
+						'template-2' as NotificationID,
+						'Forbidden',
+					),
+				).toBe(false);
+				expect(
+					yield* repository.updateNotification(
+						'owner-1' as UserID,
+						'missing' as NotificationID,
+						'Missing',
+					),
+				).toBe(false);
+				expect(
+					yield* repository.updateNotification(
+						'owner-1' as UserID,
+						'template-1' as NotificationID,
+						'Updated',
+					),
+				).toBe(true);
+			}),
+		);
+		expect((await getTemplate()).notification.message).toBe('Updated');
+		expect((await getTemplate('owner-2')).notification.message).toBe(
+			'Other owner',
+		);
+	});
+
+	it('repository deletion refuses missing and other owner ids without deleting recipients', async () => {
+		await runtime.runPromise(
+			Effect.gen(function* () {
+				const repository = yield* NotificationRepository;
+				expect(
+					yield* repository.deleteNotification(
+						'owner-2' as UserID,
+						'template-1' as NotificationID,
+					),
+				).toBe(false);
+				expect(
+					yield* repository.deleteNotification(
+						'owner-1' as UserID,
+						'missing' as NotificationID,
+					),
+				).toBe(false);
+			}),
+		);
+		expect((await getTemplate()).usersToNotify.map((user) => user.id)).toEqual([
+			'owner-2',
+		]);
+	});
+
+	it.each([false, true])(
+		'repository deletion is atomic when deletion is blocked: %s',
+		async (blocked) => {
+			await runtime.runPromise(
+				Effect.gen(function* () {
+					const db = yield* Database;
+					yield* db.execute((client) =>
+						client.$client.executeMultiple(`
+				INSERT INTO notification_history (id, notification_id, user_id, message_id, sent_at)
+				VALUES ('history-1', 'template-1', 'owner-1', 123, 0);
+				${
+					blocked
+						? `CREATE TRIGGER prevent_template_delete BEFORE DELETE ON notifications
+				BEGIN SELECT RAISE(ABORT, 'blocked deletion'); END;`
+						: ''
+				}
+			`),
+					);
+				}),
+			);
+			const deletion = runtime.runPromise(
+				Effect.gen(function* () {
+					const repository = yield* NotificationRepository;
+					return yield* repository.deleteNotification(
+						'owner-1' as UserID,
+						'template-1' as NotificationID,
+					);
+				}),
+			);
+			if (blocked) {
+				await expect(deletion).rejects.toBeDefined();
+				expect(
+					(await getTemplate()).usersToNotify.map((user) => user.id),
+				).toEqual(['owner-2']);
+			} else {
+				expect(await deletion).toBe(true);
+				await expect(getTemplate()).rejects.toMatchObject({
+					_tag: 'NotificationNotFoundError',
+				});
+			}
+			await runtime.runPromise(
+				Effect.gen(function* () {
+					const db = yield* Database;
+					const result = yield* db.execute((client) =>
+						client.$client.execute('SELECT * FROM notification_history'),
+					);
+					expect(result.rows).toHaveLength(blocked ? 1 : 0);
+					const recipients = yield* db.execute((client) =>
+						client.$client.execute('SELECT * FROM users_to_notify'),
+					);
+					expect(recipients.rows).toHaveLength(blocked ? 1 : 0);
+				}),
+			);
+			expect((await getTemplate('owner-2')).notification.message).toBe(
+				'Other owner',
 			);
 		},
 	);

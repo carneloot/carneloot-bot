@@ -11,6 +11,3 @@ export const UpdateNotificationParamsSchema = Schema.Struct({
 export type UpdateNotificationParams = Schema.Schema.Type<
 	typeof UpdateNotificationParamsSchema
 >;
-export const UpdateNotificationParams = Schema.toStandardSchemaV1(
-	UpdateNotificationParamsSchema,
-);

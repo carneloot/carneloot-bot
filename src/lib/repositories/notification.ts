@@ -32,8 +32,8 @@ const makeNotificationRepository = Effect.gen(function* () {
 		'NotificationRepository.createNotification',
 	)(function* (
 		ownerID: Notification['ownerID'],
-		keyword: Notification['keyword'],
-		message: Notification['message'],
+		keyword: string,
+		message: string,
 	) {
 		const result = yield* db.execute((client) =>
 			client
@@ -50,22 +50,21 @@ const makeNotificationRepository = Effect.gen(function* () {
 				.returning({ id: notificationsTable.id })
 				.get(),
 		);
-
 		return result !== undefined;
 	});
 
 	const getNotificationsByOwner = Effect.fn(
 		'NotificationRepository.getNotificationsByOwner',
-	)(function* (ownerID: Notification['ownerID']) {
-		return yield* db.execute((client) =>
+	)((ownerID: Notification['ownerID']) =>
+		db.execute((client) =>
 			client
 				.select()
 				.from(notificationsTable)
 				.where(eq(notificationsTable.ownerID, ownerID))
 				.orderBy(notificationsTable.keyword)
 				.all(),
-		);
-	});
+		),
+	);
 
 	const updateNotification = Effect.fn(
 		'NotificationRepository.updateNotification',
@@ -92,33 +91,40 @@ const makeNotificationRepository = Effect.gen(function* () {
 
 	const deleteNotification = Effect.fn(
 		'NotificationRepository.deleteNotification',
-	)(function* (ownerID: Notification['ownerID'], id: Notification['id']) {
-		return yield* db.execute((client) =>
-			client.transaction(async (tx) => {
+	)((ownerID: Notification['ownerID'], id: Notification['id']) =>
+		db.transaction((execute) =>
+			Effect.gen(function* () {
 				const where = and(
 					eq(notificationsTable.ownerID, ownerID),
 					eq(notificationsTable.id, id),
 				);
-				const notification = await tx
-					.select({ id: notificationsTable.id })
-					.from(notificationsTable)
-					.where(where)
-					.get();
+				const notification = yield* execute((client) =>
+					client
+						.select({ id: notificationsTable.id })
+						.from(notificationsTable)
+						.where(where)
+						.get(),
+				);
 				if (!notification) return false;
-
-				await tx
-					.delete(notificationHistoryTable)
-					.where(eq(notificationHistoryTable.notificationID, id))
-					.run();
-				await tx
-					.delete(usersToNotifyTable)
-					.where(eq(usersToNotifyTable.notificationID, id))
-					.run();
-				await tx.delete(notificationsTable).where(where).run();
+				yield* execute((client) =>
+					client
+						.delete(notificationHistoryTable)
+						.where(eq(notificationHistoryTable.notificationID, id))
+						.run(),
+				);
+				yield* execute((client) =>
+					client
+						.delete(usersToNotifyTable)
+						.where(eq(usersToNotifyTable.notificationID, id))
+						.run(),
+				);
+				yield* execute((client) =>
+					client.delete(notificationsTable).where(where).run(),
+				);
 				return true;
 			}),
-		);
-	});
+		),
+	);
 
 	const getNotificationByOwnerAndKeyword = Effect.fn(
 		'NotificationRepository.getNotificationByOwnerAndKeyword',
@@ -256,6 +262,9 @@ export class NotificationRepository extends Context.Service<
 	NotificationRepository,
 	Effect.Success<typeof makeNotificationRepository>
 >()('app/NotificationRepository') {
+	declare readonly createNotification: Effect.Success<
+		typeof makeNotificationRepository
+	>['createNotification'];
 	declare readonly getNotificationsByOwner: Effect.Success<
 		typeof makeNotificationRepository
 	>['getNotificationsByOwner'];
@@ -265,9 +274,6 @@ export class NotificationRepository extends Context.Service<
 	declare readonly deleteNotification: Effect.Success<
 		typeof makeNotificationRepository
 	>['deleteNotification'];
-	declare readonly createNotification: Effect.Success<
-		typeof makeNotificationRepository
-	>['createNotification'];
 	declare readonly getNotificationByOwnerAndKeyword: Effect.Success<
 		typeof makeNotificationRepository
 	>['getNotificationByOwnerAndKeyword'];
@@ -278,7 +284,5 @@ export class NotificationRepository extends Context.Service<
 		typeof makeNotificationRepository
 	>['createNotificationHistory'];
 
-	static readonly layer = Layer.effect(this, makeNotificationRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makeNotificationRepository);
 }

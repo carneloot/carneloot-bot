@@ -1,5 +1,5 @@
 import { createId } from '@paralleldrive/cuid2';
-import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { Context, DateTime, Effect, Layer, Option } from 'effect';
 
 import * as Database from '../database/db.js';
@@ -8,6 +8,7 @@ import {
 	type PetID,
 	petFoodTable,
 	petsTable,
+	usersTable,
 } from '../database/schema.js';
 
 const makePetFoodRepository = Effect.gen(function* () {
@@ -73,6 +74,45 @@ const makePetFoodRepository = Effect.gen(function* () {
 		).pipe(Effect.withSpan('getLastPetFood')),
 	);
 
+	const getPetFoodByRange = db.makeQuery(
+		(
+			execute,
+			input: { petID: PetID; from: DateTime.DateTime; to: DateTime.DateTime },
+		) =>
+			execute((db) =>
+				db
+					.select({
+						id: petFoodTable.id,
+						quantity: petFoodTable.quantity,
+						time: petFoodTable.time,
+						user: {
+							id: usersTable.id,
+							telegramID: usersTable.telegramID,
+							username: usersTable.username,
+							firstName: usersTable.firstName,
+							lastName: usersTable.lastName,
+						},
+					})
+					.from(petFoodTable)
+					.innerJoin(usersTable, eq(petFoodTable.userID, usersTable.id))
+					.where(
+						and(
+							eq(petFoodTable.petID, input.petID),
+							gte(petFoodTable.time, DateTime.toDate(input.from)),
+							lte(petFoodTable.time, DateTime.toDate(input.to)),
+						),
+					)
+					.orderBy(asc(petFoodTable.time))
+					.all(),
+			).pipe(Effect.withSpan('PetFoodRepository.getPetFoodByRange')),
+	);
+
+	const deletePetFood = db.makeQuery((execute, petFoodID: PetFoodID) =>
+		execute((db) =>
+			db.delete(petFoodTable).where(eq(petFoodTable.id, petFoodID)).run(),
+		).pipe(Effect.withSpan('PetFoodRepository.deletePetFood')),
+	);
+
 	const getPetFoodsFromMessage = db.makeQuery(
 		(execute, input: { messageId: number }) =>
 			execute((db) =>
@@ -113,6 +153,8 @@ const makePetFoodRepository = Effect.gen(function* () {
 	return {
 		getDailyFoodConsumption,
 		getLastPetFood,
+		getPetFoodByRange,
+		deletePetFood,
 		addPetFood,
 		getPetFoodsFromMessage,
 		updatePetFood,
@@ -129,6 +171,12 @@ export class PetFoodRepository extends Context.Service<
 	declare readonly getLastPetFood: Effect.Success<
 		typeof makePetFoodRepository
 	>['getLastPetFood'];
+	declare readonly getPetFoodByRange: Effect.Success<
+		typeof makePetFoodRepository
+	>['getPetFoodByRange'];
+	declare readonly deletePetFood: Effect.Success<
+		typeof makePetFoodRepository
+	>['deletePetFood'];
 	declare readonly addPetFood: Effect.Success<
 		typeof makePetFoodRepository
 	>['addPetFood'];
@@ -139,7 +187,5 @@ export class PetFoodRepository extends Context.Service<
 		typeof makePetFoodRepository
 	>['updatePetFood'];
 
-	static readonly layer = Layer.effect(this, makePetFoodRepository).pipe(
-		Layer.provide(Database.layer),
-	);
+	static readonly layer = Layer.effect(this, makePetFoodRepository);
 }

@@ -19,6 +19,9 @@ const envSchema = Schema.Struct({
 
 	DATABASE_URL: Schema.String,
 	DATABASE_AUTH_TOKEN: Schema.optional(Schema.RedactedFromValue(Schema.String)),
+	DATABASE_BACKUP_ENABLED: Schema.Literals(['true', 'false']).pipe(
+		Schema.withDecodingDefaultType(Effect.succeed('false')),
+	),
 
 	DEBUG: Schema.optional(Schema.String),
 

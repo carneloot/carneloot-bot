@@ -1,75 +1,172 @@
-import { sValidator } from '@hono/standard-validator';
-import { Effect } from 'effect';
-import { Hono } from 'hono';
+import { Effect, Layer, Schema } from 'effect';
+import {
+	HttpApi,
+	HttpApiBuilder,
+	HttpApiEndpoint,
+	HttpApiGroup,
+	HttpApiSchema,
+} from 'effect/http-api';
 
 import { NotificationRepository } from '../lib/repositories/notification.js';
 import { NotificationService } from '../lib/services/notification.js';
-import { runtime } from '../runtime.js';
-import { apiKeyAuth } from './auth.js';
-import { CreateNotificationParams } from './types/create-notification-params.js';
-import { UpdateNotificationParams } from './types/update-notification-params.js';
-import { validationErrorHook } from './validation-error.js';
+import { ApiKeyAuth, ApiKeyAuthLive, AuthenticatedUser } from './auth.js';
+import {
+	DatabaseErrorResponse,
+	RequestValidation,
+	RequestValidationLive,
+} from './errors.js';
+import { CreateNotificationParamsSchema } from './types/create-notification-params.js';
+import { NotifyParamsSchema } from './types/notify-params.js';
+import { UpdateNotificationParamsSchema } from './types/update-notification-params.js';
 
-export const notificationsApi = new Hono()
-	.post(
-		'/notifications',
-		apiKeyAuth,
-		sValidator('json', CreateNotificationParams, validationErrorHook),
-		(c) =>
-			Effect.gen(function* () {
-				const repository = yield* NotificationRepository;
-				const { keyword, message } = c.req.valid('json');
-				const created = yield* repository.createNotification(
-					c.get('user').id,
-					keyword,
-					message,
-				);
-				return created
-					? c.json(
-							{ message: 'Notification template created successfully!' },
-							201,
-						)
-					: c.json(
-							{
-								message:
-									'Notification template already exists for user and keyword',
-							},
-							409,
-						);
-			}).pipe(
-				Effect.catchTag('DatabaseError', () =>
-					Effect.succeed(c.json({ message: 'Database error' }, 500)),
-				),
-				Effect.withSpan('/api/post/notifications'),
-				runtime.runPromise,
-			),
+const NotificationNotFound = Schema.Struct({
+	message: Schema.Literal('Notification not found for user and keyword'),
+}).pipe(HttpApiSchema.status(404));
+
+export const NotificationsGroup = HttpApiGroup.make('notifications')
+	.add(
+		HttpApiEndpoint.post('create', '/api/notifications', {
+			payload: CreateNotificationParamsSchema,
+			success: Schema.Struct({
+				message: Schema.Literal('Notification template created successfully!'),
+			}).pipe(HttpApiSchema.status(201)),
+			error: [
+				DatabaseErrorResponse,
+				Schema.Struct({
+					message: Schema.Literal(
+						'Notification template already exists for user and keyword',
+					),
+				}).pipe(HttpApiSchema.status(409)),
+			],
+		}),
+		HttpApiEndpoint.patch('update', '/api/notifications', {
+			payload: UpdateNotificationParamsSchema,
+			success: Schema.Struct({
+				message: Schema.Literal('Notification template updated successfully!'),
+			}),
+			error: [DatabaseErrorResponse, NotificationNotFound],
+		}),
+		HttpApiEndpoint.post('notify', '/api/notify', {
+			payload: NotifyParamsSchema,
+			success: [
+				Schema.Struct({
+					message: Schema.Literal('Notification sent successfully!'),
+				}),
+				Schema.Struct({
+					message: Schema.Literal('Notification partially delivered'),
+					delivered: Schema.Number,
+					failed: Schema.Number,
+				}).pipe(HttpApiSchema.status(207)),
+			],
+			error: [
+				DatabaseErrorResponse,
+				NotificationNotFound,
+				Schema.Struct({
+					message: Schema.Literal('User not found for apiKey'),
+				}).pipe(HttpApiSchema.status(404)),
+				Schema.Struct({
+					message: Schema.Literal('Missing used variables'),
+					variables: Schema.Array(Schema.String),
+				}).pipe(HttpApiSchema.status(422)),
+				Schema.Struct({
+					message: Schema.Literal('Notification delivery failed'),
+					failed: Schema.Number,
+				}).pipe(HttpApiSchema.status(502)),
+			],
+		}),
 	)
-	.patch(
-		'/notifications',
-		apiKeyAuth,
-		sValidator('json', UpdateNotificationParams, validationErrorHook),
-		(c) =>
-			Effect.gen(function* () {
-				const service = yield* NotificationService;
-				return yield* service
-					.updateNotificationTemplate(c.get('user'), c.req.valid('json'))
-					.pipe(
-						Effect.map(() =>
-							c.json({
-								message: 'Notification template updated successfully!',
-							}),
+	.middleware(RequestValidation)
+	.middleware(ApiKeyAuth);
+
+export const NotificationsApi =
+	HttpApi.make('CarnelootBot').add(NotificationsGroup);
+
+export const NotificationsLive = HttpApiBuilder.group(
+	NotificationsApi,
+	'notifications',
+	(handlers) =>
+		Effect.gen(function* () {
+			const repository = yield* NotificationRepository;
+			const service = yield* NotificationService;
+			return handlers
+				.handle('create', ({ payload }) =>
+					Effect.gen(function* () {
+						const { user } = yield* AuthenticatedUser;
+						const created = yield* repository.createNotification(
+							user.id,
+							payload.keyword,
+							payload.message,
+						);
+						if (!created) {
+							return yield* Effect.fail({
+								message:
+									'Notification template already exists for user and keyword' as const,
+							});
+						}
+						return {
+							message: 'Notification template created successfully!' as const,
+						};
+					}).pipe(
+						Effect.catchTag('DatabaseError', () =>
+							Effect.fail({ message: 'Database error' as const }),
 						),
+					),
+				)
+				.handle('update', ({ payload }) =>
+					Effect.gen(function* () {
+						const { user } = yield* AuthenticatedUser;
+						yield* service.updateNotificationTemplate(user, payload);
+						return {
+							message: 'Notification template updated successfully!' as const,
+						};
+					}).pipe(
 						Effect.catchTags({
-							NotificationNotFoundError: () =>
-								Effect.succeed(
-									c.json(
-										{ message: 'Notification not found for user and keyword' },
-										404,
-									),
-								),
 							DatabaseError: () =>
-								Effect.succeed(c.json({ message: 'Database error' }, 500)),
+								Effect.fail({ message: 'Database error' as const }),
+							NotificationNotFoundError: () =>
+								Effect.fail({
+									message:
+										'Notification not found for user and keyword' as const,
+								}),
 						}),
-					);
-			}).pipe(Effect.withSpan('/api/patch/notifications'), runtime.runPromise),
-	);
+					),
+				)
+				.handle('notify', ({ payload }) =>
+					Effect.gen(function* () {
+						const { apiKey } = yield* AuthenticatedUser;
+						const outcome = yield* service.sendNotification({
+							...payload,
+							apiKey,
+						});
+						return outcome.failed === 0
+							? { message: 'Notification sent successfully!' as const }
+							: {
+									message: 'Notification partially delivered' as const,
+									...outcome,
+								};
+					}).pipe(
+						Effect.catchTags({
+							NotificationDeliveryError: (error) =>
+								Effect.fail({
+									message: 'Notification delivery failed' as const,
+									failed: error.attempted,
+								}),
+							UserNotFoundError: () =>
+								Effect.fail({ message: 'User not found for apiKey' as const }),
+							MissingVariablesError: (error) =>
+								Effect.fail({
+									message: 'Missing used variables' as const,
+									variables: error.variables,
+								}),
+							NotificationNotFoundError: () =>
+								Effect.fail({
+									message:
+										'Notification not found for user and keyword' as const,
+								}),
+							DatabaseError: () =>
+								Effect.fail({ message: 'Database error' as const }),
+						}),
+					),
+				);
+		}),
+).pipe(Layer.provide([ApiKeyAuthLive, RequestValidationLive]));
