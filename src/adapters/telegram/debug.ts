@@ -10,7 +10,9 @@ const isGrammyDebug = (debugInstance: DebugInstance): boolean =>
 	debugInstance.namespace.startsWith('grammy');
 
 /**
- * Sends grammY's DEBUG output through the application Effect runtime.
+ * Sends grammY's DEBUG output through the application Effect runtime at Info,
+ * preserving the severity of its grammy:warn and grammy:error namespaces.
+ * The DEBUG namespace filter controls which messages are emitted.
  *
  * `debug` formats messages before invoking its global sink. Capturing the
  * arguments in `formatArgs` retains the original message and arguments while
@@ -36,8 +38,14 @@ export const installGrammyDebugLogger = (execute: Execute<AppServices>) => {
 
 		const message = messages.get(this) ?? args;
 		messages.delete(this);
+		const log =
+			this.namespace === 'grammy:warn'
+				? Effect.logWarning
+				: this.namespace === 'grammy:error'
+					? Effect.logError
+					: Effect.logInfo;
 		void execute(
-			Effect.logDebug(...message).pipe(
+			log(...message).pipe(
 				Effect.annotateLogs({ 'debug.namespace': this.namespace }),
 			),
 		);
