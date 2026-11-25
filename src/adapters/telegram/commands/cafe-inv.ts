@@ -6,6 +6,7 @@ import { table } from 'table';
 import type { AppServices } from '../../../app/layer.js';
 import type { Command } from '../../../common/types/command.js';
 import type { Execute } from '../../execute.js';
+import { withTelegramSpan } from '../tracing.js';
 
 async function sendMissingInformationMessage(ctx: Context) {
 	await ctx.reply('Me envie a quantidade de café em g. 😄');
@@ -104,6 +105,6 @@ export const createCafeInvCommand = (
 					})}</pre>`,
 					{ parse_mode: 'HTML' },
 				);
-			}),
+			}).pipe(withTelegramSpan(ctx)),
 		),
 });

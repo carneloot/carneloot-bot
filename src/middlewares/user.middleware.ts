@@ -2,6 +2,7 @@ import { Effect, Option } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Execute } from '../adapters/execute.js';
+import { withTelegramSpan } from '../adapters/telegram/tracing.js';
 import type { Context } from '../common/types/context.js';
 import { UserRepository } from '../lib/repositories/user.js';
 
@@ -18,7 +19,7 @@ export const createUserMiddleware =
 			Effect.gen(function* () {
 				const users = yield* UserRepository;
 				return yield* users.getUserByTelegramID(from.id);
-			}),
+			}).pipe(withTelegramSpan(ctx)),
 		);
 
 		if (Option.isSome(user)) {

@@ -7,6 +7,7 @@ import type {
 } from '../../common/types/context.js';
 import type { Execute } from '../execute.js';
 import { conversationStorageVersion } from './conversation-storage-version.js';
+import { withTelegramSpan } from './tracing.js';
 
 /** Runs an Effect once and persists its Schema-encoded result for conversation replay. */
 export const conversationExternal = <Value, Encoded, Requirements>(
@@ -25,6 +26,7 @@ export const conversationExternal = <Value, Encoded, Requirements>(
 							'telegram.chat.id': context.chat?.id ?? 'unknown',
 						},
 					}),
+					withTelegramSpan(context),
 				),
 			),
 		beforeStore: Schema.encodePromise(schema),

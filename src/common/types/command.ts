@@ -1,11 +1,13 @@
 import type { MiddlewareObj } from 'grammy';
 
+import type { Context } from './context.js';
 import type { MaybeRequiredArray } from './maybe-array.js';
 
-export type Command<S extends MaybeRequiredArray<string>> = MiddlewareObj & {
-	command: S;
-	description: string;
-};
+export type Command<S extends MaybeRequiredArray<string>> =
+	MiddlewareObj<Context> & {
+		command: S;
+		description: string;
+	};
 
 export const getCommandForHelp = <S extends MaybeRequiredArray<string>>(
 	command: Command<S>,

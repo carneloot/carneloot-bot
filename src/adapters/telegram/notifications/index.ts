@@ -1,4 +1,3 @@
-import { createConversation } from '@grammyjs/conversations';
 import { Effect, Schema } from 'effect';
 import type { Middleware, MiddlewareFn } from 'grammy';
 import type { MessageEntity } from 'grammy/types';
@@ -13,6 +12,7 @@ import type { NotificationID, UserID } from '../../../lib/database/schema.js';
 import { NotificationRepository } from '../../../lib/repositories/notification.js';
 import type { Execute } from '../../execute.js';
 import { conversationExternal } from '../conversation-external.js';
+import { createTracedConversation, withTelegramSpan } from '../tracing.js';
 
 const ConversationUser = Schema.Struct({
 	id: Schema.String,
@@ -205,9 +205,13 @@ export const createNotificationModule = (
 			await ctx.conversation.enter(name);
 		};
 
-	module.use(createConversation(createNotification, 'createNotification'));
-	module.use(createConversation(editNotification, 'editNotification'));
-	module.use(createConversation(deleteNotification, 'deleteNotification'));
+	module.use(
+		createTracedConversation(createNotification, 'createNotification'),
+	);
+	module.use(createTracedConversation(editNotification, 'editNotification'));
+	module.use(
+		createTracedConversation(deleteNotification, 'deleteNotification'),
+	);
 	module.setCommand(
 		'criar_notificacao',
 		'Cria um modelo de notificação para usar pela API',
@@ -223,7 +227,9 @@ export const createNotificationModule = (
 				await ctx.reply('Por favor cadastre-se primeiro utilizando /cadastrar');
 				return;
 			}
-			const notifications = await execute(getNotifications(ctx.user.id));
+			const notifications = await execute(
+				getNotifications(ctx.user.id).pipe(withTelegramSpan(ctx)),
+			);
 			if (notifications.length === 0) {
 				await ctx.reply(emptyListMessage);
 				return;

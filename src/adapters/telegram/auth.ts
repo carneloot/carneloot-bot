@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import type { Context } from '../../common/types/context.js';
 import { UserRepository } from '../../lib/repositories/user.js';
 import type { Execute } from '../execute.js';
+import { withTelegramSpan } from './tracing.js';
 
 const generateApiKeyAndSend = (
 	execute: Execute<UserRepository>,
@@ -22,7 +23,7 @@ const generateApiKeyAndSend = (
 			yield* Effect.promise(() =>
 				ctx.reply(`Aqui está: <pre>${apiKey}</pre>`, { parse_mode: 'HTML' }),
 			);
-		}),
+		}).pipe(withTelegramSpan(ctx)),
 	);
 };
 
@@ -57,7 +58,7 @@ export const createSignupCommand =
 				yield* Effect.promise(() =>
 					ctx.reply('Usuário cadastrado com sucesso!'),
 				);
-			}),
+			}).pipe(withTelegramSpan(ctx)),
 		);
 	};
 
@@ -77,7 +78,7 @@ export const createGenerateApiKeyCommand =
 			Effect.gen(function* () {
 				const users = yield* UserRepository;
 				return yield* users.userHasApiKey(user.id);
-			}),
+			}).pipe(withTelegramSpan(ctx)),
 		);
 
 		if (!hasApiKey) {

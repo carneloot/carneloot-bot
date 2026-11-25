@@ -1,8 +1,24 @@
-import { Effect, Layer, Logger, ManagedRuntime } from 'effect';
+import type { ConversationData, VersionedState } from '@grammyjs/conversations';
+import {
+	Deferred,
+	Effect,
+	Layer,
+	Logger,
+	ManagedRuntime,
+	Option,
+	Schema,
+} from 'effect';
 import { createServer } from 'node:http';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { Execute } from '../../src/adapters/execute.js';
+import { createBot } from '../../src/adapters/telegram/bot.js';
+import type { AppServices } from '../../src/app/layer.js';
 import { TelemetryLive } from '../../src/app/telemetry.js';
+import type { UserID } from '../../src/lib/database/schema.js';
+import { PetRepository } from '../../src/lib/repositories/pet.js';
+import { UserRepository } from '../../src/lib/repositories/user.js';
+import { createGrammyRunner } from '../support/grammy-runner.js';
 
 const config = vi.hoisted(() => ({ url: undefined as string | undefined }));
 
@@ -10,6 +26,9 @@ vi.mock('../../src/common/env.js', async () => {
 	const { Redacted } = await import('effect');
 	return {
 		Env: {
+			BOT_TOKEN: Redacted.make('test-token'),
+			REDIS_URL: 'redis://localhost:6379',
+			DATABASE_URL: 'file::memory:',
 			get OTLP_URL() {
 				return config.url;
 			},
@@ -19,34 +38,45 @@ vi.mock('../../src/common/env.js', async () => {
 	};
 });
 
+const startCollector = async () => {
+	const requests: Array<{
+		path: string | undefined;
+		authorization: string | undefined;
+		body: unknown;
+	}> = [];
+	const server = createServer(async (request, response) => {
+		let body = '';
+		for await (const chunk of request) body += chunk.toString();
+		requests.push({
+			path: request.url,
+			authorization: request.headers.authorization,
+			body: JSON.parse(body),
+		});
+		response.setHeader('Content-Type', 'application/json');
+		response.end('{}');
+	});
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+	const address = server.address();
+	if (address === null || typeof address === 'string') {
+		throw new Error('Expected an HTTP listener');
+	}
+	return {
+		requests,
+		url: `http://127.0.0.1:${address.port}`,
+		close: () =>
+			new Promise<void>((resolve, reject) =>
+				server.close((error) => (error ? reject(error) : resolve())),
+			),
+	};
+};
+
 describe('telemetry', () => {
 	it.each(['', '/v1/traces'])(
 		'exports correlated logs and traces from an OTLP URL ending in "%s"',
 		async (path) => {
-			const requests: Array<{
-				path: string | undefined;
-				authorization: string | undefined;
-				body: unknown;
-			}> = [];
-			const server = createServer(async (request, response) => {
-				let body = '';
-				for await (const chunk of request) body += chunk.toString();
-				requests.push({
-					path: request.url,
-					authorization: request.headers.authorization,
-					body: JSON.parse(body),
-				});
-				response.setHeader('Content-Type', 'application/json');
-				response.end('{}');
-			});
-			await new Promise<void>((resolve) =>
-				server.listen(0, '127.0.0.1', resolve),
-			);
-			const address = server.address();
-			if (address === null || typeof address === 'string') {
-				throw new Error('Expected an HTTP listener');
-			}
-			config.url = `http://127.0.0.1:${address.port}${path}`;
+			const collector = await startCollector();
+			const { requests } = collector;
+			config.url = `${collector.url}${path}`;
 			const localLogs: unknown[] = [];
 			const localLogger = Logger.map(Logger.formatStructured, (log) => {
 				localLogs.push(log);
@@ -139,11 +169,303 @@ describe('telemetry', () => {
 				]);
 			} finally {
 				await runtime.dispose();
-				await new Promise<void>((resolve, reject) =>
-					server.close((error) => (error ? reject(error) : resolve())),
-				);
+				await collector.close();
 				config.url = undefined;
 			}
 		},
 	);
+
+	it('groups update traces and correlates conversation runs across saved-state replay', async () => {
+		const collector = await startCollector();
+		config.url = collector.url;
+		const bothChatsStarted = Deferred.makeUnsafe<void>();
+		const chats = new Set<number>();
+		const stored = new Map<string, VersionedState<ConversationData>>();
+		const createdPets: Array<{ name: string; ownerID: UserID }> = [];
+		const runtime = ManagedRuntime.make(
+			Layer.mergeAll(
+				Layer.mock(UserRepository, {
+					getUserByTelegramID: Effect.fn('UserRepository.getUserByTelegramID')(
+						function* (id: number) {
+							chats.add(id);
+							if (chats.size === 2)
+								yield* Deferred.succeed(bothChatsStarted, undefined);
+							yield* Deferred.await(bothChatsStarted);
+							return Option.some({
+								id: `user-${id}` as UserID,
+								telegramID: String(id),
+								firstName: 'Test',
+								lastName: null,
+								username: null,
+							});
+						},
+					),
+				}),
+				Layer.mock(PetRepository, {
+					createPet: Effect.fn('PetRepository.createPet')(
+						function* (name, ownerID) {
+							createdPets.push({ name, ownerID });
+							yield* Effect.logInfo('Pet created').pipe(
+								Effect.annotateLogs({ userId: ownerID }),
+							);
+						},
+					),
+					getUserOwnedPets: Effect.fn('PetRepository.getUserOwnedPets')(
+						function* (id: UserID) {
+							yield* Effect.logInfo('Pet status requested').pipe(
+								Effect.annotateLogs({ userId: id }),
+							);
+							return [];
+						},
+					),
+					getUserCaredPets: () => Effect.succeed([]),
+				}),
+			).pipe(Layer.provideMerge(TelemetryLive)),
+		);
+		try {
+			const makeRunner = () => {
+				const { bot } = createBot(runtime.runPromise as Execute<AppServices>, {
+					type: 'key',
+					prefix: 'test:',
+					version: 0,
+					adapter: {
+						read: async (key) => stored.get(key),
+						write: async (key, value) => {
+							stored.set(key, structuredClone(value));
+						},
+						delete: async (key) => {
+							stored.delete(key);
+						},
+					},
+				});
+				bot.botInfo = {
+					id: 999,
+					is_bot: true,
+					first_name: 'Test bot',
+					username: 'test_bot',
+					can_join_groups: true,
+					can_read_all_group_messages: false,
+					supports_inline_queries: false,
+					can_connect_to_business: false,
+					has_main_web_app: false,
+					has_topics_enabled: false,
+					allows_users_to_create_topics: false,
+					can_manage_bots: false,
+					supports_join_request_queries: false,
+				};
+				return createGrammyRunner(bot);
+			};
+			let runner = makeRunner();
+			await Promise.all(
+				[1, 2].map((id) =>
+					runner.dispatch({
+						update_id: id,
+						message: {
+							message_id: id,
+							date: 0,
+							chat: { id, type: 'private', first_name: 'Test' },
+							from: { id, is_bot: false, first_name: 'Test' },
+							text: '/status_racao',
+							entities: [{ offset: 0, length: 13, type: 'bot_command' }],
+						},
+					}),
+				),
+			);
+			expect(
+				runner.calls.filter((call) => call.method === 'sendMessage'),
+			).toHaveLength(2);
+			for (const [index, text] of [
+				'/adicionar_pet',
+				'Luna',
+				'/adicionar_pet',
+				'Theo',
+				'/ping',
+			].entries()) {
+				if (index === 1) runner = makeRunner();
+				await runner.dispatch({
+					update_id: index + 3,
+					message: {
+						message_id: index + 3,
+						date: 0,
+						chat: { id: 1, type: 'private', first_name: 'Test' },
+						from: { id: 1, is_bot: false, first_name: 'Test' },
+						text,
+						entities: text.startsWith('/')
+							? [{ offset: 0, length: text.length, type: 'bot_command' }]
+							: [],
+					},
+				});
+				if (index === 0 || index === 2) {
+					expect(stored.size).toBe(1);
+					expect(JSON.stringify([...stored.values()])).not.toContain('spanId');
+				}
+			}
+			expect(createdPets).toEqual([
+				{ name: 'Luna', ownerID: 'user-1' },
+				{ name: 'Theo', ownerID: 'user-1' },
+			]);
+			expect(stored.size).toBe(0);
+			expect(runner.calls).toContainEqual({
+				method: 'sendMessage',
+				payload: expect.objectContaining({
+					text: 'Pet cadastrado com sucesso!',
+				}),
+			});
+			await runtime.dispose();
+			const payload = Schema.decodeUnknownSync(
+				Schema.Struct({
+					resourceSpans: Schema.Array(
+						Schema.Struct({
+							scopeSpans: Schema.Array(
+								Schema.Struct({
+									spans: Schema.Array(
+										Schema.Struct({
+											name: Schema.String,
+											traceId: Schema.String,
+											spanId: Schema.String,
+											parentSpanId: Schema.optional(Schema.String),
+											attributes: Schema.Array(
+												Schema.Struct({
+													key: Schema.String,
+													value: Schema.Struct({
+														intValue: Schema.optional(Schema.Number),
+														stringValue: Schema.optional(Schema.String),
+													}),
+												}),
+											),
+										}),
+									),
+								}),
+							),
+						}),
+					),
+				}),
+			)(
+				collector.requests.find((request) => request.path === '/v1/traces')
+					?.body,
+			);
+			const spans = payload.resourceSpans.flatMap((resource) =>
+				resource.scopeSpans.flatMap((scope) => scope.spans),
+			);
+			expect(new Set(spans.map((span) => span.traceId)).size).toBe(7);
+			const updates = new Map(
+				spans
+					.filter((span) => span.name === 'telegram.update')
+					.map((span) => [
+						span.attributes.find(
+							(attribute) => attribute.key === 'telegram.update.id',
+						)?.value.intValue,
+						span,
+					]),
+			);
+			const conversationIds = [3, 4, 5, 6].map(
+				(id) =>
+					updates
+						.get(id)
+						?.attributes.find(
+							(attribute) => attribute.key === 'conversation.id',
+						)?.value.stringValue,
+			);
+			expect(conversationIds[0]).toEqual(expect.any(String));
+			expect(conversationIds[1]).toBe(conversationIds[0]);
+			expect(conversationIds[2]).toEqual(expect.any(String));
+			expect(conversationIds[2]).not.toBe(conversationIds[0]);
+			expect(conversationIds[3]).toBe(conversationIds[2]);
+			for (const id of [1, 2, 3, 4, 5, 6, 7]) {
+				const update = updates.get(id);
+				expect(update).toBeDefined();
+				const trace = spans.filter((span) => span.traceId === update?.traceId);
+				expect(trace.filter((span) => !span.parentSpanId)).toHaveLength(1);
+				for (const span of trace.filter((span) => span !== update)) {
+					expect(trace.map((span) => span.spanId)).toContain(span.parentSpanId);
+				}
+				if (id >= 3 && id <= 6) {
+					expect(trace.map((span) => span.name)).toContain(
+						'telegram.conversation.external',
+					);
+					for (const span of trace.filter(
+						(span) =>
+							span.name === 'telegram.conversation.external' ||
+							span.name === 'PetRepository.createPet',
+					)) {
+						expect(span.attributes).toContainEqual({
+							key: 'conversation.id',
+							value: { stringValue: conversationIds[id - 3] },
+						});
+					}
+					if (id === 4 || id === 6) {
+						expect(trace.map((span) => span.name)).toContain(
+							'PetRepository.createPet',
+						);
+					}
+				} else {
+					expect(
+						update?.attributes.some(
+							(attribute) => attribute.key === 'conversation.id',
+						),
+					).toBe(false);
+				}
+				if (id <= 2) {
+					expect(trace.map((span) => span.name)).toEqual(
+						expect.arrayContaining([
+							'telegram.update',
+							'telegram.command',
+							'replyMiddleware',
+							'UserRepository.getUserByTelegramID',
+							'FoodStatusCommand',
+						]),
+					);
+					expect(
+						trace.find((span) => span.name === 'telegram.command')
+							?.parentSpanId,
+					).toBe(update?.spanId);
+					expect(
+						trace.find((span) => span.name === 'FoodStatusCommand')
+							?.parentSpanId,
+					).toBe(trace.find((span) => span.name === 'replyMiddleware')?.spanId);
+				}
+				if (id === 3 || id === 5 || id === 7) continue;
+				expect(
+					collector.requests.find((request) => request.path === '/v1/logs')
+						?.body,
+				).toMatchObject({
+					resourceLogs: [
+						{
+							scopeLogs: [
+								{
+									logRecords: expect.arrayContaining([
+										expect.objectContaining({
+											traceId: update?.traceId,
+											body: {
+												stringValue:
+													id <= 2 ? 'Pet status requested' : 'Pet created',
+											},
+											attributes: expect.arrayContaining([
+												{
+													key: 'userId',
+													value: { stringValue: `user-${id <= 2 ? id : 1}` },
+												},
+												...(id <= 2
+													? []
+													: [
+															{
+																key: 'conversation.id',
+																value: { stringValue: conversationIds[id - 3] },
+															},
+														]),
+											]),
+										}),
+									]),
+								},
+							],
+						},
+					],
+				});
+			}
+		} finally {
+			await runtime.dispose();
+			await collector.close();
+			config.url = undefined;
+		}
+	});
 });

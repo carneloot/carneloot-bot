@@ -13,12 +13,13 @@ import type { Execute } from '../execute.js';
 import { QueueError } from '../queue/pet-food-notification.js';
 import { handleNotificationReply } from './notification/handle-notification-reply.js';
 import { handlePetFoodNotificationReply } from './notification/handle-pet-food-notification-reply.js';
+import { nextWithSpan, withTelegramSpan } from './tracing.js';
 
 export const createReplyMiddleware = (execute: Execute<AppServices>) =>
 	((ctx, next) =>
 		Effect.gen(function* () {
 			if (!ctx.message?.reply_to_message) {
-				return yield* Effect.promise(() => next());
+				return yield* nextWithSpan(ctx, next);
 			}
 
 			const user = ctx.user;
@@ -55,7 +56,7 @@ export const createReplyMiddleware = (execute: Execute<AppServices>) =>
 			if (petFoods.length > 0) {
 				return yield* handlePetFoodReply(ctx, petFoods);
 			}
-			return yield* Effect.promise(() => next());
+			return yield* nextWithSpan(ctx, next);
 		}).pipe(
 			Effect.catch((error) => {
 				if (error instanceof MissingConfigError) {
@@ -79,5 +80,6 @@ export const createReplyMiddleware = (execute: Execute<AppServices>) =>
 				return Effect.fail(error);
 			}),
 			Effect.withSpan('replyMiddleware'),
+			withTelegramSpan(ctx),
 			execute,
 		)) satisfies MiddlewareFn<Context>;

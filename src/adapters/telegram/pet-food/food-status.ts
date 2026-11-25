@@ -11,6 +11,7 @@ import { ConfigService } from '../../../lib/entities/config.js';
 import { PetFoodRepository } from '../../../lib/repositories/pet-food.js';
 import { type Pet, PetRepository } from '../../../lib/repositories/pet.js';
 import type { Execute } from '../../execute.js';
+import { withTelegramSpan } from '../tracing.js';
 
 const getPetMessage = Effect.fn('getPetMessage')(function* (
 	pet: Pick<Pet, 'id' | 'name'>,
@@ -111,4 +112,8 @@ export const createFoodStatusCommand =
 					parse_mode: 'MarkdownV2',
 				}),
 			).pipe(Effect.withSpan('ctx.reply'));
-		}).pipe(Effect.withSpan('FoodStatusCommand'), execute);
+		}).pipe(
+			Effect.withSpan('FoodStatusCommand'),
+			withTelegramSpan(ctx),
+			execute,
+		);

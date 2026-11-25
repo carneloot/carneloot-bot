@@ -4,6 +4,7 @@ import type { MiddlewareFn } from 'grammy';
 import type { Context } from '../../common/types/context.js';
 import { PetRepository } from '../../lib/repositories/pet.js';
 import type { Execute } from '../execute.js';
+import { withTelegramSpan } from './tracing.js';
 
 export const createListPetsCommand =
 	(execute: Execute<PetRepository>): MiddlewareFn<Context> =>
@@ -24,7 +25,7 @@ export const createListPetsCommand =
 					...ownedPets.map((pet) => pet.name),
 					...caredPets.map((pet) => `${pet.name} (cuidando)`),
 				];
-			}),
+			}).pipe(withTelegramSpan(ctx)),
 		);
 
 		if (pets.length === 0) {

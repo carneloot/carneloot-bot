@@ -17,7 +17,10 @@ import {
 	getCommandForHelp,
 	getDescriptionForHelp,
 } from '../../common/types/command.js';
-import type { Context } from '../../common/types/context.js';
+import type {
+	Context,
+	ConversationContext,
+} from '../../common/types/context.js';
 import { createForwardToOwnerMiddleware } from '../../middlewares/forward-to-owner.middleware.js';
 import { createGenericErrorMiddleware } from '../../middlewares/generic-error.middleware.js';
 import { createUserMiddleware } from '../../middlewares/user.middleware.js';
@@ -50,6 +53,7 @@ import {
 } from './pet-food/index.js';
 import { createPetCommand, registerPetConversations } from './pets/index.js';
 import { createReplyMiddleware } from './reply.js';
+import { nextWithSpan, withTelegramSpan } from './tracing.js';
 
 export type TelegramBot = {
 	readonly bot: Bot<Context>;
@@ -76,7 +80,10 @@ export const createBot = (
 
 	bot.use((ctx, next) =>
 		execute(
-			Effect.promise(() => next()).pipe(
+			Effect.gen(function* () {
+				ctx.span = yield* Effect.currentSpan;
+				return yield* Effect.promise(next);
+			}).pipe(
 				Effect.withSpan('telegram.update', {
 					attributes: {
 						'telegram.chat.id': ctx.chat?.id ?? 'unknown',
@@ -97,19 +104,28 @@ export const createBot = (
 		if (!command) return next();
 
 		return execute(
-			Effect.promise(() => next()).pipe(
+			nextWithSpan(ctx, next).pipe(
 				Effect.withSpan('telegram.command', {
 					attributes: { 'telegram.command.name': command },
 				}),
+				withTelegramSpan(ctx),
 			),
 		);
 	});
 
-	bot.use(
-		conversations({
+	bot.use((ctx, next) =>
+		conversations<Context, ConversationContext>({
 			storage: conversationStorage,
-			plugins: [myEmojiParser],
-		}),
+			plugins: [
+				myEmojiParser,
+				(inner, next) => {
+					// Reconstructed conversation contexts use the live update's span,
+					// never a span persisted with the replay state.
+					inner.span = ctx.span;
+					return next();
+				},
+			],
+		})(ctx, next),
 	);
 
 	bot.command('cancelar', async (ctx) => {
@@ -265,6 +281,7 @@ export const createBot = (
 					error: String(error.error),
 					updateId: error.ctx.update.update_id,
 				}),
+				withTelegramSpan(error.ctx),
 			),
 		).catch((reportingError) => {
 			void execute(

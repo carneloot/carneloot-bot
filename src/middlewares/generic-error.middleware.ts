@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
 import type { Execute } from '../adapters/execute.js';
+import { withTelegramSpan } from '../adapters/telegram/tracing.js';
 import { Env } from '../common/env.js';
 import type { GifResponse } from '../common/response/response.js';
 import { sendResponse } from '../common/response/send-response.js';
@@ -21,9 +22,11 @@ export const createGenericErrorMiddleware =
 			await next();
 		} catch (error) {
 			if (Env.DEBUG) {
-				void execute(Effect.logError('Telegram command failed', error)).catch(
-					() => undefined,
-				);
+				void execute(
+					Effect.logError('Telegram command failed', error).pipe(
+						withTelegramSpan(ctx),
+					),
+				).catch(() => undefined);
 			}
 			await sendResponse(ctx, errorResponse);
 		}

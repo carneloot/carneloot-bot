@@ -1,4 +1,3 @@
-import { createConversation } from '@grammyjs/conversations';
 import { Effect, Schema } from 'effect';
 import type { MiddlewareFn } from 'grammy';
 
@@ -13,6 +12,7 @@ import { showOptionsKeyboard } from '../../../common/utils/show-options-keyboard
 import { showYesOrNoQuestion } from '../../../common/utils/show-yes-or-no-question.js';
 import type { Execute } from '../../execute.js';
 import { conversationExternal } from '../conversation-external.js';
+import { createTracedConversation } from '../tracing.js';
 import {
 	addCarer,
 	answerPendingPetInvite,
@@ -404,12 +404,24 @@ export const registerPetConversations = (
 ): MiddlewareFn<Context>[] => {
 	const conversations = createPetConversations(execute);
 	return [
-		createConversation(conversations.addPetConversation, 'addPet'),
-		createConversation(conversations.deletePetConversation, 'deletePet'),
-		createConversation(conversations.addCarerConversation, 'addCarer'),
-		createConversation(conversations.removeCarerConversation, 'removeCarer'),
-		createConversation(conversations.listCarersConversation, 'listCarers'),
-		createConversation(conversations.petInvitesConversation, 'petInvites'),
-		createConversation(conversations.stopCaringConversation, 'stopCaring'),
+		createTracedConversation(conversations.addPetConversation, 'addPet'),
+		createTracedConversation(conversations.deletePetConversation, 'deletePet'),
+		createTracedConversation(conversations.addCarerConversation, 'addCarer'),
+		createTracedConversation(
+			conversations.removeCarerConversation,
+			'removeCarer',
+		),
+		createTracedConversation(
+			conversations.listCarersConversation,
+			'listCarers',
+		),
+		createTracedConversation(
+			conversations.petInvitesConversation,
+			'petInvites',
+		),
+		createTracedConversation(
+			conversations.stopCaringConversation,
+			'stopCaring',
+		),
 	];
 };

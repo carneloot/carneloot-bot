@@ -1,4 +1,3 @@
-import { createConversation } from '@grammyjs/conversations';
 import { Reactions } from '@grammyjs/emoji';
 import { getUnixTime } from 'date-fns';
 import { utcToZonedTime } from 'date-fns-tz';
@@ -21,6 +20,7 @@ import { DuplicatedEntryError } from '../../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 import type { Execute } from '../../execute.js';
 import { conversationExternal } from '../conversation-external.js';
+import { createTracedConversation, withTelegramSpan } from '../tracing.js';
 import {
 	addFood,
 	AddedFoodDto,
@@ -325,7 +325,7 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 						messageMatch: input.message?.text,
 						messageTime,
 						timezone: selection.dayStart.timezone,
-					}).pipe(Effect.result),
+					}).pipe(Effect.result, withTelegramSpan(input)),
 				).then(Result.isSuccess),
 			{
 				otherwise: (input) =>
@@ -337,7 +337,7 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 				messageMatch: reply.message?.text,
 				messageTime,
 				timezone: selection.dayStart.timezone,
-			}),
+			}).pipe(withTelegramSpan(reply)),
 		);
 		await conversationExternal(cvs, execute, EmptyOutcome, () =>
 			updateFood(
@@ -387,7 +387,7 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 						messageMatch: input.message?.text,
 						messageTime: input.message?.date ?? 0,
 						timezone: dayStart.timezone,
-					}).pipe(Effect.result),
+					}).pipe(Effect.result, withTelegramSpan(input)),
 				).then(Result.isSuccess),
 			{
 				otherwise: (input) =>
@@ -400,7 +400,7 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 				messageMatch: response.message.text,
 				messageTime: response.message.date,
 				timezone: dayStart.timezone,
-			}),
+			}).pipe(withTelegramSpan(response)),
 		);
 		const added = await conversationExternal(cvs, execute, AddedFoodDto, () =>
 			addFood(
@@ -445,14 +445,23 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 export const registerPetFoodConversations = (execute: Execute<AppServices>) => {
 	const conversations = createPetFoodConversations(execute);
 	return [
-		createConversation(conversations.setDayStartConversation, 'setDayStart'),
-		createConversation(
+		createTracedConversation(
+			conversations.setDayStartConversation,
+			'setDayStart',
+		),
+		createTracedConversation(
 			conversations.setNotificationDelayConversation,
 			'setNotificationDelay',
 		),
-		createConversation(conversations.addFoodConversation, 'addFood'),
-		createConversation(conversations.deleteFoodConversation, 'deleteFood'),
-		createConversation(conversations.correctFoodConversation, 'correctFood'),
+		createTracedConversation(conversations.addFoodConversation, 'addFood'),
+		createTracedConversation(
+			conversations.deleteFoodConversation,
+			'deleteFood',
+		),
+		createTracedConversation(
+			conversations.correctFoodConversation,
+			'correctFood',
+		),
 	];
 };
 

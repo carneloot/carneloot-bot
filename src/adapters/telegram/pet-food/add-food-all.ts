@@ -18,6 +18,7 @@ import {
 } from '../../../lib/services/pet-food.js';
 import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 import type { Execute } from '../../execute.js';
+import { withTelegramSpan } from '../tracing.js';
 
 class MissingUserError extends Data.TaggedError('MissingUserError') {}
 class MissingRequiredFieldError extends Data.TaggedError(
@@ -150,5 +151,6 @@ export const createAddFoodAllCommand =
 				return Effect.fail(error);
 			}),
 			Effect.withSpan('AddFoodAllCommand'),
+			withTelegramSpan(ctx),
 			execute,
 		);

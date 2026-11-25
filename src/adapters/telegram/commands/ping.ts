@@ -4,6 +4,7 @@ import invariant from 'tiny-invariant';
 import type { AppServices } from '../../../app/layer.js';
 import type { Command } from '../../../common/types/command.js';
 import type { Execute } from '../../execute.js';
+import { withTelegramSpan } from '../tracing.js';
 
 const MAX_DURATION = Duration.fromInputUnsafe('10 seconds');
 
@@ -41,5 +42,5 @@ export const createPingCommand = (
 					},
 				}),
 			).pipe(Effect.withSpan('ctx.reply'));
-		}).pipe(Effect.withSpan('PingCommand'), execute),
+		}).pipe(Effect.withSpan('PingCommand'), withTelegramSpan(ctx), execute),
 });

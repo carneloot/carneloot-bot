@@ -3,6 +3,7 @@ import { Data, Effect } from 'effect';
 import type { AppServices } from '../../../app/layer.js';
 import type { Command } from '../../../common/types/command.js';
 import type { Execute } from '../../execute.js';
+import { withTelegramSpan } from '../tracing.js';
 
 const formatMessage = (message: string) =>
 	encodeURIComponent(message).replace(/!/g, '%21');
@@ -55,6 +56,7 @@ export const createWhatsCommand = (
 				).pipe(Effect.withSpan('ctx.reply')),
 			),
 			Effect.withSpan('WhatsCommand'),
+			withTelegramSpan(ctx),
 			execute,
 		),
 });
