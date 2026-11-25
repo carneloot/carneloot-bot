@@ -405,29 +405,42 @@ describe('database backup', () => {
 		20000,
 	);
 
-	it.each(['none', 'list', 'delete'] as const)(
-		'cleans both backup groups across S3 pages at the seven-day boundary, failure=%s',
-		async (failure) => {
+	it.each([
+		['none', 0],
+		['none', 6],
+		['none', 7],
+		['none', 9],
+		['list', 9],
+		['list-next', 9],
+		['delete', 9],
+	] as const)(
+		'keeps seven deployment backups and seven days of daily backups across S3 pages, failure=%s, deployments=%i',
+		async (failure, count) => {
 			const deleted: string[] = [];
 			const listed: URL[] = [];
+			const deployments = Array.from({ length: count }, (_, index) => ({
+				key: `sqlite/pre-deploy/snapshot-${count - index}.sqlite`,
+				// Small histories survive beyond seven days; larger histories prune even recent snapshots.
+				date: `2026-11-${count > 7 ? '24' : '10'}T${String(index).padStart(2, '0')}:00:00Z`,
+			})).reverse();
 			const pages = [
 				[
 					{ key: 'sqlite/daily/old.sqlite', date: '2026-11-16T03:00:00Z' },
 					{
-						key: 'sqlite/pre-deploy/boundary.sqlite',
+						key: 'sqlite/daily/boundary.sqlite',
 						date: '2026-11-17T03:00:00Z',
 					},
 					{ key: 'sqlite/daily/keep.sqlite', date: '2026-11-17T03:00:00.001Z' },
 					{ key: 'unrelated/keep.sqlite', date: '2026-11-01T00:00:00Z' },
+					...deployments.filter((_, index) => index % 2 === 0),
 				],
 				[
-					{ key: 'sqlite/pre-deploy/old.sqlite', date: '2026-11-10T00:00:00Z' },
-					{
-						key: 'sqlite/pre-deploy/keep.sqlite',
-						date: '2026-11-18T00:00:00Z',
-					},
+					...deployments.filter((_, index) => index % 2 === 1),
 					{ key: 'sqlite/daily/keep.txt', date: '2026-11-01T00:00:00Z' },
 					{ key: 'sqlite/daily/no-date.sqlite', date: undefined },
+					{ key: 'sqlite/pre-deploy/no-date.sqlite', date: undefined },
+					{ key: 'sqlite/pre-deploy/invalid-date.sqlite', date: 'invalid' },
+					{ key: 'sqlite/pre-deploy/keep.txt', date: '2026-11-01T00:00:00Z' },
 				],
 			];
 			const server = createServer((request, response) => {
@@ -439,6 +452,9 @@ describe('database backup', () => {
 				if (request.method === 'GET') listed.push(url);
 				if (
 					(failure === 'list' && request.method === 'GET') ||
+					(failure === 'list-next' &&
+						request.method === 'GET' &&
+						url.searchParams.has('continuation-token')) ||
 					(failure === 'delete' && request.method === 'DELETE')
 				) {
 					response.writeHead(403, { 'content-type': 'application/xml' });
@@ -490,12 +506,18 @@ describe('database backup', () => {
 					},
 				);
 				if (failure === 'none') {
-					expect((await execution).stdout).toBe('3');
-					expect(deleted).toEqual([
+					const expected = [
 						'sqlite/daily/old.sqlite',
-						'sqlite/pre-deploy/boundary.sqlite',
-						'sqlite/pre-deploy/old.sqlite',
-					]);
+						'sqlite/daily/boundary.sqlite',
+						...(count > 7
+							? [
+									'sqlite/pre-deploy/snapshot-8.sqlite',
+									'sqlite/pre-deploy/snapshot-9.sqlite',
+								]
+							: []),
+					];
+					expect((await execution).stdout).toBe(String(expected.length));
+					expect(deleted).toEqual(expected);
 					expect(listed).toHaveLength(2);
 					expect(listed[1]?.searchParams.get('continuation-token')).toBe(
 						'page-2',
@@ -506,7 +528,7 @@ describe('database backup', () => {
 						stderr: expect.stringContaining('DatabaseBackupError'),
 					});
 					expect(deleted).toEqual(
-						failure === 'list' ? [] : ['sqlite/daily/old.sqlite'],
+						failure === 'delete' ? ['sqlite/daily/old.sqlite'] : [],
 					);
 				}
 				expect(

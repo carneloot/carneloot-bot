@@ -8,8 +8,10 @@ import {
 	Effect,
 	FileSystem,
 	Layer,
+	Option,
 	Redacted,
 	Schedule,
+	Stream,
 } from 'effect';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -60,38 +62,61 @@ export const R2BackupStoreLive = Layer.effect(
 						new DatabaseBackupError({ operation: 'upload', cause }),
 				}).pipe(Effect.asVoid, Effect.uninterruptible),
 			),
-			prune: Effect.fn('BackupStore.prune')((cutoff) =>
-				Effect.tryPromise({
-					try: async () => {
-						let continuationToken: string | undefined;
-						let deleted = 0;
-						do {
-							const page = await client.list({
-								prefix: 'sqlite/',
-								continuationToken,
-							});
-							for (const object of page.contents ?? []) {
-								const managed =
-									object.key.startsWith('sqlite/daily/') ||
-									object.key.startsWith('sqlite/pre-deploy/');
+			prune: Effect.fn('BackupStore.prune')(
+				function* (cutoff) {
+					const expired: string[] = [];
+					const preDeploy: { key: string; modified: number }[] = [];
+					yield* Stream.paginate(
+						undefined,
+						(continuationToken: string | undefined) =>
+							Effect.tryPromise(() =>
+								client.list({ prefix: 'sqlite/', continuationToken }),
+							).pipe(
+								Effect.map(
+									(page) =>
+										[
+											page.contents ?? [],
+											page.isTruncated
+												? Option.fromNullishOr(page.nextContinuationToken)
+												: Option.none(),
+										] as const,
+								),
+							),
+					).pipe(
+						Stream.runForEach((object) =>
+							Effect.sync(() => {
+								const modified = Date.parse(object.lastModified ?? '');
 								if (
-									managed &&
-									object.key.endsWith('.sqlite') &&
-									Date.parse(object.lastModified ?? '') <= cutoff
+									!object.key.endsWith('.sqlite') ||
+									!Number.isFinite(modified)
+								)
+									return;
+								if (
+									object.key.startsWith('sqlite/daily/') &&
+									modified <= cutoff
 								) {
-									await client.delete(object.key);
-									deleted++;
+									expired.push(object.key);
+								} else if (object.key.startsWith('sqlite/pre-deploy/')) {
+									preDeploy.push({ key: object.key, modified });
 								}
-							}
-							continuationToken = page.isTruncated
-								? page.nextContinuationToken
-								: undefined;
-						} while (continuationToken !== undefined);
-						return deleted;
-					},
-					catch: (cause) =>
-						new DatabaseBackupError({ operation: 'cleanup', cause }),
-				}),
+							}),
+						),
+					);
+					// Rank across every page, keeping seven deployment snapshots regardless of age.
+					preDeploy.sort(
+						(a, b) => b.modified - a.modified || b.key.localeCompare(a.key),
+					);
+					expired.push(...preDeploy.slice(7).map((object) => object.key));
+					yield* Effect.forEach(
+						expired,
+						(key) => Effect.tryPromise(() => client.delete(key)),
+						{ discard: true },
+					);
+					return expired.length;
+				},
+				Effect.mapError(
+					(cause) => new DatabaseBackupError({ operation: 'cleanup', cause }),
+				),
 			),
 		});
 	}),

@@ -216,16 +216,18 @@ at the next deadline. Alert on that message and on the absence of a daily
 `Database backup uploaded` message.
 
 Daily and manual backups use the `sqlite/daily/` prefix. Startup backups use
-`sqlite/pre-deploy/`. Both groups retain seven days of snapshots, measured
-from R2's object modification time, rather than a shared maximum count.
+`sqlite/pre-deploy/`. Daily backups retain seven days of snapshots. Startup
+backups retain the newest seven snapshots, regardless of age. Both policies
+use R2's object modification time to determine age or order.
 Extra deployments therefore do not shorten the daily backup history.
 
 After each successful upload, the job lists all pages under `sqlite/` and
-deletes `.sqlite` objects in either managed group whose age is at least
-seven days. Newer backups, objects without modification times, and unrelated
-keys are retained. If the upload fails, cleanup does not run. A cleanup
-failure fails that run and blocks startup when preparation is running.
-Expired backups can remain longer while the service is down or uploads fail.
+deletes daily `.sqlite` objects whose age is at least seven days, plus startup
+snapshots beyond the newest seven. Objects without valid modification times
+and unrelated keys are retained. If the upload fails, cleanup does not run.
+A cleanup failure fails that run and blocks startup when preparation is running.
+Backups beyond either retention limit can remain while the service is down
+or uploads fail.
 
 The bucket itself is retained if Alchemy removes the resource, and
 `forceDestroy` remains disabled. These snapshots cover SQLite only, not
