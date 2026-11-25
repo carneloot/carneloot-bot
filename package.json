@@ -9,9 +9,11 @@
 	"scripts": {
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
+		"db:backup": "bun run src/scripts/backup-database.ts",
+		"db:prepare": "bun run src/scripts/prepare-database.ts",
 		"build:dev": "tsc",
 		"dev": "fnox run -P local -- nodemon",
-		"start": "bun run src/main.ts",
+		"start": "bun run db:prepare && bun run src/main.ts",
 		"set-webhook": "curl $BOT_URL/api/set-webhook",
 		"test": "TZ=UTC vitest --dir tests",
 		"lint": "oxlint .",

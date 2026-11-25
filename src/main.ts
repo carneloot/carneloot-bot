@@ -1,3 +1,4 @@
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import * as BunHttpServer from '@effect/platform-bun/BunHttpServer';
 import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/http';
@@ -9,8 +10,12 @@ import { ConversationPersistence } from './adapters/telegram/conversation-storag
 import { TelegramPollingLive } from './adapters/telegram/polling.js';
 import { runtime } from './app/layer.js';
 import { Env } from './common/env.js';
+import {
+	DatabaseBackup,
+	DatabaseBackupDailyLive,
+	R2BackupStoreLive,
+} from './lib/database/backup.js';
 import { Database } from './lib/database/db.js';
-import { syncDatabaseSchema } from './lib/database/sync-schema.js';
 import { PetFoodService } from './lib/services/pet-food.js';
 
 const waitForShutdown = Effect.callback<void>((resume) => {
@@ -27,8 +32,6 @@ const waitForShutdown = Effect.callback<void>((resume) => {
 
 const app = Effect.scoped(
 	Effect.gen(function* () {
-		yield* Effect.scoped(syncDatabaseSchema());
-
 		const conversationPersistence = yield* ConversationPersistence;
 		const telegramBot = yield* TelegramBot;
 		const database = yield* Database;
@@ -47,6 +50,16 @@ const app = Effect.scoped(
 		);
 		yield* readiness;
 		yield* petFoodService.reconcileNotifications();
+
+		if (Env.DATABASE_BACKUP_ENABLED === 'true') {
+			yield* Layer.build(
+				DatabaseBackupDailyLive.pipe(
+					Layer.provide(DatabaseBackup.layer),
+					Layer.provide(R2BackupStoreLive),
+					Layer.provide(BunFileSystem.layer),
+				),
+			);
+		}
 
 		yield* Layer.build(
 			HttpRouter.serve(HttpLive).pipe(

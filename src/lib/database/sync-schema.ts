@@ -1,18 +1,23 @@
 import { createClient } from '@libsql/client';
 import { pushSQLiteSchema } from 'drizzle-kit/api';
 import { drizzle } from 'drizzle-orm/libsql';
-import { Effect, Redacted } from 'effect';
+import { Config, Effect, Option, Redacted } from 'effect';
 
-import { Env } from '../../common/env.js';
 import * as DbSchema from './schema.js';
 
 export const syncDatabaseSchema = Effect.fn('Database.syncSchema')(
 	function* () {
+		const url = yield* Config.String('DATABASE_URL');
+		const authToken = yield* Config.option(
+			Config.Redacted('DATABASE_AUTH_TOKEN'),
+		);
 		const client = yield* Effect.acquireRelease(
 			Effect.sync(() =>
 				createClient({
-					url: Env.DATABASE_URL,
-					authToken: Env.DATABASE_AUTH_TOKEN?.pipe(Redacted.value),
+					url,
+					authToken: Option.isSome(authToken)
+						? Redacted.value(authToken.value)
+						: undefined,
 				}),
 			),
 			(client) => Effect.sync(() => client.close()),

@@ -149,3 +149,111 @@ The Cloudflare API token must be able to create and update the state-store
 Worker, Durable Object, and Secrets Store in the configured account. Keep the
 existing `.alchemy/` directory as a backup until the first remote deployment
 has completed successfully.
+
+## Daily database backups to R2
+
+Alchemy creates a private `DatabaseBackups` R2 bucket and an account API token
+with object-read and object-write permissions scoped to that bucket. Listing
+is required for retention cleanup. The stack derives the S3
+secret with Effect's SHA-256 implementation and injects the credentials into
+the bot service. No R2 credentials need to be copied into 1Password.
+
+Before deploying, grant **Workers R2 Storage Write** and **API Tokens Write**
+account permissions to the deployer's Cloudflare token for the
+configured account. Keep its existing state-store and DNS permissions. The
+runtime token cannot administer buckets or access other buckets.
+
+The daily Effect job runs inside the Railway bot service, which owns the
+database volume. It is not a second Railway cron service. A second service
+would not have the bot's mounted database. The existing database volume,
+custom domain, and DNS records remain unchanged.
+
+`bun run start`, including the Docker entrypoint used by Railway, runs
+`db:prepare` before loading the application. Preparation uploads a backup of
+the existing database, cleans up expired backups, then synchronizes the
+schema. If any step fails,
+the command exits nonzero without starting the bot, workers, or HTTP server.
+The existing refusal to apply a schema change that loses data still applies.
+
+On a first deployment, preparation skips the backup only when the database
+file does not exist and its parent directory exists. It then creates the
+schema. A missing parent directory, unreadable database, or failed upload
+blocks startup. With `DATABASE_BACKUP_ENABLED=false`, preparation runs the
+schema synchronization without a backup.
+
+This sequence runs on every service restart, not just new deployments. R2
+must be available before an existing database can be migrated and the bot
+can start. Allow enough time in Railway's deployment healthcheck for the
+backup and schema synchronization. Do not configure these commands as a
+Railway pre-deploy hook, because that container does not mount the volume.
+Use `bun run start` rather than invoking `src/main.ts` directly, which skips
+database preparation.
+
+The stack sets these variables:
+
+| Variable                      | Value                                       |
+| ----------------------------- | ------------------------------------------- |
+| `DATABASE_BACKUP_ENABLED`     | `true`, disabled by default outside Alchemy |
+| `DATABASE_BACKUP_CRON`        | `0 3 * * *`, evaluated in UTC               |
+| `R2_BACKUP_BUCKET`            | Generated bucket name                       |
+| `R2_BACKUP_ENDPOINT`          | Account's R2 S3 endpoint                    |
+| `R2_BACKUP_ACCESS_KEY_ID`     | Bucket-scoped token ID                      |
+| `R2_BACKUP_SECRET_ACCESS_KEY` | Redacted SHA-256 of the token value         |
+
+At 03:00 UTC, `DatabaseBackup` creates a consistent SQLite snapshot with
+`VACUUM INTO`. The snapshot includes committed WAL data without copying the
+live database file or its WAL separately. The job uploads the snapshot under
+`sqlite/daily/<UTC timestamp>-<unique suffix>.sqlite`, then removes the temporary
+directory on success or failure. Allow ephemeral disk space for a complete
+database snapshot. Snapshot creation uses local SQLite and can briefly delay
+the bot's event loop on large databases.
+
+After preparation, the daily scheduler waits for the next deadline. It does
+not repeat the startup backup or catch up for deadlines missed while the
+service was stopped. Scheduled jobs run serially. A failed scheduled backup
+logs `Database backup failed` and its operation, then the schedule continues
+at the next deadline. Alert on that message and on the absence of a daily
+`Database backup uploaded` message.
+
+Daily and manual backups use the `sqlite/daily/` prefix. Startup backups use
+`sqlite/pre-deploy/`. Both groups retain seven days of snapshots, measured
+from R2's object modification time, rather than a shared maximum count.
+Extra deployments therefore do not shorten the daily backup history.
+
+After each successful upload, the job lists all pages under `sqlite/` and
+deletes `.sqlite` objects in either managed group whose age is at least
+seven days. Newer backups, objects without modification times, and unrelated
+keys are retained. If the upload fails, cleanup does not run. A cleanup
+failure fails that run and blocks startup when preparation is running.
+Expired backups can remain longer while the service is down or uploads fail.
+
+The bucket itself is retained if Alchemy removes the resource, and
+`forceDestroy` remains disabled. These snapshots cover SQLite only, not
+Redis conversation state or queue data.
+
+### Run a backup manually
+
+Inside the deployed bot container, run:
+
+```sh copy Copy Backup Command
+bun run db:backup
+```
+
+The script reads only `DATABASE_URL` and the four `R2_BACKUP_*` variables. It
+does not start the bot, Redis, schema synchronization, or HTTP server. A failed
+snapshot or upload exits nonzero. Use an existing absolute `file:` database
+URL. Remote and in-memory databases are not supported by this script.
+
+### Restore a snapshot
+
+1. Download the desired `.sqlite` object from the private R2 bucket using the
+   Cloudflare dashboard or separate read-authorized credentials.
+2. Validate the downloaded file with `sqlite3 <downloaded.sqlite> 'PRAGMA integrity_check; PRAGMA foreign_key_check;'`.
+   Expect `ok` and no foreign-key violations.
+3. Stop the bot before replacing any volume files. Preserve the existing
+   `carneloot.db`, `carneloot.db-wal`, and `carneloot.db-shm` together as a
+   rollback copy when those files exist.
+4. Upload the snapshot as `/data/carneloot.db`. Do not leave the old WAL or SHM
+   beside the restored database. A `VACUUM INTO` snapshot is self-contained.
+5. Restart the bot, verify `/api/readyz`, and check representative application
+   records before discarding the rollback copy.
