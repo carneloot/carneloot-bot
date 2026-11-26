@@ -22,6 +22,10 @@ export const syncDatabaseSchema = Effect.fn('Database.syncSchema')(
 			),
 			(client) => Effect.sync(() => client.close()),
 		);
+		// Retire pending scheduling intents; reminders are now updated directly.
+		yield* Effect.tryPromise(() =>
+			client.execute('DROP TABLE IF EXISTS pet_food_scheduling_outbox'),
+		);
 		const db = drizzle(client, { schema: DbSchema });
 		const schemaPush = yield* Effect.tryPromise(() =>
 			pushSQLiteSchema(DbSchema, db),

@@ -14,7 +14,6 @@ import * as Database from '../lib/database/db.js';
 import { ConfigService } from '../lib/entities/config.js';
 import { Redis, RedisLive } from '../lib/redis/redis.js';
 import { NotificationRepository } from '../lib/repositories/notification.js';
-import { PetFoodSchedulingOutboxRepository } from '../lib/repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../lib/repositories/pet-food.js';
 import { PetRepository } from '../lib/repositories/pet.js';
 import { UserRepository } from '../lib/repositories/user.js';
@@ -26,7 +25,6 @@ const PersistenceLive = Layer.mergeAll(
 	NotificationRepository.layer,
 	PetRepository.layer,
 	PetFoodRepository.layer,
-	PetFoodSchedulingOutboxRepository.layer,
 	UserRepository.layer,
 	ConfigService.layer,
 ).pipe(Layer.provideMerge(Database.layer));
@@ -57,7 +55,6 @@ export type AppServices =
 	| NotificationRepository
 	| PetRepository
 	| PetFoodRepository
-	| PetFoodSchedulingOutboxRepository
 	| UserRepository
 	| PetFoodService
 	| ConfigService

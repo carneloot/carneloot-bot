@@ -205,11 +205,15 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 			if (!text) return;
 			const newDelay = DurationFromString(text);
 			if (Option.isNone(newDelay)) return;
-			await conversationExternal(cvs, execute, EmptyOutcome, () =>
-				setNotificationDelay(pet.id, newDelay.value),
+			const warning = await conversationExternal(
+				cvs,
+				execute,
+				Schema.NullOr(Schema.String),
+				() => setNotificationDelay(pet.id, newDelay.value),
 			);
 			await ctx.reply(
-				`O atraso de notificação para ${pet.name} foi definido para ${text}.`,
+				warning ??
+					`O atraso de notificação para ${pet.name} foi definido para ${text}.`,
 			);
 			return;
 		}
@@ -220,11 +224,14 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 			)(cvs, ctx))
 		)
 			return;
-		await conversationExternal(cvs, execute, EmptyOutcome, () =>
-			deleteNotificationDelay(pet.id),
+		const warning = await conversationExternal(
+			cvs,
+			execute,
+			Schema.NullOr(Schema.String),
+			() => deleteNotificationDelay(pet.id),
 		);
 		await ctx.reply(
-			'Atraso de notificação excluído e notificação desabilitada.',
+			warning ?? 'Atraso de notificação excluído e notificação desabilitada.',
 		);
 	}) satisfies ConversationFn;
 
@@ -293,10 +300,13 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 			userId: userId(user),
 		})(cvs, ctx);
 		if (!food) return void (await ctx.reply('Operação cancelada'));
-		await conversationExternal(cvs, execute, EmptyOutcome, () =>
-			deleteFood(food.id),
+		const warning = await conversationExternal(
+			cvs,
+			execute,
+			Schema.NullOr(Schema.String),
+			() => deleteFood(food.id),
 		);
-		await ctx.reply('Ração deletada com sucesso!');
+		await ctx.reply(warning ?? 'Ração deletada com sucesso!');
 	}) satisfies ConversationFn;
 
 	const correctFoodConversation = (async (cvs, ctx) => {
@@ -339,16 +349,20 @@ export const createPetFoodConversations = (execute: Execute<AppServices>) => {
 				timezone: selection.dayStart.timezone,
 			}).pipe(withTelegramSpan(reply)),
 		);
-		await conversationExternal(cvs, execute, EmptyOutcome, () =>
-			updateFood(
-				selection.pet.id,
-				food.id,
-				result.quantity.scalar,
-				result.time,
-				result.timeChanged,
-			),
+		const warning = await conversationExternal(
+			cvs,
+			execute,
+			Schema.NullOr(Schema.String),
+			() =>
+				updateFood(
+					selection.pet.id,
+					food.id,
+					result.quantity.scalar,
+					result.time,
+					result.timeChanged,
+				),
 		);
-		await ctx.reply('Ração alterada com sucesso!');
+		await ctx.reply(warning ?? 'Ração alterada com sucesso!');
 	}) satisfies ConversationFn;
 
 	const addFoodConversation = (async (cvs, ctx) => {

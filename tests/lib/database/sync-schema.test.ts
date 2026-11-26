@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@libsql/client', () => ({
 	createClient: () => ({
+		execute: async () => undefined,
 		close: () => mocks.state.events.push('close'),
 	}),
 }));

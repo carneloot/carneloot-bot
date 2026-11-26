@@ -75,7 +75,7 @@ export const createAddFoodAllCommand =
 			const config = yield* ConfigService;
 			const petFoodService = yield* PetFoodService;
 
-			yield* Effect.forEach(
+			const warnings = yield* Effect.forEach(
 				allPets,
 				Effect.fn('AddFoodAllCommand.sendSinglePet')(function* (pet) {
 					const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
@@ -86,18 +86,19 @@ export const createAddFoodAllCommand =
 						timezone: dayStart.timezone,
 					});
 
-					yield* petFoodService.addPetFoodAndScheduleNotification({
-						pet,
+					const { warning } =
+						yield* petFoodService.addPetFoodAndScheduleNotification({
+							pet,
 
-						messageID,
-						userID: user.id,
+							messageID,
+							userID: user.id,
 
-						time: DateTime.makeUnsafe(time),
-						quantity,
-						timeChanged,
+							time: DateTime.makeUnsafe(time),
+							quantity,
+							timeChanged,
 
-						dayStart,
-					});
+							dayStart,
+						});
 
 					yield* sendAddedFoodNotification({
 						id: pet.id,
@@ -105,15 +106,19 @@ export const createAddFoodAllCommand =
 						user,
 						time: timeChanged ? time : undefined,
 					})(ctx);
+					return warning;
 				}),
-				{ concurrency: 1 },
+				{ concurrency: 'unbounded' },
 			);
 
 			yield* Effect.all(
 				[
 					Effect.tryPromise(() =>
 						ctx.reply(
-							`Foram adicionados ${quantity} de ração para todos os seus pets`,
+							[
+								`Foram adicionados ${quantity} de ração para todos os seus pets`,
+								...warnings.filter(Boolean),
+							].join('\n'),
 						),
 					),
 					Effect.tryPromise(() => ctx.react(Reactions.thumbs_up)),

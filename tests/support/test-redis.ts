@@ -15,6 +15,7 @@ export const createTestRedis = () => {
 	const values = new Map<string, string>();
 	const jobs = new Map<PetFoodID, { petID: PetID; runAt: number }>();
 	let available = true;
+	let queueAvailable = true;
 	const client = new IORedis({ lazyConnect: true });
 	vi.spyOn(client, 'sendCommand').mockImplementation(async (command) => {
 		if (!available) throw new Error('Test Redis is unavailable');
@@ -43,10 +44,14 @@ export const createTestRedis = () => {
 	const checkHealth = Effect.tryPromise(() => client.ping()).pipe(
 		Effect.asVoid,
 	);
-	const queueHealth = checkHealth.pipe(
-		Effect.mapError(
-			() => new QueueError({ message: 'Test Redis is unavailable' }),
-		),
+	const queueHealth = Effect.suspend(() =>
+		queueAvailable
+			? checkHealth.pipe(
+					Effect.mapError(
+						() => new QueueError({ message: 'Test Redis is unavailable' }),
+					),
+				)
+			: Effect.fail(new QueueError({ message: 'Test queue is unavailable' })),
 	);
 	const queue = PetFoodNotificationQueue.of({
 		checkHealth,
@@ -75,6 +80,9 @@ export const createTestRedis = () => {
 		values,
 		setAvailable: (value: boolean) => {
 			available = value;
+		},
+		setQueueAvailable: (value: boolean) => {
+			queueAvailable = value;
 		},
 		close: () => client.disconnect(),
 	};

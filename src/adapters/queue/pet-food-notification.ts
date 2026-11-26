@@ -23,7 +23,7 @@ import { NotificationService } from '../../lib/services/notification.js';
 
 const QUEUE_NAME = 'pet-food-notification';
 
-const getQueueConnection = (): ConnectionOptions => {
+const getQueueConnection = () => {
 	const redisUrl = new URL(Env.REDIS_URL);
 
 	return {
@@ -32,7 +32,7 @@ const getQueueConnection = (): ConnectionOptions => {
 		username: redisUrl.username || undefined,
 		password: redisUrl.password || undefined,
 		maxRetriesPerRequest: null,
-	};
+	} satisfies ConnectionOptions;
 };
 
 const getJobName = (petID: PetID): string => `pet-${petID}`;
@@ -62,7 +62,11 @@ export class PetFoodNotificationQueue extends EffectContext.Service<PetFoodNotif
 				Effect.sync(
 					() =>
 						new Queue<Data, void, string>(QUEUE_NAME, {
-							connection: queueConnection,
+							connection: {
+								...queueConnection,
+								maxRetriesPerRequest: 1,
+								enableOfflineQueue: false,
+							},
 							defaultJobOptions: {
 								attempts: 3,
 								backoff: {

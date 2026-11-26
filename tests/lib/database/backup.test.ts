@@ -264,7 +264,7 @@ describe('database backup', () => {
 				await client.execute(
 					"INSERT INTO users (id, telegram_id, first_name) VALUES ('user-7', '7', 'Before migration')",
 				);
-				await client.execute('DROP TABLE pet_food_scheduling_outbox');
+				await client.execute('DROP TABLE sessions');
 				if (destructive) {
 					await client.execute(
 						'ALTER TABLE users ADD COLUMN legacy_value TEXT',
@@ -344,7 +344,7 @@ describe('database backup', () => {
 				}
 				if (prepare) {
 					const migrated = await client.execute(
-						"SELECT name FROM sqlite_master WHERE name = 'pet_food_scheduling_outbox'",
+						"SELECT name FROM sqlite_master WHERE name = 'sessions'",
 					);
 					expect(migrated.rows).toHaveLength(
 						status === 200 && !destructive ? 1 : 0,
@@ -383,7 +383,7 @@ describe('database backup', () => {
 						expect(
 							(
 								await restored.execute(
-									"SELECT name FROM sqlite_master WHERE name = 'pet_food_scheduling_outbox'",
+									"SELECT name FROM sqlite_master WHERE name = 'sessions'",
 								)
 							).rows,
 						).toHaveLength(0);

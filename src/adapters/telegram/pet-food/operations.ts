@@ -77,13 +77,11 @@ export const setNotificationDelay = (petID: string, delay: Duration.Duration) =>
 		Effect.andThen((service) =>
 			service.setNotificationDelayAndReschedule(petID as PetID, delay),
 		),
-		Effect.as(null),
 	);
 
 export const deleteNotificationDelay = (petID: string) =>
 	PetFoodService.pipe(
 		Effect.andThen((service) => service.disableNotification(petID as PetID)),
-		Effect.as(null),
 	);
 
 export const getFoodEntries = (
@@ -102,7 +100,6 @@ export const deleteFood = (petFoodID: string) =>
 		Effect.andThen((service) =>
 			service.deletePetFoodAndNotification(petFoodID as PetFoodID),
 		),
-		Effect.as(null),
 	);
 
 export const updateFood = (
@@ -122,7 +119,6 @@ export const updateFood = (
 				timeChanged,
 			),
 		),
-		Effect.as(null),
 	);
 
 export const addFood = (

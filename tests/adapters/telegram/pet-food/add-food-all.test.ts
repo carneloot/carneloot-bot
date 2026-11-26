@@ -38,6 +38,7 @@ vi.mock('../../../../src/lib/services/pet-food.js', () => ({
 				yield* Effect.yieldNow;
 				mocks.activeWrites -= 1;
 				mocks.addedFoods.push(input);
+				return { warning: null };
 			}),
 	}),
 }));
@@ -65,7 +66,7 @@ describe('createAddFoodAllCommand', () => {
 		mocks.getUserCaredPets.mockReset();
 	});
 
-	it('adds food to owned and cared pets one at a time, then confirms success', async () => {
+	it('adds food to owned and cared pets concurrently, then confirms success', async () => {
 		mocks.getUserOwnedPets.mockReturnValue(
 			Effect.succeed([{ id: 'owned-pet', name: 'Luna' }]),
 		);
@@ -87,15 +88,17 @@ describe('createAddFoodAllCommand', () => {
 		await createAddFoodAllCommand(execute)(ctx as never);
 
 		expect(mocks.addedFoods).toHaveLength(2);
-		expect(mocks.addedFoods.map((input) => input.pet)).toEqual([
-			{ id: 'owned-pet', name: 'Luna' },
-			{ id: 'cared-pet', name: 'Theo' },
-		]);
+		expect(mocks.addedFoods.map((input) => input.pet)).toEqual(
+			expect.arrayContaining([
+				{ id: 'owned-pet', name: 'Luna' },
+				{ id: 'cared-pet', name: 'Theo' },
+			]),
+		);
 		expect(mocks.addedFoods.map((input) => input.quantity)).toMatchObject([
 			{ scalar: 25 },
 			{ scalar: 25 },
 		]);
-		expect(mocks.maxConcurrentWrites).toBe(1);
+		expect(mocks.maxConcurrentWrites).toBe(2);
 		expect(mocks.notifications).toHaveLength(2);
 		expect(ctx.reply).toHaveBeenCalledWith(
 			'Foram adicionados 25 g de ração para todos os seus pets',

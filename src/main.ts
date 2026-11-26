@@ -13,7 +13,6 @@ import {
 	DatabaseBackupDailyLive,
 	R2BackupStoreLive,
 } from './lib/database/backup.js';
-import { PetFoodService } from './lib/services/pet-food.js';
 
 const waitForShutdown = Effect.callback<void>((resume) => {
 	const stop = () => resume(Effect.void);
@@ -29,14 +28,12 @@ const waitForShutdown = Effect.callback<void>((resume) => {
 
 const app = Effect.scoped(
 	Effect.gen(function* () {
-		const petFoodService = yield* PetFoodService;
 		const checkReadiness = yield* makeReadinessCheck;
 		yield* checkReadiness.pipe(
 			Effect.withSpan('application.readiness', {
 				attributes: { 'application.run.mode': Env.RUN_MODE },
 			}),
 		);
-		yield* petFoodService.reconcileNotifications();
 
 		if (Env.DATABASE_BACKUP_ENABLED === 'true') {
 			yield* Layer.build(

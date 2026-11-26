@@ -27,7 +27,6 @@ import {
 } from '../../../src/lib/database/db.js';
 import { ConfigService } from '../../../src/lib/entities/config.js';
 import { NotificationRepository } from '../../../src/lib/repositories/notification.js';
-import { PetFoodSchedulingOutboxRepository } from '../../../src/lib/repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../../../src/lib/repositories/pet-food.js';
 import { PetRepository } from '../../../src/lib/repositories/pet.js';
 import { UserRepository } from '../../../src/lib/repositories/user.js';
@@ -230,7 +229,6 @@ describe('registered bot command regressions', () => {
 			Layer.mock(NotificationRepository, {}),
 			Layer.mock(PetRepository, {}),
 			Layer.mock(PetFoodRepository, {}),
-			Layer.mock(PetFoodSchedulingOutboxRepository, {}),
 			Layer.mock(PetFoodService, {}),
 			Layer.mock(ConfigService, {}),
 			Layer.succeed(OtelTracer.OtelTracer, trace.getTracer('test')),

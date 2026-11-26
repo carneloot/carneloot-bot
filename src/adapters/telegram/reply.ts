@@ -10,7 +10,6 @@ import { PetFoodRepository } from '../../lib/repositories/pet-food.js';
 import { DuplicatedEntryError } from '../../lib/services/pet-food.js';
 import { handlePetFoodReply } from '../../modules/pet-food/handle-pet-food-reply.js';
 import type { Execute } from '../execute.js';
-import { QueueError } from '../queue/pet-food-notification.js';
 import { handleNotificationReply } from './notification/handle-notification-reply.js';
 import { handlePetFoodNotificationReply } from './notification/handle-pet-food-notification-reply.js';
 import { nextWithSpan, withTelegramSpan } from './tracing.js';
@@ -76,7 +75,6 @@ export const createReplyMiddleware = (execute: Execute<AppServices>) =>
 						Effect.ignore,
 					);
 				}
-				if (error instanceof QueueError) return Effect.logError(error.message);
 				return Effect.fail(error);
 			}),
 			Effect.withSpan('replyMiddleware'),

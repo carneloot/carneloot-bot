@@ -31,7 +31,6 @@ import {
 import type { AppServices } from '../../../../src/app/layer.js';
 import * as Database from '../../../../src/lib/database/db.js';
 import {
-	petFoodSchedulingOutboxTable,
 	petFoodTable,
 	type PetFoodID,
 	type PetID,
@@ -39,7 +38,6 @@ import {
 } from '../../../../src/lib/database/schema.js';
 import { syncDatabaseSchema } from '../../../../src/lib/database/sync-schema.js';
 import { ConfigService } from '../../../../src/lib/entities/config.js';
-import { PetFoodSchedulingOutboxRepository } from '../../../../src/lib/repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../../../../src/lib/repositories/pet-food.js';
 import { PetRepository } from '../../../../src/lib/repositories/pet.js';
 import { UserRepository } from '../../../../src/lib/repositories/user.js';
@@ -78,7 +76,6 @@ const setup = async () => {
 		ConfigService.layer,
 		PetRepository.layer,
 		PetFoodRepository.layer,
-		PetFoodSchedulingOutboxRepository.layer,
 		UserRepository.layer,
 	).pipe(Layer.provideMerge(database));
 	const dependencies = Layer.mergeAll(
@@ -103,11 +100,10 @@ const setup = async () => {
 		);
 	await runtime.runPromise(Effect.scoped(syncDatabaseSchema()));
 	await sql(`
-		DROP TRIGGER IF EXISTS reject_schedule;
+		DROP TRIGGER IF EXISTS reject_food;
 		DELETE FROM notification_history;
 		DELETE FROM users_to_notify;
 		DELETE FROM notifications;
-		DELETE FROM pet_food_scheduling_outbox;
 		DELETE FROM pet_food;
 		DELETE FROM pet_carers;
 		DELETE FROM configs;
@@ -193,22 +189,11 @@ const setup = async () => {
 				),
 			),
 		);
-	const pending = () =>
-		runtime.runPromise(
-			Database.Database.pipe(
-				Effect.andThen((db) =>
-					db.execute((client) =>
-						client.select().from(petFoodSchedulingOutboxTable),
-					),
-				),
-			),
-		);
 	return {
 		runner,
 		message,
 		callback,
 		foods,
-		pending,
 		redis,
 		sql,
 		run,
@@ -249,7 +234,6 @@ describe('registered food flows with SQLite and test Redis', () => {
 				petID: food.petID,
 				runAt: now - 300_000 + 7_200_000,
 			});
-		expect(await app.pending()).toEqual([]);
 		expect(bot.calls).toContainEqual(
 			expect.objectContaining({
 				method: 'sendMessage',
@@ -295,7 +279,6 @@ describe('registered food flows with SQLite and test Redis', () => {
 		await bot.dispatch(app.callback());
 		expect(await app.foods()).toEqual([]);
 		expect(app.redis.jobs.size).toBe(0);
-		expect(await app.pending()).toEqual([]);
 		expect(bot.calls).toContainEqual(
 			expect.objectContaining({
 				method: 'sendMessage',
@@ -318,67 +301,157 @@ describe('registered food flows with SQLite and test Redis', () => {
 			expect.objectContaining({ quantity: 17 }),
 		]);
 		await app.restart();
-		await app.run(
-			PetFoodService.pipe(
-				Effect.andThen((service) => service.reconcileNotifications()),
-			),
-		);
 		expect(await app.foods()).toHaveLength(1);
 		expect(app.redis.jobs.size).toBe(1);
 	});
 
-	it('preserves committed food and retries pending scheduling after a Redis outage and restart', async () => {
+	it('reports saved food and failed reminders for every pet without automatic replay on restart', async () => {
 		const bot = await app.runner();
-		app.redis.setAvailable(false);
-		// Direct service execution avoids failing conversation storage before the write.
-		const { addFood } =
-			await import('../../../../src/adapters/telegram/pet-food/operations.js');
-		const { default: Qty } = await import('js-quantities');
-		await expect(
-			app.run(
-				addFood(
-					{ id: petID, name: 'Luna' },
-					90,
-					'user-1',
-					new Date(now),
-					Qty('21g'),
-					false,
-					{ hour: 4, timezone: 'America/Sao_Paulo' },
-				),
-			),
-		).rejects.toMatchObject({ _tag: 'QueueError' });
-		expect(await app.foods()).toEqual([
-			expect.objectContaining({ quantity: 21 }),
-		]);
-		expect(await app.pending()).toHaveLength(1);
+		app.redis.setQueueAvailable(false);
+		await bot.dispatch(app.message('/todos 21g'));
+		expect((await app.foods()).map((food) => food.quantity)).toEqual([21, 21]);
+		for (const name of ['Luna', 'Theo']) {
+			expect(bot.calls).toContainEqual(
+				expect.objectContaining({
+					method: 'sendMessage',
+					payload: expect.objectContaining({
+						text: expect.stringContaining(
+							`A ração foi salva para ${name}, mas não foi possível atualizar o lembrete.`,
+						),
+					}),
+				}),
+			);
+		}
 		expect(app.redis.jobs.size).toBe(0);
 		await app.restart();
-		app.redis.setAvailable(true);
-		for (let i = 0; i < 2; i++)
-			await app.run(
+		app.redis.setQueueAvailable(true);
+		expect(await app.foods()).toHaveLength(2);
+		expect(app.redis.jobs.size).toBe(0);
+		await expect(
+			app.run(
 				PetFoodService.pipe(
-					Effect.andThen((service) => service.reconcileNotifications()),
+					Effect.andThen((service) =>
+						service.setNotificationDelayAndReschedule(petID, Duration.hours(3)),
+					),
 				),
-			);
-		expect(await app.foods()).toHaveLength(1);
-		expect(app.redis.jobs.size).toBe(1);
-		expect(await app.pending()).toEqual([]);
-		expect(bot.calls).toEqual([]);
+			),
+		).resolves.toBeNull();
+		const [food] = await app.foods();
+		expect(app.redis.jobs.get(food!.id)?.runAt).toBe(now + 10_800_000);
 	});
 
-	it('keeps food and scheduling intent atomic when SQLite rejects the intent', async () => {
+	it('reports a saved feeding and failed reminder in the add-food conversation', async () => {
+		const bot = await app.runner();
+		app.redis.setQueueAvailable(false);
+		await bot.dispatch(app.message('/colocar_racao'));
+		await bot.dispatch(app.callback());
+		await bot.dispatch(app.message('27g'));
+		expect(await app.foods()).toEqual([
+			expect.objectContaining({ petID, quantity: 27 }),
+		]);
+		expect(app.redis.jobs.size).toBe(0);
+		expect(bot.calls).toContainEqual(
+			expect.objectContaining({
+				method: 'sendMessage',
+				payload: expect.objectContaining({
+					text: expect.stringContaining(
+						'A ração foi salva para Luna, mas não foi possível atualizar o lembrete.',
+					),
+				}),
+			}),
+		);
+		await app.restart();
+		const restarted = await app.runner();
+		await restarted.dispatch(app.message('27g'));
+		expect(await app.foods()).toHaveLength(1);
+	});
+
+	it.each(['correct', 'delete', 'delay', 'disable'] as const)(
+		'reports a committed %s change when updating its reminder fails',
+		async (operation) => {
+			const bot = await app.runner();
+			await bot.dispatch(app.message('/todos 25g'));
+			const jobs = [...app.redis.jobs];
+			app.redis.setQueueAvailable(false);
+			if (operation === 'correct' || operation === 'delete') {
+				await bot.dispatch(
+					app.message(
+						operation === 'correct' ? '/corrigir_racao' : '/deletar_racao',
+					),
+				);
+				await bot.dispatch(app.callback());
+				await bot.dispatch(app.callback());
+				if (operation === 'correct') {
+					await bot.dispatch(app.message('19g -10min'));
+					expect((await app.foods())[0]).toMatchObject({
+						petID,
+						quantity: 19,
+						time: new Date(now - 600_000),
+					});
+				} else {
+					expect((await app.foods()).map((food) => food.petID)).toEqual([
+						'pet-2',
+					]);
+				}
+			} else {
+				await bot.dispatch(app.message('/configurar_atraso_notificacao'));
+				await bot.dispatch(app.callback());
+				await bot.dispatch(
+					app.callback(operation === 'delay' ? 'values-0' : 'values-1'),
+				);
+				if (operation === 'delay') {
+					await bot.dispatch(app.message('3 hours'));
+					const delay = await app.run(
+						ConfigService.pipe(
+							Effect.andThen((config) =>
+								config.getConfig('pet', 'notificationDelay', petID),
+							),
+						),
+					);
+					expect(Duration.toMillis(delay)).toBe(10_800_000);
+				} else {
+					await bot.dispatch(app.callback());
+					await expect(
+						app.run(
+							ConfigService.pipe(
+								Effect.andThen((config) =>
+									config.getConfig('pet', 'notificationDelay', petID),
+								),
+							),
+						),
+					).rejects.toMatchObject({ _tag: 'MissingConfigError' });
+				}
+			}
+			const warning = {
+				correct:
+					'A ração foi alterada, mas não foi possível atualizar o lembrete.',
+				delete:
+					'A ração foi excluída, mas não foi possível cancelar o lembrete.',
+				delay:
+					'O atraso de notificação foi salvo, mas não foi possível atualizar o lembrete.',
+				disable:
+					'O atraso de notificação foi excluído, mas não foi possível cancelar o lembrete.',
+			}[operation];
+			expect(bot.calls.at(-1)).toMatchObject({
+				method: 'sendMessage',
+				payload: { text: expect.stringContaining(warning) },
+			});
+			expect([...app.redis.jobs]).toEqual(jobs);
+		},
+	);
+
+	it('does not update reminders or report success when SQLite rejects a feeding', async () => {
 		await app.sql(
-			`CREATE TRIGGER reject_schedule BEFORE INSERT ON pet_food_scheduling_outbox BEGIN SELECT RAISE(ABORT, 'test rejection'); END;`,
+			`CREATE TRIGGER reject_food BEFORE INSERT ON pet_food BEGIN SELECT RAISE(ABORT, 'test rejection'); END;`,
 		);
 		const bot = await app.runner();
 		await bot.dispatch(app.message('/todos 25g'));
 		expect(await app.foods()).toEqual([]);
-		expect(await app.pending()).toEqual([]);
 		expect(app.redis.jobs.size).toBe(0);
 		expect(bot.calls.some((call) => call.method === 'setMessageReaction')).toBe(
 			false,
 		);
-		await app.sql('DROP TRIGGER reject_schedule;');
+		await app.sql('DROP TRIGGER reject_food;');
 		await bot.dispatch(app.message('/todos 13g'));
 		expect((await app.foods()).map((food) => food.quantity)).toEqual([13, 13]);
 		expect(app.redis.jobs.size).toBe(2);
@@ -398,7 +471,6 @@ describe('registered food flows with SQLite and test Redis', () => {
 				.map((food) => food.quantity),
 		).toEqual([23, 41]);
 		expect(app.redis.jobs.size).toBe(2);
-		expect(await app.pending()).toEqual([]);
 	});
 
 	it('does not delete food or its job when selection is cancelled', async () => {
@@ -415,9 +487,14 @@ describe('registered food flows with SQLite and test Redis', () => {
 
 	it('rejects repeated food entries without creating extra records or jobs', async () => {
 		const bot = await app.runner();
-		await bot.dispatch(app.message('/todos 25g'));
+		await Promise.all([
+			bot.dispatch(app.message('/todos 25g', 1)),
+			bot.dispatch(app.message('/todos 25g', 2)),
+		]);
 		const before = await app.foods();
 		const jobs = [...app.redis.jobs];
+		expect(before).toHaveLength(2);
+		expect(jobs).toHaveLength(2);
 		await bot.dispatch(app.message('/todos 25g'));
 		expect(await app.foods()).toEqual(before);
 		expect([...app.redis.jobs]).toEqual(jobs);
@@ -431,16 +508,30 @@ describe('registered food flows with SQLite and test Redis', () => {
 		);
 	});
 
-	it('upgrades the main schema without losing food, pets, users, or configuration', async () => {
+	it('removes the legacy outbox without losing food, pets, users, configuration, or queued jobs', async () => {
 		const bot = await app.runner();
 		await bot.dispatch(app.message('/todos 25g'));
 		const before = await app.foods();
-		// The only database schema addition in the rewrite is the durable outbox.
-		await app.sql('DROP TABLE pet_food_scheduling_outbox;');
+		const jobs = [...app.redis.jobs];
+		await app.sql(
+			"CREATE TABLE pet_food_scheduling_outbox (id TEXT PRIMARY KEY); INSERT INTO pet_food_scheduling_outbox VALUES ('pending-intent');",
+		);
 		await app.restart();
 		await app.run(Effect.scoped(syncDatabaseSchema()));
 		expect(await app.foods()).toEqual(before);
-		expect(await app.pending()).toEqual([]);
+		expect([...app.redis.jobs]).toEqual(jobs);
+		const legacyTable = await app.run(
+			Database.Database.pipe(
+				Effect.andThen((db) =>
+					db.execute((client) =>
+						client.$client.execute(
+							"SELECT name FROM sqlite_master WHERE name = 'pet_food_scheduling_outbox'",
+						),
+					),
+				),
+			),
+		);
+		expect(legacyTable.rows).toEqual([]);
 		const restartedBot = await app.runner();
 		await restartedBot.dispatch(app.message('/todos 31g', 1, now + 120_000));
 		expect(await app.foods()).toHaveLength(4);

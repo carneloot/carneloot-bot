@@ -6,6 +6,7 @@ import {
 	Effect,
 	Layer,
 	Option,
+	Semaphore,
 	Struct,
 } from 'effect';
 import type Qty from 'js-quantities';
@@ -14,7 +15,6 @@ import { PetFoodNotificationQueue } from '../../adapters/queue/pet-food-notifica
 import * as Database from '../database/db.js';
 import type { PetFoodID, PetID, UserID } from '../database/schema.js';
 import { ConfigService, type ConfigValue } from '../entities/config.js';
-import { PetFoodSchedulingOutboxRepository } from '../repositories/pet-food-scheduling-outbox.js';
 import { PetFoodRepository } from '../repositories/pet-food.js';
 import type { Pet } from '../repositories/pet.js';
 import { isDuplicatePetFoodEntry } from './is-duplicate-pet-food-entry.js';
@@ -25,11 +25,9 @@ type AddPetFoodAndScheduleNotificationParams = {
 	pet: Pick<Pet, 'id' | 'name'>;
 	messageID: number;
 	userID: UserID;
-
 	time: DateTime.DateTime;
 	timeChanged: boolean;
 	quantity: Qty;
-
 	dayStart: ConfigValue<'pet', 'dayStart'>;
 };
 
@@ -37,275 +35,244 @@ export class DuplicatedEntryError extends Data.TaggedError(
 	'DuplicatedEntryError',
 )<{ message: string }> {}
 
-export const reconcilePetFoodSchedulingOutbox = Effect.fn(
-	'PetFoodService.reconcileNotifications',
-)(function* () {
-	const outbox = yield* PetFoodSchedulingOutboxRepository;
-	const queue = yield* PetFoodNotificationQueue;
-	const intents = yield* outbox.getPending(undefined);
-
-	yield* Effect.forEach(intents, (intent) =>
-		Effect.gen(function* () {
-			if (intent.action === 'remove') {
-				yield* queue.removeFromQueue(intent.petFoodID);
-			} else {
-				if (intent.petID === null || intent.runAt === null) {
-					return yield* Effect.die('Invalid pet food scheduling intent');
-				}
-
-				yield* queue.removeFromQueue(intent.petFoodID);
-				yield* queue.scheduleJob(
-					intent.petFoodID,
-					{ petID: intent.petID },
-					DateTime.makeUnsafe(intent.runAt),
-				);
-			}
-
-			yield* outbox.remove(intent.id);
-		}),
-	);
-});
-
 const makePetFoodService = Effect.gen(function* () {
 	const petFoodRepository = yield* PetFoodRepository;
-	const outbox = yield* PetFoodSchedulingOutboxRepository;
 	const config = yield* ConfigService;
 	const db = yield* Database.Database;
+	const queue = yield* PetFoodNotificationQueue;
+	const updates = Semaphore.makeUnsafe(1);
 
-	const enqueueSchedule = (
-		petID: PetID,
-		petFoodID: PetFoodID,
-		time: DateTime.DateTime,
-		delay: Duration.Duration,
-		tx: Database.Transaction,
-	) =>
-		outbox.enqueue(
-			{
-				action: 'schedule',
-				petID,
+	const updateReminder = Effect.fn('PetFoodService.updateReminder')(
+		(operation: Effect.Effect<unknown, unknown>, warning: string) =>
+			operation.pipe(
+				Effect.as(null),
+				Effect.catch((error) =>
+					Effect.logError(warning, error).pipe(Effect.as(warning)),
+				),
+			),
+	);
+
+	const scheduleReminder = Effect.fn('PetFoodService.scheduleReminder')(
+		function* (
+			petID: PetID,
+			petFoodID: PetFoodID,
+			time: DateTime.DateTime,
+			delay: Duration.Duration,
+		) {
+			yield* queue.removeFromQueue(petFoodID);
+			yield* queue.scheduleJob(
 				petFoodID,
-				runAt: DateTime.toDate(DateTime.addDuration(time, delay)),
-			},
-			tx,
-		);
+				{ petID },
+				DateTime.addDuration(time, delay),
+			);
+		},
+	);
 
 	const addPetFoodAndScheduleNotification = Effect.fn(
 		'PetFoodService.addPetFoodAndScheduleNotification',
-	)(function* ({
-		pet,
-		messageID,
-		userID,
+	)(
+		function* ({
+			pet,
+			messageID,
+			userID,
+			timeChanged,
+			time,
+			quantity,
+			dayStart,
+		}: AddPetFoodAndScheduleNotificationParams) {
+			const notificationDelay = yield* config
+				.getConfig('pet', 'notificationDelay', pet.id)
+				.pipe(Effect.option);
 
-		timeChanged,
-		time,
-		quantity,
-
-		dayStart,
-	}: AddPetFoodAndScheduleNotificationParams) {
-		const lastPetFood = yield* petFoodRepository.getLastPetFood({
-			petID: pet.id,
-		});
-
-		const lastPetFoodTime = lastPetFood.pipe(
-			Option.map(Struct.get('time')),
-			Option.andThen(DateTime.make),
-		);
-
-		const shouldIgnoreEntry = lastPetFoodTime.pipe(
-			Option.map((lastPetFoodTime) =>
-				isDuplicatePetFoodEntry(lastPetFoodTime, time),
-			),
-			Option.getOrElse(() => false),
-		);
-
-		if (shouldIgnoreEntry) {
-			return yield* new DuplicatedEntryError({
-				message: `Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`,
-			});
-		}
-
-		const notificationDelay = yield* config
-			.getConfig('pet', 'notificationDelay', pet.id)
-			.pipe(Effect.option);
-
-		yield* db.transaction((tx) =>
-			Effect.gen(function* () {
-				const petFood = yield* petFoodRepository.addPetFood(
-					{
-						petID: pet.id,
-						messageID,
-						userID,
-
-						quantity: quantity.scalar,
-						time: DateTime.toDate(time),
-					},
-					tx,
-				);
-
-				if (
-					(Option.isNone(lastPetFoodTime) ||
-						DateTime.isGreaterThan(time, lastPetFoodTime.value)) &&
-					Option.isSome(notificationDelay)
-				) {
-					if (Option.isSome(lastPetFood)) {
-						yield* outbox.enqueue(
-							{ action: 'remove', petFoodID: lastPetFood.value.id },
+			const { petFood, lastPetFood, lastPetFoodTime } = yield* db.transaction(
+				(tx) =>
+					Effect.gen(function* () {
+						const lastPetFood = yield* petFoodRepository.getLastPetFood(
+							{ petID: pet.id },
 							tx,
 						);
-					}
+						const lastPetFoodTime = lastPetFood.pipe(
+							Option.map(Struct.get('time')),
+							Option.andThen(DateTime.make),
+						);
+						if (
+							Option.isSome(lastPetFoodTime) &&
+							isDuplicatePetFoodEntry(lastPetFoodTime.value, time)
+						) {
+							return yield* new DuplicatedEntryError({
+								message: `Já foi colocado ração há menos de ${Duration.format(LIMIT_DURATION)}. Ignorando entrada.`,
+							});
+						}
+						const petFood = yield* petFoodRepository.addPetFood(
+							{
+								petID: pet.id,
+								messageID,
+								userID,
+								quantity: quantity.scalar,
+								time: DateTime.toDate(time),
+							},
+							tx,
+						);
+						return { petFood, lastPetFood, lastPetFoodTime };
+					}),
+			);
 
-					yield* enqueueSchedule(
-						pet.id,
-						petFood.id,
-						time,
-						notificationDelay.value,
-						tx,
-					);
-				}
+			let warning: string | null = null;
+			if (
+				(Option.isNone(lastPetFoodTime) ||
+					DateTime.isGreaterThan(time, lastPetFoodTime.value)) &&
+				Option.isSome(notificationDelay)
+			) {
+				warning = yield* updateReminder(
+					Effect.gen(function* () {
+						if (Option.isSome(lastPetFood)) {
+							yield* queue.removeFromQueue(lastPetFood.value.id);
+						}
+						yield* scheduleReminder(
+							pet.id,
+							petFood.id,
+							time,
+							notificationDelay.value,
+						);
+					}),
+					`A ração foi salva para ${pet.name}, mas não foi possível atualizar o lembrete. O lembrete pode estar incorreto. Não envie a ração novamente.`,
+				);
+			}
 
-				return petFood;
-			}),
-		);
-
-		const formattedDate = time.pipe(
-			DateTime.setZoneNamedUnsafe(dayStart.timezone),
-			DateTime.format({
-				locale: 'pt-BR',
-				timeStyle: 'short',
-				dateStyle: 'short',
-			}),
-		);
-
-		const message = [
-			`Foram adicionados ${quantity} de ração para o pet ${pet.name}.`,
-			timeChanged && `A ração foi adicionada para ${formattedDate}`,
-		]
-			.filter(Boolean)
-			.join(' ');
-
-		yield* reconcilePetFoodSchedulingOutbox();
-
-		return { message };
-	});
+			const formattedDate = time.pipe(
+				DateTime.setZoneNamedUnsafe(dayStart.timezone),
+				DateTime.format({
+					locale: 'pt-BR',
+					timeStyle: 'short',
+					dateStyle: 'short',
+				}),
+			);
+			const message = [
+				`Foram adicionados ${quantity} de ração para o pet ${pet.name}.`,
+				timeChanged && `A ração foi adicionada para ${formattedDate}`,
+				warning,
+			]
+				.filter(Boolean)
+				.join(' ');
+			return { message, warning };
+		},
+		Effect.uninterruptible,
+		updates.withPermit,
+	);
 
 	const rescheduleLastPetFoodNotification = Effect.fn(
 		'PetFoodService.rescheduleLastPetFoodNotification',
-	)(function* (petID: PetID) {
-		const lastPetFood = yield* petFoodRepository.getLastPetFood({ petID });
-
-		if (Option.isSome(lastPetFood)) {
-			const notificationDelay = yield* config.getConfig(
-				'pet',
-				'notificationDelay',
-				petID,
+	)(
+		function* (petID: PetID) {
+			const lastPetFood = yield* petFoodRepository.getLastPetFood({ petID });
+			if (Option.isNone(lastPetFood)) return null;
+			const delay = yield* config.getConfig('pet', 'notificationDelay', petID);
+			return yield* updateReminder(
+				scheduleReminder(
+					petID,
+					lastPetFood.value.id,
+					DateTime.makeUnsafe(lastPetFood.value.time),
+					delay,
+				),
+				'Não foi possível atualizar o lembrete. Configure o atraso de notificação novamente para tentar atualizar o lembrete.',
 			);
-			yield* db.transaction((tx) =>
-				Effect.gen(function* () {
-					yield* enqueueSchedule(
-						petID,
-						lastPetFood.value.id,
-						DateTime.makeUnsafe(lastPetFood.value.time),
-						notificationDelay,
-						tx,
-					);
-				}),
-			);
-			yield* reconcilePetFoodSchedulingOutbox();
-		}
-	});
+		},
+		Effect.uninterruptible,
+		updates.withPermit,
+	);
 
 	const setNotificationDelayAndReschedule = Effect.fn(
 		'PetFoodService.setNotificationDelayAndReschedule',
-	)(function* (petID: PetID, delay: ConfigValue<'pet', 'notificationDelay'>) {
-		const lastPetFood = yield* petFoodRepository.getLastPetFood({ petID });
-		yield* db.transaction((tx) =>
-			Effect.gen(function* () {
-				yield* config.setConfig('pet', 'notificationDelay', petID, delay, tx);
-				if (Option.isSome(lastPetFood)) {
-					yield* enqueueSchedule(
-						petID,
-						lastPetFood.value.id,
-						DateTime.makeUnsafe(lastPetFood.value.time),
-						delay,
-						tx,
-					);
-				}
-			}),
-		);
-		yield* reconcilePetFoodSchedulingOutbox();
-	});
+	)(
+		function* (petID: PetID, delay: ConfigValue<'pet', 'notificationDelay'>) {
+			yield* config.setConfig('pet', 'notificationDelay', petID, delay);
+			const lastPetFood = yield* petFoodRepository.getLastPetFood({ petID });
+			if (Option.isNone(lastPetFood)) return null;
+			return yield* updateReminder(
+				scheduleReminder(
+					petID,
+					lastPetFood.value.id,
+					DateTime.makeUnsafe(lastPetFood.value.time),
+					delay,
+				),
+				'O atraso de notificação foi salvo, mas não foi possível atualizar o lembrete. Configure o atraso novamente para tentar atualizar o lembrete.',
+			);
+		},
+		Effect.uninterruptible,
+		updates.withPermit,
+	);
 
 	const disableNotification = Effect.fn('PetFoodService.disableNotification')(
 		function* (petID: PetID) {
+			yield* config.deleteConfig('pet', 'notificationDelay', petID);
 			const lastPetFood = yield* petFoodRepository.getLastPetFood({ petID });
-			yield* db.transaction((tx) =>
-				Effect.gen(function* () {
-					yield* config.deleteConfig('pet', 'notificationDelay', petID, tx);
-					if (Option.isSome(lastPetFood)) {
-						yield* outbox.enqueue(
-							{ action: 'remove', petFoodID: lastPetFood.value.id },
-							tx,
-						);
-					}
-				}),
+			if (Option.isNone(lastPetFood)) return null;
+			return yield* updateReminder(
+				queue.removeFromQueue(lastPetFood.value.id),
+				'O atraso de notificação foi excluído, mas não foi possível cancelar o lembrete. Ele ainda pode ser enviado.',
 			);
-			yield* reconcilePetFoodSchedulingOutbox();
 		},
+		Effect.uninterruptible,
+		updates.withPermit,
 	);
 
 	const deletePetFoodAndNotification = Effect.fn(
 		'PetFoodService.deletePetFoodAndNotification',
-	)(function* (petFoodID: PetFoodID) {
-		yield* db.transaction((tx) =>
-			Effect.gen(function* () {
-				yield* petFoodRepository.deletePetFood(petFoodID, tx);
-				yield* outbox.enqueue({ action: 'remove', petFoodID }, tx);
-			}),
-		);
-		yield* reconcilePetFoodSchedulingOutbox();
-	});
+	)(
+		function* (petFoodID: PetFoodID) {
+			yield* petFoodRepository.deletePetFood(petFoodID);
+			return yield* updateReminder(
+				queue.removeFromQueue(petFoodID),
+				'A ração foi excluída, mas não foi possível cancelar o lembrete. Ele ainda pode ser enviado.',
+			);
+		},
+		Effect.uninterruptible,
+		updates.withPermit,
+	);
 
 	const updatePetFoodAndNotification = Effect.fn(
 		'PetFoodService.updatePetFoodAndNotification',
-	)(function* (
-		petID: PetID,
-		petFoodID: PetFoodID,
-		quantity: number,
-		time: Date,
-		timeChanged: boolean,
-	) {
-		const notificationDelay = yield* config
-			.getConfig('pet', 'notificationDelay', petID)
-			.pipe(Effect.option);
-		yield* db.transaction((tx) =>
-			Effect.gen(function* () {
-				yield* petFoodRepository.updatePetFood(
-					{ petFoodID, values: { quantity, time } },
-					tx,
-				);
-
-				const lastPetFood = yield* petFoodRepository.getLastPetFood(
-					{ petID },
-					tx,
-				);
-				if (
-					timeChanged &&
-					Option.isSome(lastPetFood) &&
-					lastPetFood.value.id === petFoodID &&
-					Option.isSome(notificationDelay)
-				) {
-					yield* enqueueSchedule(
+	)(
+		function* (
+			petID: PetID,
+			petFoodID: PetFoodID,
+			quantity: number,
+			time: Date,
+			timeChanged: boolean,
+		) {
+			const notificationDelay = yield* config
+				.getConfig('pet', 'notificationDelay', petID)
+				.pipe(Effect.option);
+			const lastPetFood = yield* db.transaction((tx) =>
+				Effect.gen(function* () {
+					yield* petFoodRepository.updatePetFood(
+						{ petFoodID, values: { quantity, time } },
+						tx,
+					);
+					return yield* petFoodRepository.getLastPetFood({ petID }, tx);
+				}),
+			);
+			if (
+				timeChanged &&
+				Option.isSome(lastPetFood) &&
+				lastPetFood.value.id === petFoodID &&
+				Option.isSome(notificationDelay)
+			) {
+				return yield* updateReminder(
+					scheduleReminder(
 						petID,
 						petFoodID,
 						DateTime.makeUnsafe(time),
 						notificationDelay.value,
-						tx,
-					);
-				}
-			}),
-		);
-		yield* reconcilePetFoodSchedulingOutbox();
-	});
+					),
+					'A ração foi alterada, mas não foi possível atualizar o lembrete. O lembrete pode estar incorreto.',
+				);
+			}
+			return null;
+		},
+		Effect.uninterruptible,
+		updates.withPermit,
+	);
 
 	return {
 		addPetFoodAndScheduleNotification,
@@ -314,7 +281,6 @@ const makePetFoodService = Effect.gen(function* () {
 		disableNotification,
 		deletePetFoodAndNotification,
 		updatePetFoodAndNotification,
-		reconcileNotifications: reconcilePetFoodSchedulingOutbox,
 	} as const;
 });
 
@@ -340,9 +306,6 @@ export class PetFoodService extends Context.Service<
 	declare readonly updatePetFoodAndNotification: Effect.Success<
 		typeof makePetFoodService
 	>['updatePetFoodAndNotification'];
-	declare readonly reconcileNotifications: Effect.Success<
-		typeof makePetFoodService
-	>['reconcileNotifications'];
 
 	static readonly layer = Layer.effect(this, makePetFoodService);
 }
