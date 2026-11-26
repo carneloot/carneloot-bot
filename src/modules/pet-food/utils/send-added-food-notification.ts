@@ -11,68 +11,111 @@ import type { User } from '../../../lib/repositories/user.js';
 
 class MissingPetError extends Data.TaggedError('MissingPetError') {}
 
-export const sendAddedFoodNotification =
+type AddedFood = {
+	id: PetID;
+	quantity: Qty;
+	time?: Date;
+};
+
+export const sendAddedFoodNotifications =
 	({
-		id,
-		quantity,
+		foods,
 		user,
-		time,
+		grouped = true,
 	}: {
-		id: PetID;
-		quantity: Qty;
+		foods: AddedFood[];
 		user: User;
-		time?: Date;
+		grouped?: boolean;
 	}) =>
 	(ctx: Context) =>
 		Effect.gen(function* () {
 			const petRepository = yield* PetRepository;
-			const pet = yield* petRepository.getPetByIDWithOwner(id).pipe(
-				Effect.flatMap(Effect.fromOption),
-				Effect.catchTag('NoSuchElementError', () =>
-					Effect.fail(new MissingPetError()),
-				),
-			);
-
 			const config = yield* ConfigService;
-
-			const dayStart = yield* config.getConfig('pet', 'dayStart', id);
-
-			const carers = yield* petRepository.getPetCarers(id).pipe(
-				Effect.tapError((error) =>
-					Effect.logWarning('Error getting pet carers', error),
-				),
-				Effect.orElseSucceed(() => []),
-				Effect.map((carers) =>
-					carers
-						.filter((carer) => carer.status === 'accepted')
-						.map((carer) => carer.carer),
-				),
-			);
-
-			const usersToNotify = [...carers, pet.owner].filter(
-				(carer) => carer.id !== user.id,
-			);
-
 			const username = getUserDisplay(user);
 
-			const message = [
-				`${username} colocou ${quantity} de ração para o pet ${pet.name}.`,
-				time &&
-					`A ração foi adicionada às ${utcToZonedTime(
-						time,
-						dayStart.timezone,
-					).toLocaleString('pt-BR')}`,
-			]
-				.filter(Boolean)
-				.join(' ');
+			const prepared = yield* Effect.forEach(
+				foods,
+				Effect.fn('sendAddedFoodNotifications.prepare')(function* ({
+					id,
+					quantity,
+					time,
+				}) {
+					const pet = yield* petRepository.getPetByIDWithOwner(id).pipe(
+						Effect.flatMap(Effect.fromOption),
+						Effect.catchTag('NoSuchElementError', () =>
+							Effect.fail(new MissingPetError()),
+						),
+					);
 
-			yield* Effect.all(
-				usersToNotify.map((userToNotify) =>
+					const dayStart = yield* config.getConfig('pet', 'dayStart', id);
+
+					const carers = yield* petRepository.getPetCarers(id).pipe(
+						Effect.tapError((error) =>
+							Effect.logWarning('Error getting pet carers', error),
+						),
+						Effect.orElseSucceed(() => []),
+						Effect.map((carers) =>
+							carers
+								.filter((carer) => carer.status === 'accepted')
+								.map((carer) => carer.carer),
+						),
+					);
+
+					const usersToNotify = [...carers, pet.owner].filter(
+						(carer) => carer.id !== user.id,
+					);
+
+					const formattedTime =
+						time &&
+						utcToZonedTime(time, dayStart.timezone).toLocaleString('pt-BR');
+
+					const message = [
+						grouped
+							? `• ${pet.name}: ${quantity}`
+							: `${username} colocou ${quantity} de ração para o pet ${pet.name}.`,
+						formattedTime &&
+							(grouped
+								? `às ${formattedTime}`
+								: `A ração foi adicionada às ${formattedTime}`),
+					]
+						.filter(Boolean)
+						.join(' ');
+
+					return { usersToNotify, message };
+				}),
+				{ concurrency: 'unbounded' },
+			);
+
+			const notifications = new Map<
+				User['id'],
+				{ user: User; messages: string[] }
+			>();
+			for (const { usersToNotify, message } of prepared) {
+				for (const recipient of usersToNotify) {
+					let notification = notifications.get(recipient.id);
+					if (!notification) {
+						notification = { user: recipient, messages: [] };
+						notifications.set(recipient.id, notification);
+					}
+					notification.messages.push(message);
+				}
+			}
+
+			yield* Effect.forEach(
+				notifications.values(),
+				({ user: userToNotify, messages }) =>
 					Effect.tryPromise({
 						try: () =>
-							ctx.api.sendMessage(userToNotify.telegramID, message, {
-								disable_notification: true,
-							}),
+							ctx.api.sendMessage(
+								userToNotify.telegramID,
+								(grouped
+									? [`${username} colocou ração para os pets:`, ...messages]
+									: messages
+								).join('\n'),
+								{
+									disable_notification: true,
+								},
+							),
 						catch: (error) => error,
 					}).pipe(
 						Effect.tapError((error) =>
@@ -81,11 +124,17 @@ export const sendAddedFoodNotification =
 								error,
 							),
 						),
+						Effect.ignore,
 					),
-				),
 				{
 					concurrency: 'unbounded',
-					mode: 'result',
+					discard: true,
 				},
 			);
-		}).pipe(Effect.withSpan('sendAddedFoodNotification'));
+		}).pipe(Effect.withSpan('sendAddedFoodNotifications'));
+
+export const sendAddedFoodNotification = ({
+	user,
+	...food
+}: AddedFood & { user: User }) =>
+	sendAddedFoodNotifications({ foods: [food], user, grouped: false });

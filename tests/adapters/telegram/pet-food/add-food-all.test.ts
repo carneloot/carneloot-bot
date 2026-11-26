@@ -46,7 +46,7 @@ vi.mock('../../../../src/lib/services/pet-food.js', () => ({
 vi.mock(
 	'../../../../src/modules/pet-food/utils/send-added-food-notification.js',
 	() => ({
-		sendAddedFoodNotification: (input: Record<string, unknown>) => () =>
+		sendAddedFoodNotifications: (input: Record<string, unknown>) => () =>
 			Effect.sync(() => mocks.notifications.push(input)),
 	}),
 );
@@ -99,7 +99,7 @@ describe('createAddFoodAllCommand', () => {
 			{ scalar: 25 },
 		]);
 		expect(mocks.maxConcurrentWrites).toBe(2);
-		expect(mocks.notifications).toHaveLength(2);
+		expect(mocks.notifications).toHaveLength(1);
 		expect(ctx.reply).toHaveBeenCalledWith(
 			'Foram adicionados 25 g de ração para todos os seus pets',
 		);

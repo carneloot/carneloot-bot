@@ -238,10 +238,185 @@ describe('registered food flows with SQLite and test Redis', () => {
 			expect.objectContaining({
 				method: 'sendMessage',
 				payload: expect.objectContaining({
-					text: 'Foram adicionados 25 g de ração para todos os seus pets',
+					text: [
+						'Foram adicionados 25 g de ração para todos os seus pets',
+						'Luna: 23/11/2026, 12:55:00',
+						'Theo: 23/11/2026, 12:55:00',
+					].join('\n'),
 				}),
 			}),
 		);
+	});
+
+	it.each([
+		{
+			input: '/todos 25g',
+			times: ['2026-11-23T16:00:00Z', '2026-11-23T16:00:00Z'],
+			displayedTimes: [],
+		},
+		{
+			input: '/todos 25g -800min',
+			times: ['2026-11-23T02:40:00Z', '2026-11-23T02:40:00Z'],
+			displayedTimes: ['22/11/2026, 23:40:00', '23/11/2026, 02:40:00'],
+		},
+		{
+			input: '/todos 25g 08:15',
+			times: ['2026-11-23T11:15:00Z', '2026-11-23T08:15:00Z'],
+			displayedTimes: ['23/11/2026, 08:15:00', '23/11/2026, 08:15:00'],
+		},
+		{
+			input: '/todos 25g 22/11/2026 08:15',
+			times: ['2026-11-22T11:15:00Z', '2026-11-22T08:15:00Z'],
+			displayedTimes: ['22/11/2026, 08:15:00', '22/11/2026, 08:15:00'],
+		},
+	])(
+		'groups $input by recipient, showing times only for custom times without timezone labels',
+		async ({ input, times, displayedTimes }) => {
+			await app.sql(`
+			INSERT INTO users (id, telegram_id, first_name) VALUES
+				('user-3', '3', 'Shared carer'), ('user-4', '4', 'Partial carer'),
+				('user-5', '5', 'Pending carer');
+			INSERT INTO pet_carers (id, pet_id, carer_id, status) VALUES
+				('carer-2', 'pet-1', 'user-2', 'accepted'),
+				('carer-3', 'pet-1', 'user-3', 'accepted'),
+				('carer-4', 'pet-2', 'user-3', 'accepted'),
+				('carer-5', 'pet-1', 'user-4', 'pending'),
+				('carer-6', 'pet-2', 'user-4', 'accepted'),
+				('carer-7', 'pet-1', 'user-5', 'pending');
+		`);
+			await app.run(
+				ConfigService.pipe(
+					Effect.andThen((config) =>
+						config.setConfig('pet', 'dayStart', 'pet-2' as PetID, {
+							hour: 4,
+							timezone: 'UTC',
+						}),
+					),
+				),
+			);
+			const bot = await app.runner();
+			await bot.dispatch(app.message(input));
+
+			const lines = ['Luna', 'Theo'].map(
+				(name, index) =>
+					`• ${name}: 25 g` +
+					(displayedTimes[index] ? ` às ${displayedTimes[index]}` : ''),
+			);
+			const notifications = bot.calls.filter(
+				(call) =>
+					call.method === 'sendMessage' &&
+					'disable_notification' in call.payload,
+			);
+			expect(notifications).toHaveLength(3);
+			for (const [chatID, text] of [
+				['2', ['Owner colocou ração para os pets:', ...lines].join('\n')],
+				['3', ['Owner colocou ração para os pets:', ...lines].join('\n')],
+				['4', ['Owner colocou ração para os pets:', lines[1]].join('\n')],
+			]) {
+				expect(notifications).toContainEqual({
+					method: 'sendMessage',
+					payload: {
+						chat_id: chatID,
+						text,
+						disable_notification: true,
+					},
+				});
+			}
+			expect(bot.calls).toContainEqual(
+				expect.objectContaining({
+					method: 'sendMessage',
+					payload: expect.objectContaining({
+						chat_id: 1,
+						text: [
+							'Foram adicionados 25 g de ração para todos os seus pets',
+							...displayedTimes.map((time, index) =>
+								index === 0 ? `Luna: ${time}` : `Theo: ${time}`,
+							),
+						].join('\n'),
+					}),
+				}),
+			);
+			const foods = await app.foods();
+			expect(foods.map((food) => food.time)).toEqual(
+				times.map((time) => new Date(time)),
+			);
+			for (const food of foods) {
+				expect(app.redis.jobs.get(food.id)?.runAt).toBe(
+					food.time.getTime() + 7_200_000,
+				);
+			}
+		},
+	);
+
+	it('notifies only saved feedings when another pet has a duplicate entry', async () => {
+		await app.sql(`
+			INSERT INTO users (id, telegram_id, first_name) VALUES ('user-3', '3', 'Shared carer');
+			INSERT INTO pet_carers (id, pet_id, carer_id, status) VALUES
+				('carer-2', 'pet-1', 'user-3', 'accepted'),
+				('carer-3', 'pet-2', 'user-3', 'accepted');
+		`);
+		const bot = await app.runner();
+		await bot.dispatch(app.message('/todos 41g', 2));
+		bot.calls.length = 0;
+		await bot.dispatch(app.message('/todos 25g'));
+		expect(
+			(await app.foods()).map(({ petID, quantity }) => ({ petID, quantity })),
+		).toEqual([
+			{ petID: 'pet-1', quantity: 25 },
+			{ petID: 'pet-2', quantity: 41 },
+		]);
+		expect(
+			bot.calls.filter(
+				(call) =>
+					call.method === 'sendMessage' &&
+					'disable_notification' in call.payload,
+			),
+		).toEqual([
+			{
+				method: 'sendMessage',
+				payload: {
+					chat_id: '3',
+					text: 'Owner colocou ração para os pets:\n• Luna: 25 g',
+					disable_notification: true,
+				},
+			},
+		]);
+		expect(bot.calls).toContainEqual(
+			expect.objectContaining({
+				method: 'sendMessage',
+				payload: expect.objectContaining({
+					text: expect.stringContaining('Ignorando entrada'),
+				}),
+			}),
+		);
+		expect(bot.calls.some((call) => call.method === 'setMessageReaction')).toBe(
+			false,
+		);
+	});
+
+	it('keeps single-pet notifications unchanged with an adjusted time', async () => {
+		await app.sql(`INSERT INTO pet_carers (id, pet_id, carer_id, status)
+			VALUES ('carer-2', 'pet-1', 'user-2', 'accepted');`);
+		const bot = await app.runner();
+		await bot.dispatch(app.message('/colocar_racao'));
+		await bot.dispatch(app.callback());
+		await bot.dispatch(app.message('32g -5min'));
+		expect(
+			bot.calls.filter(
+				(call) =>
+					call.method === 'sendMessage' &&
+					'disable_notification' in call.payload,
+			),
+		).toEqual([
+			{
+				method: 'sendMessage',
+				payload: {
+					chat_id: '2',
+					text: 'Owner colocou 32 g de ração para o pet Luna. A ração foi adicionada às 23/11/2026, 12:55:00',
+					disable_notification: true,
+				},
+			},
+		]);
 	});
 
 	it('completes add, correct, and delete conversations through persisted callbacks', async () => {

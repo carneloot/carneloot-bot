@@ -1,5 +1,5 @@
 import { Reactions } from '@grammyjs/emoji';
-import { Array, Data, DateTime, Effect, Option } from 'effect';
+import { Array, Data, DateTime, Effect, Option, Result } from 'effect';
 
 import type { AppServices } from '../../../app/layer.js';
 import type { Context } from '../../../common/types/context.js';
@@ -16,7 +16,7 @@ import {
 	DuplicatedEntryError,
 	PetFoodService,
 } from '../../../lib/services/pet-food.js';
-import { sendAddedFoodNotification } from '../../../modules/pet-food/utils/send-added-food-notification.js';
+import { sendAddedFoodNotifications } from '../../../modules/pet-food/utils/send-added-food-notification.js';
 import type { Execute } from '../../execute.js';
 import { withTelegramSpan } from '../tracing.js';
 
@@ -75,7 +75,7 @@ export const createAddFoodAllCommand =
 			const config = yield* ConfigService;
 			const petFoodService = yield* PetFoodService;
 
-			const warnings = yield* Effect.forEach(
+			const results = yield* Effect.forEach(
 				allPets,
 				Effect.fn('AddFoodAllCommand.sendSinglePet')(function* (pet) {
 					const dayStart = yield* config.getConfig('pet', 'dayStart', pet.id);
@@ -100,16 +100,24 @@ export const createAddFoodAllCommand =
 							dayStart,
 						});
 
-					yield* sendAddedFoodNotification({
+					return {
 						id: pet.id,
 						quantity,
-						user,
 						time: timeChanged ? time : undefined,
-					})(ctx);
-					return warning;
-				}),
+						confirmation: timeChanged
+							? `${pet.name}: ${time.toLocaleString('pt-BR', {
+									timeZone: dayStart.timezone,
+								})}`
+							: undefined,
+						warning,
+					};
+				}, Effect.result),
 				{ concurrency: 'unbounded' },
 			);
+
+			const additions = Array.getSuccesses(results);
+			yield* sendAddedFoodNotifications({ foods: additions, user })(ctx);
+			yield* Effect.fromResult(Result.all(results));
 
 			yield* Effect.all(
 				[
@@ -117,7 +125,10 @@ export const createAddFoodAllCommand =
 						ctx.reply(
 							[
 								`Foram adicionados ${quantity} de ração para todos os seus pets`,
-								...warnings.filter(Boolean),
+								...additions
+									.map(({ confirmation }) => confirmation)
+									.filter(Boolean),
+								...additions.map(({ warning }) => warning).filter(Boolean),
 							].join('\n'),
 						),
 					),
